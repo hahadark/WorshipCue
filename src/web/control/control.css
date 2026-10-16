@@ -449,3 +449,14 @@ video.ce-thumb { background: #000; }
 .stg-remote { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .stg-url { font-size: 18px; font-weight: 700; color: #9ec5ff; user-select: all; }
 .stg-pin { font-size: 22px; letter-spacing: 3px; color: #ffd479; margin: 0 6px; }
+
+/* 예배 진행 시계 */
+.cue-clock { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 4px 10px 6px; font-size: 12px; border-bottom: 1px solid var(--line); }
+.cue-clock input[type=time] { padding: 1px 4px; font-size: 12px; }
+.cc-now { color: #cfd6e4; }
+.cc-delay { font-weight: 800; padding: 1px 8px; border-radius: 4px; }
+.cc-delay.ok { background: #1d4430; color: #8ff0b3; }
+.cc-delay.late { background: #5a1f22; color: #ffb3b3; }
+.cc-delay.early { background: #1f3354; color: #a9c8ff; }
+.cue-time { margin-left: auto; text-align: right; font-size: 12px; color: #9aa3b5; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; align-items: flex-end; padding-right: 4px; }
+.cue-time small { color: #6d7588; font-size: 11px; }

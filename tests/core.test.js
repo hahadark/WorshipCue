@@ -624,6 +624,19 @@ test('휴대폰 리모컨: PIN 확인·잠금, 다음·숨김·메시지, 순서
   }
 });
 
+test('예배 진행 시계: 큐시트 시작 시각·순서 예정 시간 저장, 복제에도 유지', () => {
+  const core = newCore('sched');
+  const c = core.command('saveCue', { cue: { name: '주일', startTime: '11:00', items: [{ type: 'title', title: '묵도', duration: 2 }, { type: 'title', title: '설교', duration: 35 }, { type: 'title', title: 'x', duration: -5 }] } });
+  assert.equal(c.ok, true, c.error);
+  const g = core.command('getCue', { id: c.result.id }).result;
+  assert.equal(g.startTime, '11:00');
+  assert.deepEqual(g.items.map(i => i.duration), [2, 35, 0]);
+  assert.equal(core.command('saveCue', { cue: { name: 'y', startTime: '25시', items: [] } }).result.startTime, '');
+  const d = core.command('duplicateCue', { id: c.result.id }).result;
+  assert.equal(core.command('getCue', { id: d.id }).result.startTime, '11:00');
+  core.store.close();
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

@@ -87,15 +87,76 @@
     const live = app.state.live;
     const airIdx = live.hasLive && live.passage && live.passage.cueId === st.cue.id ? live.passage.cueIndex : -1;
     const pvIdx = app.preview && app.preview.cue && app.preview.cue.id === st.cue.id ? app.preview.cue.index : -1;
+    const plan = planTimes();
     el.innerHTML = st.cue.items.length ? st.cue.items.map((it, i) => `
       <div class="cue-item ${i === st.sel ? 'sel' : ''} ${i === pvIdx ? 'pv' : ''} ${i === airIdx ? 'air' : ''} ${i === airIdx && !live.visible ? 'hid' : ''}" draggable="true" data-i="${i}">
         <span class="cue-no">${i + 1}</span>
         <span class="cue-ico" title="${TYPE[it.type]}">${ICON[it.type]}</span>
         <span class="cue-body"><b>${esc(it.title)}</b><span class="cue-detail">${esc(detail(it))}</span>${it.note ? `<span class="cue-note">📝 ${esc(it.note)}</span>` : ''}</span>
+        ${plan[i] ? `<span class="cue-time" title="예정 시작${it.duration ? ' · ' + it.duration + '분' : ''}">${plan[i]}${it.duration ? `<small>${it.duration}분</small>` : ''}</span>` : ''}
         <button class="cue-edit" data-edit="${i}" title="이 순서 고치기 (F2)">✎</button>
       </div>`).join('') : '<div class="empty">아래 버튼으로 예배 순서를 추가하세요.</div>';
     el.querySelector('.cue-item.sel')?.scrollIntoView({ block: 'nearest' });
+    noteLive();
+    renderClock();
   }
+
+  // ---------------- 예배 진행 시계 ----------------
+  const hm = m => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m) % 60).padStart(2, '0')}`;
+  const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
+  /** 순서마다 예정 시작 (시작 시각 + 앞 순서들의 예정 시간 합) */
+  function planMinutes() {
+    const start = toMin(st.cue && st.cue.startTime);
+    if (start == null) return [];
+    let t = start;
+    return st.cue.items.map(it => { const at = t; t += Number(it.duration) || 0; return at; });
+  }
+  function planTimes() { return planMinutes().map(hm); }
+  /** 실제로 송출을 시작한 시각 (이 PC 에 큐시트·날짜별로 기억) */
+  function actualKey() { return st.cue ? `wc-actual-${st.cue.id}-${new Date().toISOString().slice(0, 10)}` : ''; }
+  function actuals() { try { return JSON.parse(localStorage.getItem(actualKey()) || '{}'); } catch { return {}; } }
+  let lastAirIdx = -1;
+  function noteLive() {
+    if (!st.cue) return;
+    const live = app.state.live;
+    const idx = live.hasLive && live.passage && live.passage.cueId === st.cue.id ? live.passage.cueIndex : -1;
+    if (idx < 0 || idx === lastAirIdx) return;
+    lastAirIdx = idx;
+    const a = actuals();
+    if (!a[idx]) { a[idx] = Date.now(); try { localStorage.setItem(actualKey(), JSON.stringify(a)); } catch { /* 무시 */ } }
+  }
+  function renderClock() {
+    const el = $('#cueClock');
+    if (!el || !st.cue) return;
+    const pm = planMinutes();
+    const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    const live = app.state.live;
+    const idx = live.hasLive && live.passage && live.passage.cueId === st.cue.id ? live.passage.cueIndex : -1;
+    const totalDur = st.cue.items.reduce((s, it) => s + (Number(it.duration) || 0), 0);
+    let html = `<span class="cc-start" title="예배 시작 시각 (비우면 진행 시계 끔)">⏰ <input type="time" id="ccStart" value="${esc(st.cue.startTime || '')}"></span>`;
+    if (pm.length) {
+      html += `<span class="muted">끝 예정 ${hm(pm[0] + totalDur)}</span>`;
+      if (idx >= 0) {
+        const a = actuals()[idx];
+        const startedMin = a ? (() => { const d = new Date(a); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; })() : nowMin;
+        const dur = Number(st.cue.items[idx].duration) || 0;
+        // 늦음 = (이 순서를 시작한 시각 - 예정) + (예정 시간을 넘긴 만큼)
+        const delay = (startedMin - pm[idx]) + (dur ? Math.max(0, nowMin - startedMin - dur) : 0);
+        const d = Math.round(delay);
+        const cls = d >= 3 ? 'late' : d <= -3 ? 'early' : 'ok';
+        html += `<span class="cc-now">지금 ${idx + 1}번 · 예정 ${hm(pm[idx])}</span><span class="cc-delay ${cls}">${d > 0 ? d + '분 늦음' : d < 0 ? -d + '분 이름' : '제시간'}</span>`;
+      } else if (nowMin < pm[0]) {
+        html += `<span class="cc-now">시작까지 ${Math.ceil(pm[0] - nowMin)}분</span>`;
+      }
+    } else html += '<span class="muted">예배 시작 시각과 순서마다 예정 시간(분)을 넣으면 진행 시계가 나옵니다</span>';
+    if (el.dataset.html !== html) {
+      if (el.contains(document.activeElement)) return; // 시각 입력 중이면 다시 그리지 않음
+      el.dataset.html = html;
+      el.innerHTML = html;
+      $('#ccStart').onchange = e => { st.cue.startTime = e.target.value; save(); renderClock(); };
+    }
+  }
+  setInterval(() => { noteLive(); renderClock(); }, 5000);
 
   // ---------------- 찬송가 ----------------
   async function hymnMeta(it) {
@@ -329,6 +390,7 @@
         ${fields}
         ${['song', 'text', 'title', 'bible'].includes(it.type) ? `<label>배경</label><div class="ce-row">${it.bg ? thumbTag(it.bg) : '<span class="muted">템플릿 배경</span>'}<button data-act="itembg">🖼 이미지·영상 고르기…</button>${it.bg ? '<button data-act="itembgclear">지우기</button>' : ''}</div>` : ''}
         ${it.type !== 'audio' ? `<label>템플릿</label><div class="ce-row">${tplSelect('tplMain', '예배당', it.tplMain)}${tplSelect('tplOverlay', 'OBS', it.tplOverlay)}</div>` : ''}
+        <label>예정 시간</label><div class="ce-row"><input type="number" data-k="duration" min="0" max="600" value="${it.duration || ''}" placeholder="0" style="width:80px"> 분 <span class="note">${planTimes()[i] ? '예정 시작 ' + planTimes()[i] : '큐시트 위 ⏰ 에 예배 시작 시각을 넣으면 순서마다 예정 시각이 계산됩니다'}</span></div>
         <label>메모</label><input type="text" data-k="note" value="${esc(it.note || '')}" placeholder="조작자만 보는 메모 (예: 설교 후 바로)">
       </div>`;
     if (it.type === 'bible') checkRef(it);
@@ -365,7 +427,7 @@
     const it = st.cue.items[st.sel];
     if (!it) return;
     const k = el.dataset.k;
-    it[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? Number(el.value) : el.value;
+    it[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' || el.type === 'number' ? Number(el.value) : el.value;
     if (it.type === 'song' && it.songId && k === 'lyrics') saveLinkedSong(it);
     if (it.type === 'song' && k === 'order') showOrderMsg(it);
     if (it.type === 'audio' && k === 'volume' && window.BCLib) window.BCLib.audio.setVolumeIf(it.file, it.volume);

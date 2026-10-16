@@ -604,7 +604,7 @@ WorshipCueCore.prototype.commands = {
   duplicateCue(a) {
     const src = this.store.getCue(String(a.id));
     if (!src) throw new Error('큐시트를 찾을 수 없습니다.');
-    const c = normalizeCue({ name: a.name || src.name + ' 복사본', serviceDate: src.serviceDate, items: src.items.map(it => ({ ...it, id: newId() })) });
+    const c = normalizeCue({ name: a.name || src.name + ' 복사본', serviceDate: src.serviceDate, startTime: src.startTime, items: src.items.map(it => ({ ...it, id: newId() })) });
     return this.commands.saveCue.call(this, { cue: c });
   },
   deleteCue(a) {

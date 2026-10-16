@@ -37,6 +37,7 @@ function normalizeItem(x) {
   }
   // 순서별 배경 이미지·템플릿 (글자 순서)
   if (['song', 'text', 'title', 'bible'].includes(x.type)) it.bg = str(x.bg, 1500);
+  it.duration = Math.max(0, Math.min(600, Number(x.duration) || 0)); // 예정 시간(분), 0 = 정하지 않음
   it.tplMain = str(x.tplMain, 80);
   it.tplOverlay = str(x.tplOverlay, 80);
   if (!it.title) it.title = TYPE_NAMES[x.type];
@@ -49,6 +50,7 @@ function normalizeCue(c) {
     id: /^[a-z0-9]{4,40}$/i.test(c.id || '') ? c.id : newId('c'),
     name: str(c.name, 200).trim(),
     serviceDate: /^\d{4}-\d{2}-\d{2}$/.test(c.serviceDate || '') ? c.serviceDate : '',
+    startTime: /^\d{1,2}:\d{2}$/.test(c.startTime || '') ? c.startTime : '', // 예배 시작 시각 (진행 시계)
     items: (Array.isArray(c.items) ? c.items : []).slice(0, 500).map(normalizeItem),
   };
 }

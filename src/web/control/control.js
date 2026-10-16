@@ -1237,7 +1237,8 @@
       prev = l;
       return l;
     });
-    return labels.some(Boolean) ? labels : null;
+    // 찬양 이름표(절·후렴·브릿지…)가 있을 때만
+    return labels.some(l => /절|후렴|브릿지|브리지|엔딩|전주|마무리|chorus|bridge|verse/i.test(l)) ? labels : null;
   }
   function jumpKey(e) {
     if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return false;

@@ -88,6 +88,8 @@ class BibleStore {
     this.db = new DatabaseSync(file);
     this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;');
     this.db.exec(SCHEMA);
+    // 큐시트 예배 시작 시각 칸 (예전 DB 에는 없으면 추가)
+    if (!this.db.prepare('PRAGMA table_info(Cuesheets)').all().some(c => c.name === 'start_time')) this.db.exec("ALTER TABLE Cuesheets ADD COLUMN start_time TEXT NOT NULL DEFAULT ''");
     const ins = this.db.prepare('INSERT OR REPLACE INTO BibleBooks (id, name, short_name, testament, book_order) VALUES (?, ?, ?, ?, ?)');
     this.transaction(() => { for (const b of BOOKS) ins.run(b.id, b.name, b.short, b.testament, b.id); });
     this.structure = new Map(); // versionId → Map(bookId → [verseCount per chapter, index = chapter-1])
@@ -320,12 +322,12 @@ class BibleStore {
 
   getCue(id) {
     const r = this.db.prepare('SELECT * FROM Cuesheets WHERE id = ?').get(id);
-    return r ? { id: r.id, name: r.name, serviceDate: r.service_date || '', items: safeJson(r.items, []), updatedAt: r.updated_at } : null;
+    return r ? { id: r.id, name: r.name, serviceDate: r.service_date || '', startTime: r.start_time || '', items: safeJson(r.items, []), updatedAt: r.updated_at } : null;
   }
 
   saveCue(cue) {
-    this.db.prepare('INSERT OR REPLACE INTO Cuesheets (id, name, service_date, items, updated_at) VALUES (?, ?, ?, ?, ?)')
-      .run(cue.id, cue.name, cue.serviceDate || '', JSON.stringify(cue.items || []), new Date().toISOString());
+    this.db.prepare('INSERT OR REPLACE INTO Cuesheets (id, name, service_date, start_time, items, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(cue.id, cue.name, cue.serviceDate || '', cue.startTime || '', JSON.stringify(cue.items || []), new Date().toISOString());
     return this.getCue(cue.id);
   }
 
