@@ -45,14 +45,25 @@
 
   // ---------------- 메시지 ----------------
   let msgTimer = null;
+  // 알림: 오른쪽 아래에 상자로 잠깐 떴다가 사라진다 (화면 배치는 움직이지 않음). 누르면 바로 닫힘
   function showMsg(text, kind = 'info', ms = 4000) {
     const el = $('#msg');
     el.textContent = text;
-    el.className = 'msg ' + kind;
+    el.className = 'msg ' + kind + (ms ? '' : ' sticky');
     el.hidden = false;
+    el.classList.remove('show');
+    void el.offsetWidth; // 나타나는 효과를 다시 시작
+    el.classList.add('show');
     clearTimeout(msgTimer);
-    if (ms) msgTimer = setTimeout(() => { el.hidden = true; }, ms);
+    if (ms) msgTimer = setTimeout(hideMsg, ms);
   }
+  function hideMsg() {
+    const el = $('#msg');
+    el.classList.remove('show');
+    clearTimeout(msgTimer);
+    msgTimer = setTimeout(() => { el.hidden = true; }, 250);
+  }
+  $('#msg').addEventListener('click', hideMsg);
   app.showMsg = showMsg;
 
   // ---------------- 실시간 연결 ----------------

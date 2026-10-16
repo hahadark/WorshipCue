@@ -36,11 +36,19 @@ kbd { font-family: inherit; font-size: 11px; color: var(--muted); border: 1px so
 .suggest .item .s { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suggest .item.err { color: #ff9b9e; cursor: default; }
 
-.msg { padding: 8px 14px; font-weight: 600; }
+/* 알림: 오른쪽 아래 상자 (레이아웃에 끼지 않음) */
+.msg {
+  position: fixed; right: 16px; bottom: 72px; z-index: 900; max-width: min(440px, calc(100vw - 32px));
+  padding: 11px 16px; font-weight: 600; line-height: 1.5; border-radius: 8px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.12); box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  opacity: 0; transform: translateY(12px); transition: opacity .2s ease, transform .2s ease;
+}
+.msg.show { opacity: 1; transform: none; }
+.msg.sticky::after { content: '  ✕'; opacity: .7; }
 .msg.info { background: #1f3354; }
 .msg.ok { background: #1d4430; }
 .msg.error { background: #5a1f22; }
-.conn { padding: 8px 14px; background: var(--warn); color: #000; font-weight: 700; }
+.conn { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); z-index: 900; padding: 8px 16px; border-radius: 8px; background: var(--warn); color: #000; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 
 /* 본문 그리드 */
 .grid { flex: 1; display: grid; grid-template-columns: 300px minmax(320px, 1fr) minmax(420px, 44%); min-height: 0; }
