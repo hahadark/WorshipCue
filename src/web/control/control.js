@@ -449,8 +449,10 @@
     $('#lvInfo').textContent = [live.passage.cueIndex >= 0 && live.slide.kind !== 'bible' ? live.passage.itemTitle || live.slide.ref : live.slide.ref, live.passage.versionName].filter(Boolean).join(' · ');
     $('#lvCount').textContent = `${live.index + 1} / ${live.count}`;
     const nx = live.nextSlide;
-    $('#lvNextHint').innerHTML = nx ? `다음: <b>${esc(nx.ref)}</b> ${esc(slideSnippet(nx))}`
-      : settings().navMode === 'continuous' ? '범위 끝 — F6을 누르면 다음 절로 이어갑니다' : '마지막 슬라이드';
+    const hasJump = liveLabels();
+    $('#lvNextHint').title = hasJump ? '찬양 바로 가기: 1~9 = 절 · C = 후렴 · B = 브릿지 · E = 엔딩' : '';
+    $('#lvNextHint').innerHTML = (hasJump ? '<span class="jump-hint">⌨ 1~9·C·B</span> ' : '') + (nx ? `다음: <b>${esc(nx.ref)}</b> ${esc(slideSnippet(nx))}`
+      : settings().navMode === 'continuous' ? '범위 끝 — F6을 누르면 다음 절로 이어갑니다' : '마지막 슬라이드');
     $('#lvSlides').innerHTML = live.slides.map((ref, i) => `<button data-i="${i}" class="${i === live.index ? 'on' : ''}">${i + 1}. ${esc(ref.startsWith('¶') ? ref.slice(1) : shortRef(ref))}</button>`).join('');
     $('#lvSlides button.on')?.scrollIntoView({ block: 'nearest' });
     renderVideoBar();
@@ -1193,6 +1195,46 @@
   // 모달이 열려 있어도 동작해야 하는 송출 관련 기능
   const LIVE_ACTIONS = new Set(['prevSlide', 'nextSlide', 'sendPreview', 'toggleClear']);
 
+  // ---------------- 찬양 중 바로 가기 키 ----------------
+  // 송출 중인 슬라이드에 이름표(1절·후렴…)가 있으면: 1~9 = 그 절, C(ㅊ) = 후렴, B(ㅠ) = 브릿지, E(ㄷ) = 엔딩
+  // (글을 입력하는 칸에 있을 때와 창이 열려 있을 때는 동작하지 않음)
+  const JUMP = { c: ['후렴', 'chorus'], 'ㅊ': ['후렴', 'chorus'], b: ['브릿지', '브리지', 'bridge'], 'ㅠ': ['브릿지', '브리지', 'bridge'], e: ['엔딩', '마무리', 'ending'], 'ㄷ': ['엔딩', '마무리', 'ending'], p: ['전주', 'pre'], 'ㅔ': ['전주', 'pre'] };
+  function liveLabels() {
+    const live = app.state.live;
+    if (!live.hasLive) return null;
+    // 번호만 있는 이름표(이름표 없는 이어지는 칸)는 앞 이름표에 붙인다
+    let prev = '';
+    const labels = live.slides.map(x => {
+      const l = x.startsWith('¶') ? x.slice(1).replace(/-\d+$/, '') : '';
+      if (!l || /^\d+$/.test(l)) return prev;
+      prev = l;
+      return l;
+    });
+    return labels.some(Boolean) ? labels : null;
+  }
+  function jumpKey(e) {
+    if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return false;
+    if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return false;
+    if (!$('#modal').hidden) return false;
+    const labels = liveLabels();
+    if (!labels) return false;
+    const k = e.key.toLowerCase();
+    const cur = app.state.live.index;
+    const norm = s => s.replace(/\s/g, '').toLowerCase();
+    let want = null;
+    if (/^[1-9]$/.test(k)) want = l => norm(l) === k + '절' || norm(l).startsWith(k + '절');
+    else if (JUMP[k]) want = l => JUMP[k].some(n => norm(l).startsWith(n));
+    if (!want) return false;
+    // 같은 이름표 묶음의 첫 슬라이드: 지금 위치 다음부터 찾고, 없으면 처음부터
+    const starts = labels.map((l, i) => (l && want(l) && (i === 0 || labels[i - 1] !== l) ? i : -1)).filter(i => i >= 0);
+    if (!starts.length) { showMsg(`'${e.key}' 에 맞는 부분이 이 찬양에 없습니다.`, 'info', 1500); e.preventDefault(); return true; }
+    const target = starts.find(i => i > cur) ?? starts[0];
+    e.preventDefault();
+    cmd('gotoSlide', { index: target });
+    return true;
+  }
+  app.liveLabels = liveLabels;
+
   window.addEventListener('keydown', e => {
     if (!app.state) return;
     const combo = comboOf(e);
@@ -1215,6 +1257,7 @@
       return;
     }
     if (e.key === 'Escape' && !$('#modal').hidden) { closeModal(); e.preventDefault(); return; }
+    if (jumpKey(e)) return;
     // 브라우저 기본 동작 중 송출 화면에 위험한 키 차단 (새로 고침 등)
     if (combo === 'F5' || combo === 'Ctrl+R' || combo === 'Ctrl+Shift+R') e.preventDefault();
   }, true);

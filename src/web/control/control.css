@@ -441,3 +441,5 @@ video.ce-thumb { background: #000; }
 .clear-group button.danger:hover { background: #5a1f22; }
 
 .ce-chips button { padding: 1px 8px; font-size: 12px; }
+
+.jump-hint { background: #22314d; color: #9ec5ff; border-radius: 4px; padding: 0 6px; font-size: 12px; }
