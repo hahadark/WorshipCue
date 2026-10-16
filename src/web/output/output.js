@@ -138,6 +138,23 @@
     }
   }
 
+  // ---------- 배경 숨김 · 로고 화면 ----------
+  let logoEl = null;
+  function applyLayers(p) {
+    const L = p.layers || {};
+    stage.classList.toggle('hide-bg', !!L.hideBg);
+    const want = L.logo ? L.logoImage : '';
+    if (logoEl && (!want || logoEl.dataset.img !== want)) { const old = logoEl; logoEl = null; old.style.opacity = '0'; setTimeout(() => old.remove(), 450); }
+    if (want && !logoEl) {
+      logoEl = R.buildLogoScreen(want);
+      logoEl.dataset.img = want;
+      logoEl.style.opacity = '0';
+      stage.appendChild(logoEl);
+      requestAnimationFrame(() => requestAnimationFrame(() => { if (logoEl) logoEl.style.opacity = '1'; }));
+    }
+    if (logoEl && logoEl !== stage.lastChild) stage.appendChild(logoEl); // 늘 맨 위
+  }
+
   function render(p) {
     lastPayload = p;
     document.body.classList.toggle('nocursor', p.cursorHidden !== false);
@@ -148,6 +165,8 @@
     bg.style.opacity = (!show && p.template.clearHidesBackground) ? '0' : '1';
 
     renderOverlays(p, stageChanged);
+    if (stageChanged) logoEl = null;
+    applyLayers(p);
     if (!stageChanged && key === lastKey) { applyVideo(p); ack(p); return; }
     lastKey = key;
 

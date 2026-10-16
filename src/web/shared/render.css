@@ -60,3 +60,9 @@
 .bc-bgvid, .bc-vid { pointer-events: none; }
 .bc-vlayer { position: absolute; inset: 0; transition: opacity 600ms ease; }
 .bc-vlayer video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* 로고 화면 · 배경 숨김 */
+.bc-logoscreen { position: absolute; inset: 0; z-index: 20; background: #000; display: flex; align-items: center; justify-content: center; transition: opacity 400ms ease; }
+.bc-logoscreen img { max-width: 45%; max-height: 55%; object-fit: contain; }
+.bc-stage.hide-bg .bc-bg, .bc-stage.hide-bg .bc-vlayer, .bc-stage.hide-bg .bc-slidebg { opacity: 0 !important; }
+.bc-bg, .bc-vlayer, .bc-slidebg { transition: opacity 400ms ease; }

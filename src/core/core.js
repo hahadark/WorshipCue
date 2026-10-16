@@ -43,6 +43,8 @@ class WorshipCueCore extends EventEmitter {
     this.hymnLyrics = new HymnLyrics(this);
     this.library = new Library(this);
     this.stage = { timer: { running: false, endAt: 0, remaining: 0, duration: 0 }, message: '' };
+    // 화면 지우기 층: 배경 숨김 · 로고 화면 · 오버레이 끄기 전 켜져 있던 것
+    this.layers = { hideBg: false, logo: false, savedOverlays: [] };
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
@@ -70,6 +72,14 @@ class WorshipCueCore extends EventEmitter {
 
   versionId(args) {
     return (args && args.versionId) || this.settings.get().versionId;
+  }
+
+  // ---------------- 화면 지우기 층 ----------------
+  layersPayload(output) {
+    const s = this.settings.get();
+    const tpl = this.templateFor(output || 'main');
+    const logo = s.logoScreenImage || (tpl.logo && tpl.logo.image) || '/shared/assets/sa-shield.png';
+    return { hideBg: this.layers.hideBg, logo: this.layers.logo, logoImage: logo, overlaysOff: this.layers.savedOverlays.length > 0 };
   }
 
   // ---------------- 무대 화면 (설교자·찬양팀 모니터) ----------------
@@ -129,6 +139,7 @@ class WorshipCueCore extends EventEmitter {
       versionName: live.passage ? live.passage.versionName : '',
       template: this.templateFor(output),
       overlays: this.library.activeFor(output),
+      layers: this.layersPayload(output),
       video: this.videoPayload(),
       cursorHidden: this.settings.get().output.cursorHidden,
     };
@@ -148,6 +159,7 @@ class WorshipCueCore extends EventEmitter {
     return {
       live: { ...this.presentation.getLiveState(), video: this.videoPayload() },
       stage: this.stagePayload(),
+      layers: this.layersPayload('main'),
       preview: this.presentation.preview ? {
         passage: this.presentation.preview.passage,
         index: this.presentation.preview.index,
@@ -338,6 +350,7 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.songInboxDir === 'string') d.songInboxDir = p.songInboxDir.trim().slice(0, 500);
       if (typeof p.bethlehemDir === 'string') d.bethlehemDir = p.bethlehemDir.trim().slice(0, 500);
       if (typeof p.previewMode === 'boolean') d.previewMode = p.previewMode;
+      if (typeof p.logoScreenImage === 'string') d.logoScreenImage = p.logoScreenImage.slice(0, 1500);
       if (typeof p.dockLocked === 'boolean') d.dockLocked = p.dockLocked;
       if (typeof p.dockLayout === 'string' && p.dockLayout.length <= 300000) d.dockLayout = p.dockLayout;
       if (typeof p.reservedKeys === 'string') d.reservedKeys = p.reservedKeys.slice(0, 1000);
@@ -452,6 +465,29 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  // ---- 화면 지우기 ----
+  toggleBackground(a) { this.layers.hideBg = a && typeof a.on === 'boolean' ? a.on : !this.layers.hideBg; this.emit('live'); return this.layersPayload(); },
+  toggleLogoScreen(a) { this.layers.logo = a && typeof a.on === 'boolean' ? a.on : !this.layers.logo; this.emit('live'); return this.layersPayload(); },
+  /** 오버레이 모두 끄기 ↔ 다시 켜기 (끄기 전에 켜져 있던 것만) */
+  toggleOverlaysOff() {
+    const on = this.library.overlays().filter(o => o.on).map(o => o.id);
+    if (on.length) { this.layers.savedOverlays = on; on.forEach(id => this.library.toggleOverlay(id, false)); }
+    else { this.layers.savedOverlays.forEach(id => { try { this.library.toggleOverlay(id, true); } catch { /* 지워진 것 */ } }); this.layers.savedOverlays = []; }
+    this.settingsChanged('overlays');
+    this.emit('live');
+    return this.layersPayload();
+  },
+  /** 모두 지우기: 글자 숨김 + 배경 숨김 + 오버레이 끄기 + 로고 화면 끔 (음악은 조작 화면에서 멈춤) */
+  clearAll() {
+    if (this.presentation.live && this.presentation.live.visible) this.presentation.clear();
+    this.layers.hideBg = true;
+    this.layers.logo = false;
+    const on = this.library.overlays().filter(o => o.on).map(o => o.id);
+    if (on.length) { this.layers.savedOverlays = on; on.forEach(id => this.library.toggleOverlay(id, false)); this.settingsChanged('overlays'); }
+    if (this.video && this.video.playing) Object.assign(this.video, { playing: false, offset: this.videoPosition(), at: Date.now() });
+    this.emit('live');
+    return this.layersPayload();
+  },
   /** 무대 타이머: start(minutes) | pause | resume | reset | add(minutes) */
   stageTimer(a) {
     const t = this.stage.timer;

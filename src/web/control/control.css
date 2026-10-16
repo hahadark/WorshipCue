@@ -432,3 +432,10 @@ video.ce-thumb { background: #000; }
 .sg-screen { width: 100% !important; border: 0 !important; border-radius: 3px 3px 0 0; }
 .sg-label { font-size: 12px; padding: 3px 6px; color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .sg-label b { color: #9ec5ff; }
+
+/* 화면 지우기 단추 */
+.clear-group { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.clear-group button { padding: 8px 10px; }
+.clear-group button.active { background: #5a4410; border-color: #d4a12a; color: #fff; font-weight: 700; }
+.clear-group button.danger { border-color: #7a2a30; }
+.clear-group button.danger:hover { background: #5a1f22; }

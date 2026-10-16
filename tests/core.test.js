@@ -533,6 +533,31 @@ test('무대 화면: 지금·다음 슬라이드, 순서 메모, 타이머, 메�
   core.store.close();
 });
 
+test('화면 지우기: 배경 숨김·로고 화면·오버레이 끄기/다시 켜기·모두 지우기', () => {
+  const core = newCore('layers');
+  const o1 = core.command('saveOverlay', { overlay: { type: 'clock', on: true } }).result;
+  core.command('saveOverlay', { overlay: { type: 'banner', text: '공지', on: false } });
+  core.command('sendLive', { passage: { title: 'x' }, slides: [{ kind: 'title', ref: 'x', parts: [] }], index: 0 });
+  assert.equal(core.command('toggleBackground').result.hideBg, true);
+  assert.equal(core.outputPayload('main').layers.hideBg, true);
+  assert.equal(core.command('toggleBackground').result.hideBg, false);
+  const lg = core.command('toggleLogoScreen').result;
+  assert.equal(lg.logo, true);
+  assert.match(lg.logoImage, /sa-shield|png|jpg/);
+  core.command('toggleLogoScreen');
+  // 오버레이 끄기 → 켜져 있던 것만 다시 켜기
+  assert.equal(core.command('toggleOverlaysOff').result.overlaysOff, true);
+  assert.equal(core.outputPayload('main').overlays.length, 0);
+  assert.equal(core.command('toggleOverlaysOff').result.overlaysOff, false);
+  assert.deepEqual(core.outputPayload('main').overlays.map(o => o.id), [o1.id]);
+  // 모두 지우기
+  const all = core.command('clearAll').result;
+  assert.equal(all.hideBg, true);
+  assert.equal(core.outputPayload('main').visible, false);
+  assert.equal(core.outputPayload('main').overlays.length, 0);
+  core.store.close();
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

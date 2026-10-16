@@ -370,6 +370,14 @@
     if (!st.playing && !v.paused) v.pause();
   }
 
+  /** '로고 화면': 검은 바탕 가운데 큰 로고 (모든 것 위에) */
+  function buildLogoScreen(image) {
+    const el = document.createElement('div');
+    el.className = 'bc-logoscreen';
+    el.innerHTML = `<img alt="" src="${safeUrl(image)}">`;
+    return el;
+  }
+
   /** 미리보기/모니터용: 컨테이너에 슬라이드를 즉시 그린다 */
   function renderInto(container, slide, t, opts = {}) {
     const prev = [...container.children];
@@ -385,6 +393,8 @@
       result = fit(area, t);
     }
     if (opts.overlays && opts.overlays.length) stage.appendChild(buildOverlays(opts.overlays, t));
+    if (opts.layers && opts.layers.hideBg) { stage.firstChild.style.opacity = '0'; stage.querySelectorAll('.bc-slidebg').forEach(x => { x.style.opacity = '0'; }); }
+    if (opts.layers && opts.layers.logo) stage.appendChild(buildLogoScreen(opts.layers.logoImage));
     scaleStage(stage, container, t);
     // 이전 화면은 새 화면의 그림이 준비될 때까지 뒤에 둔다
     const imgs = [...stage.querySelectorAll('img')].filter(i => !i.complete);
@@ -397,5 +407,5 @@
     return { stage, ...result };
   }
 
-  global.BCRender = { esc, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

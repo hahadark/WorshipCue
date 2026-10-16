@@ -436,7 +436,8 @@
     pane.classList.toggle('is-hidden', live.hasLive && !live.visible);
     $('#lvHidden').hidden = !(live.hasLive && !live.visible);
     if (!live.hasLive) {
-      R.renderInto($('#lvScreen'), null, tpl, { checker: true, overlays: overlaysFor(app.view.lv) });
+      R.renderInto($('#lvScreen'), null, tpl, { checker: true, overlays: overlaysFor(app.view.lv), layers: app.state.layers });
+      renderLayerButtons();
       $('#lvScreen').insertAdjacentHTML('beforeend', '<div class="ph">송출 중인 본문 없음</div>');
       $('#lvInfo').textContent = '';
       $('#lvCount').textContent = '';
@@ -444,7 +445,7 @@
       $('#lvSlides').innerHTML = '';
       return;
     }
-    R.renderInto($('#lvScreen'), live.slide, tpl, { checker: true, hidden: !live.visible, versionName: live.passage.versionName, overlays: overlaysFor(app.view.lv) });
+    R.renderInto($('#lvScreen'), live.slide, tpl, { checker: true, hidden: !live.visible, versionName: live.passage.versionName, overlays: overlaysFor(app.view.lv), layers: app.state.layers });
     $('#lvInfo').textContent = [live.passage.cueIndex >= 0 && live.slide.kind !== 'bible' ? live.passage.itemTitle || live.slide.ref : live.slide.ref, live.passage.versionName].filter(Boolean).join(' · ');
     $('#lvCount').textContent = `${live.index + 1} / ${live.count}`;
     const nx = live.nextSlide;
@@ -453,6 +454,7 @@
     $('#lvSlides').innerHTML = live.slides.map((ref, i) => `<button data-i="${i}" class="${i === live.index ? 'on' : ''}">${i + 1}. ${esc(ref.startsWith('¶') ? ref.slice(1) : shortRef(ref))}</button>`).join('');
     $('#lvSlides button.on')?.scrollIntoView({ block: 'nearest' });
     renderVideoBar();
+    renderLayerButtons();
     if (window.BCGrid) window.BCGrid.update();
   }
   // ---------------- 영상 재생 조작 (LIVE 아래) ----------------
@@ -950,6 +952,18 @@
   $('#bNext').onclick = () => liveMove(1);
   $('#bSend').onclick = sendPreview;
   $('#bClear').onclick = () => cmd('toggleLive');
+  // 화면 지우기 단추 (켜진 상태는 색으로)
+  $('#bBg').onclick = () => cmd('toggleBackground');
+  $('#bOvOff').onclick = () => cmd('toggleOverlaysOff');
+  $('#bLogo').onclick = () => cmd('toggleLogoScreen');
+  $('#bAudio').onclick = () => { if (window.BCLib) window.BCLib.audio.fadeOut(2500); };
+  $('#bAll').onclick = () => { cmd('clearAll'); if (window.BCLib) window.BCLib.audio.fadeOut(2000); };
+  function renderLayerButtons() {
+    const L = app.state.layers || {};
+    $('#bBg').classList.toggle('active', !!L.hideBg); $('#bBg').textContent = L.hideBg ? '배경 보이기' : '배경 지우기';
+    $('#bOvOff').classList.toggle('active', !!L.overlaysOff); $('#bOvOff').textContent = L.overlaysOff ? '오버레이 다시 켜기' : '오버레이 끄기';
+    $('#bLogo').classList.toggle('active', !!L.logo); $('#bLogo').textContent = L.logo ? '로고 화면 끄기' : '로고 화면';
+  }
   $('#btnHistory').onclick = () => openHistory();
   $('#btnSettings').onclick = () => window.BCSettings.open();
   $('#mode').onchange = e => cmd('updateSettings', { patch: { searchMode: e.target.value } });
