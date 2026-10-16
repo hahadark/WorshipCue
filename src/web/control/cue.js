@@ -749,7 +749,7 @@
       <label>예배 날짜</label><input type="date" id="mDate" value="${esc(c ? c.serviceDate : '')}">
       <span></span><div class="row-flex"><button id="mSave">이름·날짜 저장</button><button id="mDup">복제 (다음 주 순서 만들기)</button><button id="mExport">파일로 내보내기</button><button id="mDel">삭제</button></div>
       <h4>새 큐시트</h4>
-      <span></span><div class="row-flex"><button id="mNew">기본 순서로 새로 만들기</button><button id="mNewEmpty">빈 큐시트</button><button id="mImport">파일에서 가져오기 (.json)</button></div>
+      <span></span><div class="row-flex"><button id="mAI" class="primary">🤖 주보로 만들기 (AI)</button><button id="mNew">기본 순서로 새로 만들기</button><button id="mNewEmpty">빈 큐시트</button><button id="mImport">파일에서 가져오기 (.json)</button></div>
       <span></span><div class="note">기본 순서: 예배로 부름 · 찬양 · 대표기도 · 성경 봉독 · 설교 · 광고 · 축도 · 빈 화면 (자유롭게 고치세요)</div>
     </div>`);
     $('#mSave').onclick = async () => { c.name = $('#mName').value.trim() || c.name; c.serviceDate = $('#mDate').value; app.closeModal(); save(); };
@@ -759,6 +759,7 @@
       await cmd('deleteCue', { id: c.id }); app.closeModal(); st.cue = null; await refreshList();
       if (st.list[0]) openCue(st.list[0].id); else init();
     };
+    $('#mAI').onclick = () => { app.closeModal(); if (window.BCAI) window.BCAI.open(); };
     $('#mNew').onclick = async () => { const r = await cmd('newCue', {}); app.closeModal(); if (r.ok) { await refreshList(); openCue(r.result.id); } };
     $('#mNewEmpty').onclick = async () => { const r = await cmd('newCue', { empty: true }); app.closeModal(); if (r.ok) { await refreshList(); openCue(r.result.id); } };
     $('#mExport').onclick = () => {
@@ -822,7 +823,8 @@
   window.BCCue = {
     init, render, onCueNext, move, showSide, onSongDownloaded, onSongInbox: showInbox,
     addItem: (type, extra) => addItem(type, extra),
-    sendItem: i => { showSide('cue'); return sendItem(i); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
+    sendItem: i => { showSide('cue'); return sendItem(i); },
+    openCue: async id => { await refreshList(); showSide('cue'); return openCue(id); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
     selected: () => (st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null),
     /** 고른 순서를 바꾸고 저장·미리보기 갱신 */
     updateSelected: fn => { const it = st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null; if (!it) return false; fn(it); save(); forceEditor(); previewItem(st.sel, { keepIndex: true }); return true; },

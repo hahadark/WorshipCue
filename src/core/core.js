@@ -82,6 +82,30 @@ class WorshipCueCore extends EventEmitter {
     return { hideBg: this.layers.hideBg, logo: this.layers.logo, logoImage: logo, overlaysOff: this.layers.savedOverlays.length > 0 };
   }
 
+  // ---------------- AI 주보 → 큐시트 ----------------
+  aiKey() {
+    const a = this.settings.get().ai || {};
+    if (a.keyEnc && this.desktop && this.desktop.decrypt) { try { return this.desktop.decrypt(a.keyEnc); } catch { return ''; } }
+    return a.key || '';
+  }
+  /** input: { text } 또는 { file } → AI → 찬송가·장절 확인 → 큐시트 저장 */
+  async aiBulletin({ input, extra = '', fetchImpl }) {
+    const { askAI, planToCue, DEFAULT_MODEL } = require('./bulletin');
+    if (input.text !== undefined && !String(input.text).trim()) throw new Error('주보 내용이 비었습니다.');
+    const ai = this.settings.get().ai || {};
+    const { plan, usage, model } = await askAI({ apiKey: this.aiKey(), model: ai.model || DEFAULT_MODEL, input, extra, endpoint: ai.endpoint || undefined, fetchImpl: fetchImpl || this.aiFetch || fetch });
+    const resolveHymn = (n, book) => {
+      const hits = this.hymns.search(String(n)).filter(h => h.number === n);
+      if (!hits.length) return null;
+      const want = /구세군/.test(book) ? /구세군/ : /새찬송가|찬송가/;
+      return hits.find(h => want.test(h.folder)) || hits.find(h => !/교독문/.test(h.folder)) || null;
+    };
+    const checkRef = ref => { const r = this.commands.searchReference.call(this, { query: ref }); return r && r.passage ? r.passage.title : null; };
+    const { cue, warnings } = planToCue(plan, { resolveHymn, checkRef: ref => { try { return checkRef(ref); } catch { return null; } } });
+    const saved = this.commands.saveCue.call(this, { cue });
+    return { cue: saved, warnings, usage, model };
+  }
+
   // ---------------- 무대 화면 (설교자·찬양팀 모니터) ----------------
   /** 무대 화면에 보낼 데이터: 지금·다음 슬라이드, 순서 이름·메모, 타이머, 전달 메시지 */
   stagePayload() {
@@ -465,6 +489,37 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  // ---- AI 주보 → 큐시트 ----
+  /** 안내 페이지를 기본 브라우저로 (https 만) */
+  openLink(a) {
+    const url = String(a.url || '');
+    if (!/^https:\/\/(openrouter\.ai|github\.com|bethlehembible\.org)\//.test(url)) throw new Error('열 수 없는 주소입니다.');
+    if (!this.desktop || !this.desktop.openUrl) throw new Error('브라우저 열기는 데스크톱 프로그램에서만 됩니다.');
+    this.desktop.openUrl(url);
+    return {};
+  },
+  aiSettings() {
+    const { RECOMMENDED, DEFAULT_MODEL } = require('./bulletin');
+    const a = this.settings.get().ai || {};
+    return { hasKey: !!(a.keyEnc || a.key), model: a.model || DEFAULT_MODEL, models: RECOMMENDED, encrypted: !!a.keyEnc };
+  },
+  setAi(a) {
+    this.settings.update(d => {
+      d.ai = { model: '', keyEnc: '', key: '', ...(d.ai || {}) };
+      if (typeof a.model === 'string') d.ai.model = a.model.trim().slice(0, 120);
+      if (typeof a.endpoint === 'string') d.ai.endpoint = /^https?:\/\//.test(a.endpoint.trim()) ? a.endpoint.trim().slice(0, 300) : '';
+      if (typeof a.apiKey === 'string') {
+        const k = a.apiKey.trim();
+        const dk = this.desktop;
+        if (!k) { d.ai.keyEnc = ''; d.ai.key = ''; }
+        else if (dk && dk.canEncrypt && dk.canEncrypt()) { d.ai.keyEnc = dk.encrypt(k); d.ai.key = ''; }
+        else { d.ai.key = k; d.ai.keyEnc = ''; }
+      }
+    });
+    return this.commands.aiSettings.call(this);
+  },
+  /** 붙여 넣은 주보 글로 큐시트 만들기 */
+  aiMakeCue(a) { return this.aiBulletin({ input: { text: String(a.text || '') }, extra: a.extra }); },
   // ---- 휴대폰 리모컨 ----
   remoteStatus() { return this.remote ? this.remote.status() : { enabled: false, running: false, urls: [], error: '리모컨을 쓸 수 없습니다.' }; },
   async setRemote(a) {

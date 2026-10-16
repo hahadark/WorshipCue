@@ -2,7 +2,7 @@
 // Electron 데스크톱 셸: 조작 창 + 예배당 전체 화면 창(Output Manager) + 전역 단축키
 
 const path = require('path');
-const { app, BrowserWindow, screen, globalShortcut, dialog, Menu, powerSaveBlocker, session, shell } = require('electron');
+const { app, BrowserWindow, screen, globalShortcut, dialog, Menu, powerSaveBlocker, session, shell, safeStorage } = require('electron');
 const { WorshipCueCore } = require('../core/core');
 const { startServer } = require('../core/server');
 
@@ -182,6 +182,10 @@ if (!app.requestSingleInstanceLock()) {
         return r.canceled || !r.filePaths.length ? '' : r.filePaths[0];
       },
       downloadsDir: app.getPath('downloads'),
+      // API 키 같은 비밀값: Windows 보호(DPAPI)로 암호화
+      canEncrypt: () => safeStorage.isEncryptionAvailable(),
+      encrypt: s => safeStorage.encryptString(String(s)).toString('base64'),
+      decrypt: b64 => safeStorage.decryptString(Buffer.from(String(b64), 'base64')),
       documentsDir: app.getPath('documents'),
       // 찬양 PPT 온라인 검색: 기본 브라우저로 연다 (http/https 만)
       openUrl: url => {

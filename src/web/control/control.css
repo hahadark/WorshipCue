@@ -14,7 +14,7 @@ button {
 }
 button:hover { border-color: #46506a; background: #283041; }
 button:focus-visible, input:focus-visible, select:focus-visible, .results:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-select, input[type=text], input[type=number], textarea {
+select, input[type=text], input[type=number], input[type=password], input[type=time], input[type=date], textarea {
   background: #11141a; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
 }
 kbd { font-family: inherit; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 4px; }
@@ -460,3 +460,9 @@ video.ce-thumb { background: #000; }
 .cc-delay.early { background: #1f3354; color: #a9c8ff; }
 .cue-time { margin-left: auto; text-align: right; font-size: 12px; color: #9aa3b5; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; align-items: flex-end; padding-right: 4px; }
 .cue-time small { color: #6d7588; font-size: 11px; }
+
+/* AI 주보 */
+.ai-form h4 { grid-column: 1 / -1; margin: 10px 0 0; }
+.ai-done { background: #13261b; border: 1px solid #2e6b45; border-radius: 6px; padding: 10px 14px; }
+.ai-done ol { margin: 6px 0; padding-left: 22px; max-height: 260px; overflow: auto; }
+.ai-done li { margin: 2px 0; }

@@ -637,6 +637,56 @@ test('예배 진행 시계: 큐시트 시작 시각·순서 예정 시간 저장
   core.store.close();
 });
 
+test('AI 주보 → 큐시트: 한글 주보 글자, AI 요청 형식, 찬송가·장절 확인, 키 저장', async () => {
+  const { readBulletin, parseJson, planToCue } = require('../src/core/bulletin');
+  const hwp = 'C:/Users/Administrator/Downloads/20261011.hwp';
+  if (fs.existsSync(hwp)) {
+    const t = readBulletin(fs.readFileSync(hwp), '20261011.hwp').text;
+    assert.match(t, /주일성결예배/);
+    assert.match(t, /마태복음 6:9-13/);
+  }
+  assert.equal(readBulletin(Buffer.from('예배 순서'), 'a.txt').text, '예배 순서');
+  assert.equal(readBulletin(Buffer.from([1, 2]), 'a.pdf').file.mime, 'application/pdf');
+  assert.throws(() => readBulletin(Buffer.from('x'), 'a.exe'));
+  assert.deepEqual(parseJson('```json\n{"a":1}\n```'), { a: 1 });
+  assert.deepEqual(parseJson('결과입니다: {"a":2} 끝'), { a: 2 });
+  // 찬송가를 못 찾으면 제목 순서 + 경고
+  const p = planToCue({ name: 'x', items: [{ type: 'hymn', title: '찬송', hymnNumber: 999 }, { type: 'bible', title: '성경봉독', ref: '마 6:9-13' }, { type: 'text', title: '광고', body: 'a\n---\nb' }] },
+    { resolveHymn: () => null, checkRef: () => '마태복음 6:9-13' });
+  assert.deepEqual(p.cue.items.map(i => i.type), ['title', 'bible', 'text']);
+  assert.equal(p.warnings.length, 1);
+  // 코어: 가짜 AI 응답으로 전체 흐름
+  const core = newCore('ai');
+  assert.equal((await core.command('aiMakeCue', { text: '주보' })).ok, false); // 키 없음
+  core.command('setAi', { apiKey: 'sk-or-test', model: 'anthropic/claude-haiku-5.5' });
+  assert.equal(core.command('aiSettings').result.hasKey, true);
+  assert.equal(core.aiKey(), 'sk-or-test');
+  let sent = null;
+  core.aiFetch = async (url, opt) => {
+    sent = { url, body: JSON.parse(opt.body), auth: opt.headers.Authorization };
+    const plan = { name: '2026-10-11 주일성결예배', serviceDate: '2026-10-11', startTime: '11:00', items: [
+      { type: 'title', title: '묵도', subtitle: '사회자' },
+      { type: 'bible', title: '성경봉독', ref: '요 3:16' },
+      { type: 'title', title: '설교', subtitle: '“주기도문 8” · 차재수 사관' },
+      { type: 'blank', title: '예배 후' }] };
+    return { ok: true, status: 200, json: async () => ({ model: 'anthropic/claude-haiku-5.5', usage: { cost: 0.0012 }, choices: [{ message: { content: JSON.stringify(plan) } }] }) };
+  };
+  const r = await core.command('aiMakeCue', { text: '주보 내용', extra: '오전 예배' });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(sent.url, 'https://openrouter.ai/api/v1/chat/completions');
+  assert.equal(sent.auth, 'Bearer sk-or-test');
+  assert.equal(sent.body.model, 'anthropic/claude-haiku-5.5');
+  assert.match(JSON.stringify(sent.body.messages), /주보 내용/);
+  assert.match(JSON.stringify(sent.body.messages), /오전 예배/);
+  assert.equal(r.result.cue.name, '2026-10-11 주일성결예배');
+  assert.equal(r.result.cue.startTime, '11:00');
+  assert.deepEqual(r.result.cue.items.map(i => i.type), ['title', 'bible', 'title', 'blank']);
+  assert.equal(core.settings.get().activeCueId, r.result.cue.id);
+  core.command('setAi', { apiKey: '' });
+  assert.equal(core.command('aiSettings').result.hasKey, false);
+  core.store.close();
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

@@ -167,6 +167,18 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
     if (req.method === 'POST') {
       // 다른 웹사이트에서의 요청 차단: 사용자 정의 헤더는 교차 출처 요청에 붙일 수 없다
       if (req.headers['x-worshipcue'] !== '1') { res.writeHead(403); return res.end('Forbidden'); }
+      // AI 주보 → 큐시트: 파일을 그대로 받아 처리 (hwp · hwpx · docx · pdf · txt · 사진)
+      if (p === '/api/bulletin') {
+        const name = decodeURIComponent(String(req.headers['x-filename'] || 'bulletin.txt'));
+        const extra = decodeURIComponent(String(req.headers['x-extra'] || ''));
+        return readBody(req, 30 * 1024 * 1024, async buf => {
+          try {
+            const { readBulletin } = require('./bulletin');
+            const input = readBulletin(buf, name);
+            json(res, 200, { ok: true, result: await core.aiBulletin({ input, extra }) });
+          } catch (e) { json(res, 200, { ok: false, error: e.message }); }
+        });
+      }
       if (p === '/api/media') {
         const name = String(req.headers['x-filename'] || 'image.png');
         const ext = path.extname(name).toLowerCase();
