@@ -335,10 +335,10 @@ test('큐시트 송출: 항목 끝에서 다음 순서 요청, 제목·이미지
   core.store.close();
 });
 
-test('찬송가 폴더: .pps 에서 배경·악보·교독문 글자 꺼내기', { skip: !fs.existsSync('D:/OneDrive - The Salvation Army Korea Territory/자료실/새찬송가및 구세군찬송가/새찬송가') && '찬송가 폴더 없음' }, () => {
+test('찬송가 폴더: .pps 에서 배경·악보·교독문 글자 꺼내기', { skip: !fs.existsSync('D:/OneDrive - The Salvation Army Korea Territory/자료실/새찬송가및 구세군찬송가/새찬송가') && '찬송가 폴더 없음' }, async () => {
   const root = 'D:/OneDrive - The Salvation Army Korea Territory/자료실/새찬송가및 구세군찬송가/';
   const core = newCore('hymn');
-  assert.equal(core.command('loadHymn', { file: root + '새찬송가/010 전능왕 오셔서.pps' }).ok, false); // 등록 안 한 폴더
+  assert.equal((await core.command('loadHymn', { file: root + '새찬송가/010 전능왕 오셔서.pps' })).ok, false); // 등록 안 한 폴더
   const add = core.command('addHymnFolder', { path: root + '새찬송가' });
   assert.equal(add.ok, true, add.error);
   assert.ok(add.result.count > 600);
@@ -348,15 +348,58 @@ test('찬송가 폴더: .pps 에서 배경·악보·교독문 글자 꺼내기',
   assert.equal(byNum[0].title, '전능왕 오셔서');
   const byTitle = core.command('searchHymns', { query: '전능왕' }).result;
   assert.ok(byTitle.some(h => h.number === 10));
-  const h = core.command('loadHymn', { file: byNum[0].file });
+  const h = await core.command('loadHymn', { file: byNum[0].file });
   assert.equal(h.ok, true, h.error);
   assert.match(h.result.background, /^\/hymn\/[0-9a-f]{16}\/bg\.png$/);
   assert.equal(h.result.scores.length, 8);
   assert.ok(fs.existsSync(core.hymns.cachePath(h.result.key, 'score-01.png')));
   const gyo = core.command('searchHymns', { query: '시편 23' }).result.find(x => x.folder === '교독문');
-  const g = core.command('loadHymn', { file: gyo.file }).result;
+  const g = (await core.command('loadHymn', { file: gyo.file })).result;
   assert.equal(g.scores.length, 0);
   assert.match(g.texts[0].join(' '), /여호와는 나의 목자/);
+  // 읽는 방식 '화면 그대로' (PowerPoint 가 있을 때만)
+  if (await require('../src/core/pptrender').hasPowerPoint()) {
+    core.command('setHymnFolderRender', { path: path.resolve(root + '새찬송가'), render: 'slides' });
+    const sl = await core.command('loadHymn', { file: byNum[0].file });
+    assert.equal(sl.ok, true, sl.error);
+    assert.equal(sl.result.mode, 'slides');
+    assert.ok(sl.result.slides.length >= 8);
+    assert.ok(sl.result.aspect > 1.2 && sl.result.aspect < 1.4, `4:3 슬라이드 비율: ${sl.result.aspect}`);
+    assert.ok(fs.existsSync(core.hymns.cachePath(sl.result.key, 'slide-001.png')));
+  }
+  core.store.close();
+});
+
+test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
+  const { onlineSearchUrl } = require('../src/core/songinbox');
+  assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');
+  assert.throws(() => onlineSearchUrl('javascript:alert(1)', 'x'));
+  const core = newCore('inbox');
+  const dl = path.join(tmp, 'dl'), inbox = path.join(tmp, 'inbox-ppt');
+  fs.mkdirSync(dl);
+  fs.writeFileSync(path.join(dl, 'old.ppt'), 'x'); // 지켜보기 전부터 있던 파일은 건드리지 않는다
+  core.command('updateSettings', { patch: { songDownloadDir: dl, songInboxDir: inbox, songSearchUrl: 'https://example.org/s/{q}' } });
+  let opened = null;
+  core.desktop = { openUrl: u => { opened = u; } };
+  const got = new Promise(res => core.once('song-downloaded', res));
+  const r = core.command('songOnlineSearch', { query: '은혜' });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(opened, 'https://example.org/s/%EC%9D%80%ED%98%9C');
+  assert.equal(core.command('songInboxStatus').result.watching, true);
+  fs.writeFileSync(path.join(dl, '은혜 아니면.pptx.crdownload'), 'partial'); // 받는 중
+  await new Promise(r => setTimeout(r, 1700));
+  fs.renameSync(path.join(dl, '은혜 아니면.pptx.crdownload'), path.join(dl, '은혜 아니면 (1).pptx'));
+  const d = await got;
+  assert.equal(d.title, '은혜 아니면');
+  assert.equal(d.file, path.join(inbox, '은혜 아니면.pptx'));
+  assert.ok(fs.existsSync(d.file));
+  assert.ok(!fs.existsSync(path.join(dl, '은혜 아니면 (1).pptx')));
+  assert.ok(fs.existsSync(path.join(dl, 'old.ppt')));
+  const f = core.command('listHymnFolders').result.find(x => x.path === inbox);
+  assert.equal(f.render, 'slides');
+  assert.equal(core.command('searchHymns', { query: '은혜' }).result[0].file, d.file);
+  core.command('songInboxStop');
+  assert.equal(core.command('songInboxStatus').result.watching, false);
   core.store.close();
 });
 

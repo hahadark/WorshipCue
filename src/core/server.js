@@ -42,6 +42,8 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   core.on('extend-request', d => broadcastControl('extend-request', d));
   core.on('cue-next', d => broadcastControl('cue-next', d));
   core.on('cues', d => broadcastControl('cues', d));
+  core.on('song-downloaded', d => broadcastControl('song-downloaded', d));
+  core.on('song-inbox', d => broadcastControl('song-inbox', d));
   core.on('outputs', () => broadcastControl('outputs', core.outputStatus()));
 
   const heartbeat = setInterval(() => {

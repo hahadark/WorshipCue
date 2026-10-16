@@ -89,6 +89,8 @@
     });
     es.addEventListener('extend-request', e => handleExtend(JSON.parse(e.data)));
     es.addEventListener('cue-next', e => window.BCCue && window.BCCue.onCueNext(JSON.parse(e.data)));
+    es.addEventListener('song-downloaded', e => window.BCCue && window.BCCue.onSongDownloaded(JSON.parse(e.data)));
+    es.addEventListener('song-inbox', e => window.BCCue && window.BCCue.onSongInbox(JSON.parse(e.data)));
     es.addEventListener('cues', e => window.BCCue && window.BCCue.onCues(JSON.parse(e.data)));
     es.onerror = () => {
       app.connected = false;

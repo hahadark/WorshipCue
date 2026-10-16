@@ -66,7 +66,10 @@ function defaults() {
     activeCueId: '',     // 열어 둔 큐시트
     cueAdvance: true,    // 항목의 마지막 슬라이드에서 F6 → 다음 순서로
     hymnFolders: [],     // [{ name, path }] 찬송가·교독문 .pps 폴더
-    hymnBackground: 'original', // 찬송가 배경 기본값: original(파일의 배경) | template(템플릿 배경) | 이미지 주소 // 처음 실행 안내를 다시 보지 않기
+    hymnBackground: 'original', // 찬송가 배경 기본값: original(파일의 배경) | template(템플릿 배경) | #ffffff | 이미지 주소
+    songSearchUrl: 'https://cwy0675.tistory.com/search/{q}', // 온라인에서 찾기: {q} = 검색어
+    songDownloadDir: '', // 지켜볼 다운로드 폴더 (비우면 Windows 다운로드 폴더)
+    songInboxDir: '',    // 받은 찬양 PPT 를 모아 둘 폴더 (비우면 문서\WorshipCue 찬양 PPT)
   };
 }
 

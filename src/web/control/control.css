@@ -304,3 +304,8 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .hrow.sel { background: var(--sel); }
 .hrow .hno { color: #9ec5ff; font-weight: 700; min-width: 3em; text-align: right; }
 .hrow .htitle { flex: 1; font-size: 15px; }
+
+/* 온라인에서 받은 찬양 PPT 기다리는 중 */
+.hinbox { margin: 6px 0; padding: 8px 10px; border-radius: 6px; background: #2b2410; border: 1px solid #806a20; line-height: 1.6; }
+.hinbox .muted { display: block; font-size: 12px; }
+.hymn-list .empty button { margin-top: 10px; font-size: 15px; padding: 8px 14px; }

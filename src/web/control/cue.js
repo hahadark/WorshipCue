@@ -13,7 +13,7 @@
   const cmd = app.cmd;
 
   const ICON = { hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
-  const TYPE = { hymn: '찬송가', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
+  const TYPE = { hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
   const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map() };
   const newId = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -150,7 +150,9 @@
     let slides = [];
     if (it.type === 'hymn' && meta) {
       const bg = hymnBg(it, meta);
-      if (meta.scores.length) {
+      if (meta.slides && meta.slides.length) { // PowerPoint 로 만든 '화면 그대로' 슬라이드
+        slides = meta.slides.map((img, k) => ({ kind: 'image', image: img, ref: it.title, label: String(k + 1), parts: [] }));
+      } else if (meta.scores.length) {
         slides = meta.scores.map((img, k) => ({ kind: 'score', image: img, bg, ref: it.title, label: String(k + 1), parts: [] }));
       } else if (meta.texts.some(t => t.length)) { // 교독문 등 글자 슬라이드
         slides = SL.buildText({ title: it.title, showTitle: false, chunks: meta.texts.map((t, k) => ({ label: String(k + 1), text: t.join('\n') })) }, opts);
@@ -172,7 +174,7 @@
     $('#resultTitle').textContent = `${i + 1}. ${it.title}`;
     $('#resultInfo').textContent = `${TYPE[it.type]} · 슬라이드 ${app.preview.slides.length}장`;
     $('#results').innerHTML = app.preview.slides.map((s, k) => {
-      const body = s.kind === 'score' ? `<img class="sthumb" src="${esc(s.image)}" alt="">`
+      const body = s.kind === 'score' || (s.kind === 'image' && it.type === 'hymn') ? `<img class="sthumb" src="${esc(s.image)}" alt="">`
         : esc(s.kind === 'text' ? s.parts[0].text : s.kind === 'title' ? [s.ref, s.subtitle].filter(Boolean).join('\n') : s.kind === 'image' ? '🖼 이미지' : '⬛ ' + (s.mode === 'background' ? '배경·로고만' : '검은 화면'));
       return `<div class="srow ${k === app.preview.index ? 'in-pv' : ''}" data-k="${k}"><span class="vn">${esc(s.label || String(k + 1))}</span><span class="stext">${body}</span></div>`;
     }).join('');
@@ -226,7 +228,7 @@
     };
     const fields = {
       hymn: `<label>파일</label><div class="ce-row"><span class="muted ce-file">${esc((it.file || '').split(/[\\/]/).pop())}</span><button data-act="rehymn">다른 찬송가로 바꾸기</button></div>
-        <label>배경</label><div class="ce-row">${hymnBgSel()}</div>`,
+        <label>배경</label><div class="ce-row">${(st.hymnMeta.get(it.file) || {}).mode === 'slides' ? '<span class="muted">PPT 화면 그대로 송출합니다 (배경 바꾸기 없음). 폴더 읽는 방식을 \'자동\'으로 바꾸면 악보·배경을 나눠 꺼낼 수 있습니다.</span>' : hymnBgSel()}</div>`,
       bible: `<label>장절</label><div class="ce-row"><input type="text" data-k="ref" value="${esc(it.ref || '')}" placeholder="예: 롬 8:18-25 · 시 23" style="flex:1"><select data-k="versionId"><option value="">현재 번역본</option>${vs.map(v => `<option value="${esc(v.id)}" ${it.versionId === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></div><span></span><div id="ceRefMsg" class="note"></div>`,
       song: `<label>가사</label><textarea data-k="lyrics" rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
         <span></span><div class="ce-row note"><label class="tc-toggle"><input type="checkbox" data-k="showTitle" ${it.showTitle ? 'checked' : ''}> 화면에 제목 표시</label> · 빈 줄 = 다음 슬라이드 · [1절] 줄은 슬라이드 이름</div>`,
@@ -384,7 +386,7 @@
     showSide('cue');
     forceEditor();
     if (type === 'image') { pickImage(url => { it.image = url; save(); forceEditor(); previewItem(at); }); return; }
-    if (type === 'hymn') { previewItem(at); return; }
+    if (type === 'hymn') { previewItem(at).then(() => forceEditor()); return; }
     focusTitle();
     previewItem(at);
   }
@@ -410,20 +412,28 @@
   async function openHymnPicker({ replace = -1 } = {}) {
     const s = app.state.settings;
     const bgName = b => ({ original: '찬송가 원래 배경', template: '템플릿 배경' }[b] || '지정한 이미지');
-    app.openModal(replace >= 0 ? '🎼 다른 찬송가로 바꾸기' : '🎼 찬송가 넣기', `<div class="hymn-pick">
-      <div class="row-flex"><select id="hFolder"></select><input type="text" id="hQ" placeholder="번호 또는 제목 (예: 10, 전능왕)" style="flex:1;font-size:16px"><span id="hCount" class="muted"></span></div>
+    app.openModal(replace >= 0 ? '🎼 다른 찬송가·PPT로 바꾸기' : '🎼 찬송가·찬양 PPT 넣기', `<div class="hymn-pick">
+      <div class="row-flex"><select id="hFolder"></select><input type="text" id="hQ" placeholder="번호 또는 제목 (예: 10, 전능왕, 은혜 아니면)" style="flex:1;font-size:16px"><span id="hCount" class="muted"></span><button id="hOnline" title="내 폴더에 없는 찬양 PPT를 온라인에서 찾아 받기">🌐 온라인에서 찾기</button></div>
+      <div id="hInbox" class="hinbox" hidden></div>
       <div id="hList" class="hymn-list" tabindex="0"></div>
       <div class="note">클릭: 고르기 · 더블클릭 또는 Enter: ${replace >= 0 ? '바꾸기' : '큐시트에 넣기 (창을 닫지 않고 여러 곡 연달아 넣을 수 있습니다)'}</div>
       <details class="tc-adv" id="hSetup"><summary>찬송가 폴더 · 기본 배경 설정</summary>
         <div class="form" style="margin-top:8px">
           <label>등록한 폴더</label><div id="hFolders"></div>
           <label>폴더 추가</label><div class="row-flex"><button id="hPick">📁 폴더 고르기…</button><input type="text" id="hPath" placeholder="또는 경로 입력 (예: D:\\자료실\\새찬송가)" style="flex:1"><button id="hAdd">추가</button></div>
-          <span></span><div class="note">.pps / .ppt 파일이 들어 있는 폴더 (새찬송가 · 구세군 찬송가 · 교독문 등)를 여러 개 등록할 수 있습니다.</div>
+          <span></span><div class="note">.pps / .ppt / .pptx 파일이 들어 있는 폴더 (새찬송가 · 구세군 찬송가 · 교독문 · 찬양 PPT 등)를 여러 개 등록할 수 있습니다.
+            읽는 방식 — <b>자동</b>: 악보와 배경을 나눠 꺼냄 (배경 바꾸기 가능) · <b>화면 그대로</b>: PowerPoint 로 슬라이드를 그대로 그림으로 (PowerPoint 필요)</div>
           <label>기본 배경</label><div class="row-flex"><select id="hBg">
             <option value="original">찬송가 원래 배경</option><option value="#ffffff">흰 배경 (악보가 가장 잘 보임)</option><option value="template">템플릿 배경 (테마·빠른 설정의 배경)</option>
             ${!['original', 'template', '#ffffff'].includes(s.hymnBackground || 'original') ? `<option value="${esc(s.hymnBackground)}">지정한 이미지</option>` : ''}
           </select><button id="hBgImg">🖼 다른 이미지로…</button></div>
           <span></span><div class="note">악보는 투명 그림이라 어떤 배경 위에도 겹쳐 보입니다. 악보 글씨가 검은색이라 밝은 배경을 권합니다. 순서마다 따로 바꿀 수도 있습니다 (가운데 편집칸의 '배경').</div>
+          <h4>온라인에서 찾기 (찬양 PPT)</h4>
+          <label>검색 주소</label><input type="text" id="hUrl" value="${esc(s.songSearchUrl || '')}" placeholder="https://…/search/{q}">
+          <span></span><div class="note">{q} 자리에 검색어가 들어갑니다. 기본 브라우저로 열리며, 로그인·비밀번호 입력·다운로드는 직접 합니다.</div>
+          <label>다운로드 폴더</label><div class="row-flex"><input type="text" id="hDl" value="${esc(s.songDownloadDir || '')}" placeholder="비우면 Windows 다운로드 폴더" style="flex:1"><button id="hDlPick">📁</button></div>
+          <label>받은 PPT 모으는 곳</label><div class="row-flex"><input type="text" id="hIn" value="${esc(s.songInboxDir || '')}" placeholder="비우면 문서\\WorshipCue 찬양 PPT" style="flex:1"><button id="hInPick">📁</button></div>
+          <span></span><div class="note">'온라인에서 찾기'를 누르면 20분 동안 다운로드 폴더를 지켜봅니다. 새 PPT 를 받으면 위 폴더로 옮겨 큐시트(고른 순서 다음)에 바로 넣습니다. 다음부터는 이 창에서 검색만 하면 나옵니다.</div>
         </div></details>
     </div>`);
     let rows = [];
@@ -432,8 +442,9 @@
       const r = await cmd('listHymnFolders');
       const fs = r.ok ? r.result : [];
       $('#hFolder').innerHTML = `<option value="">전체 폴더</option>` + fs.map(f => `<option value="${esc(f.path)}">${esc(f.name)} (${f.count})</option>`).join('');
-      $('#hFolders').innerHTML = fs.length ? fs.map(f => `<div class="row-flex"><b>${esc(f.name)}</b><span class="muted">${esc(f.path)}</span>${f.exists ? '' : '<span class="err-text">폴더 없음</span>'}<button data-rm="${esc(f.path)}">빼기</button></div>`).join('') : '<span class="warn-text">등록한 폴더가 없습니다. 아래에서 추가하세요.</span>';
+      $('#hFolders').innerHTML = fs.length ? fs.map(f => `<div class="row-flex"><b>${esc(f.name)}</b><span class="muted">${esc(f.path)}</span>${f.exists ? '' : '<span class="err-text">폴더 없음</span>'}<select data-render="${esc(f.path)}" title="읽는 방식"><option value="auto" ${f.render !== 'slides' ? 'selected' : ''}>자동 (악보·배경 나눔)</option><option value="slides" ${f.render === 'slides' ? 'selected' : ''}>화면 그대로</option></select><button data-rm="${esc(f.path)}">빼기</button></div>`).join('') : '<span class="warn-text">등록한 폴더가 없습니다. 아래에서 추가하세요.</span>';
       $('#hFolders').querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => { await cmd('removeHymnFolder', { path: b.dataset.rm }); await folders(); search(); });
+      $('#hFolders').querySelectorAll('[data-render]').forEach(b => b.onchange = async () => { await cmd('setHymnFolderRender', { path: b.dataset.render, render: b.value }); st.hymnMeta.clear(); app.showMsg('읽는 방식을 바꿨습니다.', 'ok', 1500); });
       if (!fs.length) $('#hSetup').open = true;
     };
     const search = async () => {
@@ -441,7 +452,10 @@
       rows = r.ok ? r.result : [];
       sel = 0;
       $('#hCount').textContent = `${rows.length}${rows.length >= 300 ? '+' : ''}곡`;
-      $('#hList').innerHTML = rows.map((h, k) => `<div class="hrow ${k === sel ? 'sel' : ''}" data-k="${k}"><span class="hno">${h.number ?? ''}</span><span class="htitle">${esc(h.title)}</span><span class="muted">${esc(h.folder)}</span></div>`).join('') || '<div class="empty">찾는 찬송가가 없습니다.</div>';
+      const q = $('#hQ').value.trim();
+      $('#hList').innerHTML = rows.map((h, k) => `<div class="hrow ${k === sel ? 'sel' : ''}" data-k="${k}"><span class="hno">${h.number ?? ''}</span><span class="htitle">${esc(h.title)}</span><span class="muted">${esc(h.folder)}</span></div>`).join('')
+        || `<div class="empty">내 폴더에 '${esc(q)}' 이(가) 없습니다.${q ? `<br><button id="hOnline2" class="primary">🌐 온라인에서 '${esc(q)}' 찾기</button><div class="note">브라우저에서 PPT 를 받으면 자동으로 큐시트에 들어갑니다.</div>` : ''}</div>`;
+      const b2 = $('#hOnline2'); if (b2) b2.onclick = online;
     };
     const mark = () => { $('#hList').querySelectorAll('.hrow').forEach(x => x.classList.toggle('sel', +x.dataset.k === sel)); $('#hList .hrow.sel')?.scrollIntoView({ block: 'nearest' }); };
     const choose = async k => {
@@ -458,6 +472,23 @@
         $('#hQ').focus(); $('#hQ').select();
       }
     };
+    // 온라인에서 찾기 → 브라우저 열기 + 다운로드 폴더 지켜보기
+    const online = async () => {
+      const q = $('#hQ').value.trim();
+      if (!q) { app.showMsg('찾을 찬양 제목(또는 첫 가사)을 입력하세요.', 'info', 2000); $('#hQ').focus(); return; }
+      const r = await cmd('songOnlineSearch', { query: q });
+      if (!r.ok) return app.showMsg(r.error, 'error', 5000);
+      st.inboxInsert = replace;
+      showInbox(r.result);
+    };
+    $('#hOnline').onclick = online;
+    const setPath = (id, key) => { $(id).onchange = () => cmd('updateSettings', { patch: { [key]: $(id).value.trim() } }); };
+    setPath('#hUrl', 'songSearchUrl'); setPath('#hDl', 'songDownloadDir'); setPath('#hIn', 'songInboxDir');
+    const pick = (id, title) => async () => { const r = await cmd('pickFolder', { title }); if (r.ok && r.result) { $(id).value = r.result; $(id).onchange(); } };
+    $('#hDlPick').onclick = pick('#hDl', '다운로드 폴더 고르기');
+    $('#hInPick').onclick = pick('#hIn', '받은 찬양 PPT 를 모을 폴더 고르기');
+    const st0 = await cmd('songInboxStatus');
+    if (st0.ok) showInbox(st0.result);
     await folders();
     $('#hBg').value = s.hymnBackground || 'original';
     $('#hBg').onchange = e => cmd('updateSettings', { patch: { hymnBackground: e.target.value } });
@@ -534,6 +565,31 @@
     };
   };
 
+  // ---------------- 온라인에서 받은 찬양 PPT ----------------
+  function showInbox(s) {
+    const box = $('#hInbox');
+    if (!box) return;
+    box.hidden = !s.watching;
+    if (!s.watching) return;
+    const min = Math.max(1, Math.round((s.until - Date.now()) / 60000));
+    box.innerHTML = `⏳ <b>다운로드 폴더를 지켜보는 중</b> (${min}분 남음) — 브라우저에서 PPT 를 받으면 자동으로 큐시트에 들어갑니다.
+      <span class="muted">${esc(s.downloads)} → ${esc(s.target)}</span> <button id="hInboxStop">그만</button>`;
+    $('#hInboxStop').onclick = () => cmd('songInboxStop');
+  }
+
+  function onSongDownloaded(d) {
+    if (d.error) return app.showMsg('받은 PPT 를 넣지 못했습니다 — ' + d.error, 'error', 6000);
+    const title = d.number != null ? `${d.number}장 ${d.title}` : d.title;
+    const rep = st.inboxInsert != null && st.inboxInsert >= 0 && st.cue && st.cue.items[st.inboxInsert] ? st.inboxInsert : -1;
+    if (rep >= 0) {
+      Object.assign(st.cue.items[rep], { title, file: d.file, number: d.number });
+      st.inboxInsert = -1;
+      save(); forceEditor(); previewItem(rep);
+    } else addItem('hymn', { title, file: d.file, number: d.number, background: 'default' });
+    app.showMsg(`받은 PPT '${title}' 을(를) 큐시트에 넣었습니다.`, 'ok', 4000);
+    const q = $('#hQ'); if (q) q.dispatchEvent(new Event('input'));
+  }
+
   // ---------------- 단축키에서 부르는 기능 ----------------
   function move(d) {
     if (!st.cue || !st.cue.items.length) return;
@@ -543,7 +599,7 @@
   }
 
   window.BCCue = {
-    init, render, onCueNext, move, showSide,
+    init, render, onCueNext, move, showSide, onSongDownloaded, onSongInbox: showInbox,
     edit: () => { if (st.cue && st.sel >= 0) { showSide('cue'); forceEditor(); focusTitle(); } },
     onLive: () => render(),
     // 다른 곳(다른 창·외부 연동)에서 바뀐 큐시트는 다시 불러온다. 방금 내가 저장한 것은 제외

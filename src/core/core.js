@@ -16,6 +16,7 @@ const { analyzeEpub } = require('./commentary');
 const { findDirs, listBibles, metaFor } = require('./bethlehem');
 const { normalizeCue, newId, sampleItems } = require('./cues');
 const { Hymns } = require('./hymns');
+const { SongInbox, onlineSearchUrl } = require('./songinbox');
 const { BOOKS, getBook } = require('./books');
 const { formatTitle } = require('./db');
 
@@ -36,6 +37,7 @@ class WorshipCueCore extends EventEmitter {
     this.store = new BibleStore(dbFile);
     this.presentation = new Presentation(this.logger);
     this.hymns = new Hymns(this);
+    this.songInbox = new SongInbox(this);
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
@@ -284,6 +286,9 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.globalShortcuts === 'boolean') d.globalShortcuts = p.globalShortcuts;
       if (typeof p.cueAdvance === 'boolean') d.cueAdvance = p.cueAdvance;
       if (typeof p.hymnBackground === 'string') d.hymnBackground = p.hymnBackground.slice(0, 300);
+      if (typeof p.songSearchUrl === 'string') d.songSearchUrl = p.songSearchUrl.trim().slice(0, 500);
+      if (typeof p.songDownloadDir === 'string') d.songDownloadDir = p.songDownloadDir.trim().slice(0, 500);
+      if (typeof p.songInboxDir === 'string') d.songInboxDir = p.songInboxDir.trim().slice(0, 500);
       if (typeof p.reservedKeys === 'string') d.reservedKeys = p.reservedKeys.slice(0, 1000);
       if (p.output && typeof p.output.cursorHidden === 'boolean') d.output.cursorHidden = p.output.cursorHidden;
       if (p.output && typeof p.output.autoOnSend === 'boolean') d.output.autoOnSend = p.output.autoOnSend;
@@ -386,6 +391,16 @@ WorshipCueCore.prototype.commands = {
   removeHymnFolder(a) { this.hymns.removeFolder(String(a.path)); this.settingsChanged('settings'); return {}; },
   searchHymns(a) { return this.hymns.search(a.query, a.folder || null); },
   loadHymn(a) { return this.hymns.load(String(a.file)); },
+  setHymnFolderRender(a) { this.hymns.setFolderRender(String(a.path), a.render); this.settingsChanged('settings'); return {}; },
+  // ---- 온라인 찬양 PPT: 브라우저로 검색 페이지를 열고, 다운로드 폴더를 지켜본다 ----
+  songOnlineSearch(a) {
+    const url = onlineSearchUrl(this.settings.get().songSearchUrl, a.query);
+    if (!this.desktop || !this.desktop.openUrl) throw new Error('브라우저 열기는 데스크톱 프로그램에서만 됩니다.');
+    this.desktop.openUrl(url);
+    return { url, ...this.songInbox.arm() };
+  },
+  songInboxStatus() { return this.songInbox.status(); },
+  songInboxStop() { return this.songInbox.disarm(); },
   /** 폴더 고르기 창 (데스크톱에서만) */
   pickFolder(a) {
     if (!this.desktop || !this.desktop.pickFolder) throw new Error('폴더 고르기 창은 데스크톱 프로그램에서만 열 수 있습니다. 경로를 직접 입력하세요.');

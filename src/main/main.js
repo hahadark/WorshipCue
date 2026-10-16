@@ -181,6 +181,14 @@ if (!app.requestSingleInstanceLock()) {
         const r = await dialog.showOpenDialog(controlWin, { title, properties: ['openDirectory'] });
         return r.canceled || !r.filePaths.length ? '' : r.filePaths[0];
       },
+      downloadsDir: app.getPath('downloads'),
+      documentsDir: app.getPath('documents'),
+      // 찬양 PPT 온라인 검색: 기본 브라우저로 연다 (http/https 만)
+      openUrl: url => {
+        if (!/^https?:\/\//i.test(url)) throw new Error('열 수 없는 주소입니다.');
+        shell.openExternal(url);
+        return true;
+      },
       // 안내 페이지를 기본 브라우저로 연다 (허용한 주소만)
       openExternal: url => {
         if (!/^https:\/\/(www\.)?bethlehembible\.org\//.test(url)) throw new Error('열 수 없는 주소입니다.');
