@@ -8,8 +8,8 @@
 //   blank  빈 화면    { mode: 'black' | 'background' }
 // 공통: id, type, title, note(조작자 메모)
 
-const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank'];
-const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
+const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn'];
+const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가' };
 
 const str = (v, max = 20000) => String(v ?? '').slice(0, max);
 
@@ -21,12 +21,16 @@ function normalizeItem(x) {
   if (!x || !TYPES.includes(x.type)) throw new Error('알 수 없는 항목 종류입니다.');
   const it = { id: /^[a-z0-9]{4,40}$/i.test(x.id || '') ? x.id : newId(), type: x.type, title: str(x.title, 200).trim(), note: str(x.note, 1000) };
   switch (x.type) {
-    case 'bible': it.ref = str(x.ref, 200).trim(); it.versionId = str(x.versionId, 40); if (!it.ref) throw new Error('성경 항목에 장절을 입력하세요.'); break;
-    case 'song': it.lyrics = str(x.lyrics); it.showTitle = !!x.showTitle; it.credit = str(x.credit, 300); if (!it.title) throw new Error('찬양 제목을 입력하세요.'); break;
+    case 'bible': it.ref = str(x.ref, 200).trim(); it.versionId = str(x.versionId, 40); break;
+    case 'song': it.lyrics = str(x.lyrics); it.showTitle = !!x.showTitle; it.credit = str(x.credit, 300); break;
     case 'text': it.body = str(x.body); break;
-    case 'title': it.subtitle = str(x.subtitle, 300); if (!it.title) throw new Error('제목을 입력하세요.'); break;
-    case 'image': it.image = str(x.image, 300); if (!it.image) throw new Error('이미지를 올리세요.'); break;
+    case 'title': it.subtitle = str(x.subtitle, 300); break;
+    case 'image': it.image = str(x.image, 300); break;
     case 'blank': it.mode = x.mode === 'background' ? 'background' : 'black'; break;
+    case 'hymn':
+      it.file = str(x.file, 1000); it.number = Number.isFinite(+x.number) ? +x.number : null;
+      it.background = str(x.background, 300) || 'default'; // default(설정 기본값) | original | template | 이미지 주소
+      break;
   }
   if (!it.title) it.title = TYPE_NAMES[x.type];
   return it;

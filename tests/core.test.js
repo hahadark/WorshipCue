@@ -297,7 +297,8 @@ test('큐시트: 만들기·저장·복제·삭제와 항목 검증', () => {
   const saved = core.command('saveCue', { cue: c });
   assert.equal(saved.ok, true);
   assert.equal(saved.result.items.at(-1).type, 'song');
-  assert.equal(core.command('saveCue', { cue: { ...c, items: [{ type: 'bible', title: 'x', ref: '' }] } }).ok, false); // 장절 없음
+  assert.equal(core.command('saveCue', { cue: { ...c, items: [{ type: 'bible', title: 'x', ref: '' }] } }).ok, true); // 바로 고치기: 빈 장절도 저장 (미리보기 때 안내)
+  core.command('saveCue', { cue: saved.result }); // 원래대로
   assert.equal(core.command('saveCue', { cue: { ...c, items: [{ type: 'nope' }] } }).ok, false); // 알 수 없는 종류
   const dup = core.command('duplicateCue', { id: c.id });
   assert.notEqual(dup.result.id, c.id);
@@ -331,6 +332,31 @@ test('큐시트 송출: 항목 끝에서 다음 순서 요청, 제목·이미지
   // 본문 없는 성경 슬라이드는 거부, 이미지·빈 화면은 허용
   assert.equal(core.command('sendLive', { passage: { title: 'x' }, slides: [{ kind: 'bible', parts: [] }] }).ok, false);
   assert.equal(core.command('sendLive', { passage: { title: 'x' }, slides: [{ kind: 'image', image: '/media/a.png', parts: [] }, { kind: 'blank', parts: [] }] }).ok, true);
+  core.store.close();
+});
+
+test('찬송가 폴더: .pps 에서 배경·악보·교독문 글자 꺼내기', { skip: !fs.existsSync('D:/OneDrive - The Salvation Army Korea Territory/자료실/새찬송가및 구세군찬송가/새찬송가') && '찬송가 폴더 없음' }, () => {
+  const root = 'D:/OneDrive - The Salvation Army Korea Territory/자료실/새찬송가및 구세군찬송가/';
+  const core = newCore('hymn');
+  assert.equal(core.command('loadHymn', { file: root + '새찬송가/010 전능왕 오셔서.pps' }).ok, false); // 등록 안 한 폴더
+  const add = core.command('addHymnFolder', { path: root + '새찬송가' });
+  assert.equal(add.ok, true, add.error);
+  assert.ok(add.result.count > 600);
+  core.command('addHymnFolder', { path: root + '교독문' });
+  const byNum = core.command('searchHymns', { query: '10' }).result;
+  assert.equal(byNum[0].number, 10);
+  assert.equal(byNum[0].title, '전능왕 오셔서');
+  const byTitle = core.command('searchHymns', { query: '전능왕' }).result;
+  assert.ok(byTitle.some(h => h.number === 10));
+  const h = core.command('loadHymn', { file: byNum[0].file });
+  assert.equal(h.ok, true, h.error);
+  assert.match(h.result.background, /^\/hymn\/[0-9a-f]{16}\/bg\.png$/);
+  assert.equal(h.result.scores.length, 8);
+  assert.ok(fs.existsSync(core.hymns.cachePath(h.result.key, 'score-01.png')));
+  const gyo = core.command('searchHymns', { query: '시편 23' }).result.find(x => x.folder === '교독문');
+  const g = core.command('loadHymn', { file: gyo.file }).result;
+  assert.equal(g.scores.length, 0);
+  assert.match(g.texts[0].join(' '), /여호와는 나의 목자/);
   core.store.close();
 });
 

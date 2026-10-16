@@ -15,6 +15,7 @@ const { listThemes, THEMES, buildOne } = require('./themes');
 const { analyzeEpub } = require('./commentary');
 const { findDirs, listBibles, metaFor } = require('./bethlehem');
 const { normalizeCue, newId, sampleItems } = require('./cues');
+const { Hymns } = require('./hymns');
 const { BOOKS, getBook } = require('./books');
 const { formatTitle } = require('./db');
 
@@ -34,6 +35,7 @@ class WorshipCueCore extends EventEmitter {
     installSeedDb(dbFile, seedDb, this.logger);
     this.store = new BibleStore(dbFile);
     this.presentation = new Presentation(this.logger);
+    this.hymns = new Hymns(this);
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
@@ -134,6 +136,10 @@ class WorshipCueCore extends EventEmitter {
     if (!fn) return { ok: false, error: `알 수 없는 명령: ${cmd}` };
     try {
       const result = fn.call(this, args || {});
+      if (result && typeof result.then === 'function') {
+        return result.then(v => ({ ok: true, result: v, liveVersion: this.presentation.version }))
+          .catch(e => ({ ok: false, error: e.message, liveVersion: this.presentation.version }));
+      }
       if (result && result.ok === false) return result;
       return { ok: true, result, liveVersion: this.presentation.version };
     } catch (e) {
@@ -277,6 +283,7 @@ WorshipCueCore.prototype.commands = {
       if (['range', 'continuous'].includes(p.navMode)) d.navMode = p.navMode;
       if (typeof p.globalShortcuts === 'boolean') d.globalShortcuts = p.globalShortcuts;
       if (typeof p.cueAdvance === 'boolean') d.cueAdvance = p.cueAdvance;
+      if (typeof p.hymnBackground === 'string') d.hymnBackground = p.hymnBackground.slice(0, 300);
       if (typeof p.reservedKeys === 'string') d.reservedKeys = p.reservedKeys.slice(0, 1000);
       if (p.output && typeof p.output.cursorHidden === 'boolean') d.output.cursorHidden = p.output.cursorHidden;
       if (p.output && typeof p.output.autoOnSend === 'boolean') d.output.autoOnSend = p.output.autoOnSend;
@@ -372,6 +379,17 @@ WorshipCueCore.prototype.commands = {
     this.logger.info(`베들레헴에서 가져옴: ${results.filter(r => r.ok).map(r => r.file).join(', ')}`);
     this.settingsChanged('versions');
     return results;
+  },
+  // ---- 찬송가·교독문 폴더 ----
+  listHymnFolders() { return this.hymns.folders(); },
+  addHymnFolder(a) { const r = this.hymns.addFolder(a.path, a.name); this.settingsChanged('settings'); return r; },
+  removeHymnFolder(a) { this.hymns.removeFolder(String(a.path)); this.settingsChanged('settings'); return {}; },
+  searchHymns(a) { return this.hymns.search(a.query, a.folder || null); },
+  loadHymn(a) { return this.hymns.load(String(a.file)); },
+  /** 폴더 고르기 창 (데스크톱에서만) */
+  pickFolder(a) {
+    if (!this.desktop || !this.desktop.pickFolder) throw new Error('폴더 고르기 창은 데스크톱 프로그램에서만 열 수 있습니다. 경로를 직접 입력하세요.');
+    return this.desktop.pickFolder(a.title || '폴더 고르기');
   },
   // ---- 큐시트 (예배 순서) ----
   listCues() { return this.store.listCues(); },

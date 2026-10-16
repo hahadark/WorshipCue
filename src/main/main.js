@@ -176,6 +176,11 @@ if (!app.requestSingleInstanceLock()) {
     core.desktop = {
       listDisplays, status, setOutput,
       globalShortcutStatus: () => globalStatus,
+      // 폴더 고르기 창 (찬송가 폴더 등)
+      pickFolder: async title => {
+        const r = await dialog.showOpenDialog(controlWin, { title, properties: ['openDirectory'] });
+        return r.canceled || !r.filePaths.length ? '' : r.filePaths[0];
+      },
       // 안내 페이지를 기본 브라우저로 연다 (허용한 주소만)
       openExternal: url => {
         if (!/^https:\/\/(www\.)?bethlehembible\.org\//.test(url)) throw new Error('열 수 없는 주소입니다.');

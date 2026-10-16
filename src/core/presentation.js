@@ -10,7 +10,7 @@ const MAX_TEXT = 5000;
 function validateSlides(slides) {
   if (!Array.isArray(slides) || !slides.length) throw new Error('슬라이드가 없습니다.');
   if (slides.length > MAX_SLIDES) throw new Error('슬라이드가 너무 많습니다.');
-  const KINDS = ['bible', 'text', 'title', 'image', 'blank'];
+  const KINDS = ['bible', 'text', 'title', 'image', 'blank', 'score'];
   return slides.map((s, i) => {
     const kind = KINDS.includes(s && s.kind) ? s.kind : 'bible';
     // 제목 카드·이미지·빈 화면은 본문(parts)이 없어도 된다
@@ -20,6 +20,7 @@ function validateSlides(slides) {
       label: String(s.label || ''),
       subtitle: String(s.subtitle || '').slice(0, 300),
       image: String(s.image || '').slice(0, 300),
+      bg: String(s.bg || '').slice(0, 300), // 슬라이드 자체 배경 (찬송가 원래 배경·지정 이미지)
       mode: s.mode === 'background' ? 'background' : 'black',
       ref: String(s.ref || ''),
       title: String(s.title || ''), // 전체 범위 (장절 '전체 범위 고정' 표시용)

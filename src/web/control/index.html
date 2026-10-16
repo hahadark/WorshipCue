@@ -40,10 +40,11 @@
       </div>
       <div id="cueList" class="cue-list" tabindex="0"></div>
       <div class="cue-add" id="cueAdd">
-        <button data-add="bible">📖 성경</button><button data-add="song">🎵 찬양</button><button data-add="text">📢 공지</button>
-        <button data-add="title">🏷 제목</button><button data-add="image">🖼 이미지</button><button data-add="blank">⬛ 빈 화면</button>
+        <button data-add="hymn">🎼 찬송가</button><button data-add="bible">📖 성경</button><button data-add="song">🎵 찬양</button>
+        <button data-add="text">📢 공지</button><button data-add="title">🏷 제목</button><button data-add="image">🖼 이미지</button>
+        <button data-add="blank">⬛ 빈 화면</button>
       </div>
-      <div class="cue-help">클릭: 미리보기 · 더블클릭: 송출 · F2: 편집 · Ctrl+↑↓: 이전/다음 순서 · 끌어서 순서 바꾸기</div>
+      <div class="cue-help">클릭: 미리보기·가운데에서 바로 고치기 · 더블클릭: 송출 · F2: 제목 고치기 · Ctrl+↑↓: 이전/다음 순서 · 끌어서 순서 바꾸기</div>
     </div>
     <div id="booksPanel" class="books-panel" hidden>
       <input id="bookFilter" type="text" placeholder="책 찾기 (Ctrl+B)" autocomplete="off">
@@ -63,6 +64,8 @@
       <span id="resultTitle">검색 결과</span>
       <span id="resultInfo" class="muted"></span>
     </div>
+    <!-- 큐시트 순서를 고르면 여기서 바로 고친다 (입력하면 자동 저장) -->
+    <div id="cueEditor" class="cue-editor" hidden></div>
     <div id="results" class="results" tabindex="0"></div>
     <div id="cmView" class="results cm-view" hidden></div>
     <!-- 자주 쓰는 설정: 바꾸면 해당 출력 화면에 바로 반영 -->

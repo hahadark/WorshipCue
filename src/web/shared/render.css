@@ -45,3 +45,9 @@
 .bc-imgslide img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .bc-blank { position: absolute; inset: 0; }
 .bc-blank.bc-black { background: #000; }
+
+/* 찬송가 악보 · 슬라이드 배경 */
+.bc-score { position: absolute; inset: 0; }
+.bc-score-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bc-score-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.bc-slidebg { position: absolute; }

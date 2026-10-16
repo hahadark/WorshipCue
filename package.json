@@ -10,7 +10,7 @@
   "scripts": {
     "start": "electron .",
     "headless": "node src/headless.js",
-    "test": "node --test tests/",
+    "test": "node --test tests/core.test.js",
     "import": "node tools/import.js",
     "dist": "electron-builder --win",
     "dist:personal": "electron-builder --win --config build-personal.json",

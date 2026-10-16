@@ -92,6 +92,12 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
       if (p.startsWith('/outputs/')) return serveFile(res, path.join(webDir, 'output', p.slice(9)), webDir);
       if (p.startsWith('/shared/')) return serveFile(res, path.join(webDir, 'shared', p.slice(8)), webDir);
       if (p.startsWith('/media/')) return serveFile(res, path.join(core.mediaDir, path.basename(p)), core.mediaDir);
+      if (p.startsWith('/hymn/')) {
+        const [, , key, file] = p.split('/');
+        const fp = core.hymns.cachePath(key, file);
+        if (!fp) { res.writeHead(404); return res.end(); }
+        return serveFile(res, fp, core.hymns.cacheDir);
+      }
       if (p === '/api/state') return json(res, 200, core.getState());
       if (p === '/api/live') return json(res, 200, core.presentation.getLiveState());
       if (p === '/events') {
@@ -153,9 +159,10 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
         try { body = JSON.parse(buf.toString('utf8') || '{}'); } catch { return json(res, 400, { ok: false, error: 'JSON 형식 오류' }); }
         if (p === '/api/command') {
           const t0 = performance.now();
-          const r = core.command(String(body.cmd || ''), body.args || {});
-          r.ms = Math.round((performance.now() - t0) * 10) / 10;
-          return json(res, 200, r);
+          return Promise.resolve(core.command(String(body.cmd || ''), body.args || {})).then(r => {
+            r.ms = Math.round((performance.now() - t0) * 10) / 10;
+            json(res, 200, r);
+          });
         }
         if (p === '/api/ack') {
           const c = core.outputClients.get(Number(body.id));

@@ -113,13 +113,21 @@
     area.className = 'bc-area';
     const kind = slide.kind || 'bible';
     // 이미지·빈 화면: 화면 전체를 쓴다
-    if (kind === 'image' || kind === 'blank') {
+    if (kind === 'image' || kind === 'blank' || kind === 'score') {
       area.style.cssText = `left:0;top:0;width:${t.width}px;height:${t.height}px;`;
-      area.innerHTML = kind === 'image'
-        ? `<div class="bc-block bc-imgslide"><img alt="" src="${encodeURI(slide.image || '')}"></div>`
-        : `<div class="bc-block bc-blank ${slide.mode === 'background' ? '' : 'bc-black'}"></div>`;
+      if (kind === 'score') {
+        // 찬송가: (배경) + 투명 악보 그림을 화면에 맞춰 겹친다
+        const sbg = !slide.bg ? '' : slide.bg.startsWith('#') ? `<div class="bc-score-bg" style="background:${esc(slide.bg)}"></div>` : `<img class="bc-score-bg" alt="" src="${encodeURI(slide.bg)}">`;
+        area.innerHTML = `<div class="bc-block bc-score">${sbg}<img class="bc-score-img" alt="" src="${encodeURI(slide.image || '')}"></div>`;
+      } else {
+        area.innerHTML = kind === 'image'
+          ? `<div class="bc-block bc-imgslide"><img alt="" src="${encodeURI(slide.image || '')}"></div>`
+          : `<div class="bc-block bc-blank ${slide.mode === 'background' ? '' : 'bc-black'}"></div>`;
+      }
       return area;
     }
+    // 슬라이드 자체 배경 (예: 교독문의 원래 배경): 화면 전체에 깔고 그 위에 글자
+    const slideBg = slide.bg ? `<div class="bc-slidebg" style="left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:${slide.bg.startsWith('#') ? esc(slide.bg) : `#000 url('${encodeURI(slide.bg)}') center/cover no-repeat`}"></div>` : '';
     const justify = { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[t.valign] || 'center';
     area.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;justify-content:${justify};`;
     const b = t.box;
@@ -128,12 +136,12 @@
       ? `<div class="bc-version" style="font-size:${t.versionLabel.size}px;color:${t.versionLabel.color};text-align:${textAlign(t.align)}">${esc(versionName)}</div>` : '';
     if (kind === 'title') {
       // 제목 카드: 큰 제목 + 부제 (장절 표시 없음)
-      area.innerHTML = `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
+      area.innerHTML = slideBg + `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
         + `<div class="bc-text bc-titlecard" style="font-size:${t.font.size}px"><div class="bc-t1">${esc(slide.ref)}</div>`
         + (slide.subtitle ? `<div class="bc-t2" style="color:${t.reference.color}">${esc(slide.subtitle)}</div>` : '') + '</div></div>';
       return area;
     }
-    area.innerHTML = `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
+    area.innerHTML = slideBg + `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
       + refHtml(slide, t, 'top')
       + `<div class="bc-text" style="font-size:${t.font.size}px">${partsHtml(slide, t)}</div>`
       + refHtml(slide, t, 'bottom') + ver + '</div>'
@@ -142,7 +150,7 @@
   }
 
   function overflows(area) {
-    const block = area.firstChild;
+    const block = area.querySelector('.bc-block');
     return block.offsetHeight > area.clientHeight + 0.5 || block.scrollWidth > area.clientWidth + 0.5;
   }
 

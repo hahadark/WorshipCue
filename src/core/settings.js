@@ -64,7 +64,9 @@ function defaults() {
     history: [],
     guide: { bethlehemDone: false },
     activeCueId: '',     // 열어 둔 큐시트
-    cueAdvance: true,    // 항목의 마지막 슬라이드에서 F6 → 다음 순서로 // 처음 실행 안내를 다시 보지 않기
+    cueAdvance: true,    // 항목의 마지막 슬라이드에서 F6 → 다음 순서로
+    hymnFolders: [],     // [{ name, path }] 찬송가·교독문 .pps 폴더
+    hymnBackground: 'original', // 찬송가 배경 기본값: original(파일의 배경) | template(템플릿 배경) | 이미지 주소 // 처음 실행 안내를 다시 보지 않기
   };
 }
 

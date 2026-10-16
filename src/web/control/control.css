@@ -283,3 +283,24 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .results .srow.in-pv { border-left-color: var(--pv); background: #18221c; }
 .results .srow .vn { color: #9ec5ff; font-weight: 700; font-size: 12px; text-align: right; margin-right: 12px; }
 .results .srow .stext { white-space: pre-line; }
+
+/* ---------- 가운데 편집칸 (큐시트 순서 바로 고치기) ---------- */
+.cue-editor { border-bottom: 2px solid var(--pv); background: #161c22; padding: 8px 14px 10px; max-height: 46%; overflow: auto; }
+.ce-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.ce-head .grow { flex: 1; }
+.ce-head button { padding: 2px 9px; font-size: 12px; }
+.ce-ico { font-size: 18px; }
+.ce-form { grid-template-columns: 52px 1fr; gap: 6px 10px; }
+.ce-form textarea { width: 100%; font-family: inherit; line-height: 1.55; resize: vertical; }
+.ce-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ce-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.ce-thumb { height: 48px; border-radius: 4px; border: 1px solid var(--line); }
+.results .srow .sthumb { max-height: 90px; max-width: 100%; background: #fff; border-radius: 4px; }
+/* 찬송가 고르기 */
+.hymn-pick { display: flex; flex-direction: column; gap: 8px; }
+.hymn-list { height: 46vh; overflow: auto; border: 1px solid var(--line); border-radius: 6px; outline: none; }
+.hrow { display: flex; gap: 12px; padding: 6px 12px; cursor: pointer; border-bottom: 1px solid #1f242d; align-items: baseline; }
+.hrow:hover { background: #1e232c; }
+.hrow.sel { background: var(--sel); }
+.hrow .hno { color: #9ec5ff; font-weight: 700; min-width: 3em; text-align: right; }
+.hrow .htitle { flex: 1; font-size: 15px; }
