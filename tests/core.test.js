@@ -558,6 +558,25 @@ test('화면 지우기: 배경 숨김·로고 화면·오버레이 끄기/다시
   core.store.close();
 });
 
+test('찬양 부를 순서(편곡): 이름표 묶음, 줄임말(1·C·B), 없는 이름 알림, 라이브러리 기본 순서', () => {
+  global.window = global; window.BCRender = window.BCRender || {};
+  require('../src/web/shared/slides.js');
+  const SL = window.BCSlides;
+  const ch = SL.lyricsChunks('[1절]\n가\n\n나\n\n[2절]\n다\n\n[후렴]\n라\n\n[브릿지]\n마');
+  assert.deepEqual(SL.lyricGroups(ch).map(g => [g.label, g.chunks.length]), [['1절', 2], ['2절', 1], ['후렴', 1], ['브릿지', 1]]);
+  const txt = r => r.chunks.map(c => c.text).join('');
+  assert.equal(txt(SL.arrange(ch, '1절 후렴 2절 후렴 후렴')), '가나라다라라');
+  assert.equal(txt(SL.arrange(ch, '1 C 2 C B C')), '가나라다라마라');
+  assert.deepEqual(SL.arrange(ch, '1 x 후렴').missing, ['x']);
+  assert.equal(txt(SL.arrange(ch, '')), '가나다라마');
+  const core = newCore('arr');
+  const s = core.command('saveSong', { song: { title: '편곡', lyrics: '[1절]\n가', arrangement: '1 1' } }).result;
+  assert.equal(core.command('getSong', { id: s.id }).result.arrangement, '1 1');
+  const c = core.command('saveCue', { cue: { name: 'a', items: [{ type: 'song', title: 'x', lyrics: 'a', order: '1 C' }] } });
+  assert.equal(c.result.items[0].order, '1 C');
+  core.store.close();
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

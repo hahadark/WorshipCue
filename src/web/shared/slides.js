@@ -143,10 +143,53 @@
     }).filter(c => c.text);
   }
 
+  /**
+   * 가사 묶음: [1절] [후렴] 같은 이름표부터 다음 이름표 전까지를 한 묶음으로
+   * → [{ label, chunks: [...] }]
+   */
+  function lyricGroups(chunks) {
+    const groups = [];
+    for (const c of chunks) {
+      if (c.label || !groups.length) groups.push({ label: c.label, chunks: [c] });
+      else groups[groups.length - 1].chunks.push({ ...c, label: c.label || '' });
+    }
+    return groups;
+  }
+  const normLabel = s => String(s || '').replace(/[\s\[\]()]/g, '').toLowerCase();
+  /** 부를 순서의 낱말 → 이름표 (1 → 1절, C·후 → 후렴, B·브 → 브릿지, P·전 → 전주 …) */
+  function aliasOf(tok) {
+    const t = normLabel(tok);
+    if (/^\d+$/.test(t)) return [t + '절', t];
+    if (/^(c|ch|chorus|후|후렴)$/.test(t)) return ['후렴', 'chorus', 'c'];
+    if (/^(b|br|bridge|브|브릿지)$/.test(t)) return ['브릿지', '브리지', 'bridge', 'b'];
+    if (/^(p|pre|prechorus|전|전주)$/.test(t)) return ['전주', 'prechorus', 'pre'];
+    if (/^(e|end|ending|엔|엔딩|마무리)$/.test(t)) return ['엔딩', '마무리', 'ending', 'end'];
+    if (/^(i|intro|인트로)$/.test(t)) return ['인트로', 'intro'];
+    if (/^(t|tag|태그)$/.test(t)) return ['태그', 'tag'];
+    return [t];
+  }
+  /**
+   * 부를 순서(편곡): "1절 후렴 2절 후렴 후렴" (또는 "1 C 2 C C") 대로 가사 묶음을 늘어놓는다
+   * → { chunks, missing: [찾지 못한 낱말] }. 순서가 비면 가사 순서 그대로
+   */
+  function arrange(chunks, order) {
+    const toks = String(order || '').split(/[\s,·>→/|]+/).filter(Boolean);
+    if (!toks.length) return { chunks, missing: [] };
+    const groups = lyricGroups(chunks);
+    const out = [];
+    const missing = [];
+    for (const tok of toks) {
+      const names = aliasOf(tok);
+      const g = groups.find(x => names.includes(normLabel(x.label))) || groups.find(x => x.label && names.some(n => normLabel(x.label).startsWith(n)));
+      if (g) out.push(...g.chunks); else missing.push(tok);
+    }
+    return { chunks: out.length ? out : chunks, missing };
+  }
+
   /** 공지 글: '---' 만 있는 줄로 슬라이드 구분 */
   function textChunks(body) {
     return String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/).map(t => ({ label: '', text: t.trim() })).filter(c => c.text);
   }
 
-  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks };
+  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, lyricGroups, arrange };
 })(window);

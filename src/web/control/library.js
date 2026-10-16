@@ -105,18 +105,19 @@
     addToCue('song', { songId: id, title: r.result.title, lyrics: r.result.lyrics }, r.result.title);
   }
   async function editSong(id) {
-    let s = { title: '', lyrics: '', credit: '', tags: '' };
+    let s = { title: '', lyrics: '', credit: '', tags: '', arrangement: '' };
     if (id) { const r = await cmd('getSong', { id }); if (r.ok) s = r.result; }
     app.openModal(id ? '찬양 고치기' : '새 찬양', `<div class="form">
       <label>제목</label><input type="text" id="sgTitle" value="${esc(s.title)}">
       <label>가사</label><textarea id="sgLyrics" rows="14" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(s.lyrics)}</textarea>
       <span></span><div class="note">빈 줄 = 다음 슬라이드 · [1절] [후렴] 같은 줄은 슬라이드 이름 (화면에는 안 나옴). 고치면 이 찬양을 쓰는 모든 큐시트에 반영됩니다.</div>
+      <label>부를 순서</label><input type="text" id="sgArr" value="${esc(s.arrangement || '')}" placeholder="비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴 후렴">
       <label>저작권·출처</label><input type="text" id="sgCredit" value="${esc(s.credit)}" placeholder="예: 작사·작곡 / CCLI 번호">
       <label>분류</label><input type="text" id="sgTags" value="${esc(s.tags)}" placeholder="예: 경배, 성탄, 감사">
       <span></span><div class="row-flex"><button id="sgSave" class="primary">저장</button>${id ? '<button id="sgAdd">저장하고 큐시트에 넣기</button><button id="sgDel">삭제</button>' : '<button id="sgAdd">저장하고 큐시트에 넣기</button>'}</div>
     </div>`);
     const save = async () => {
-      const r = await cmd('saveSong', { song: { id: s.id, title: $('#sgTitle').value, lyrics: $('#sgLyrics').value, credit: $('#sgCredit').value, tags: $('#sgTags').value } });
+      const r = await cmd('saveSong', { song: { id: s.id, title: $('#sgTitle').value, lyrics: $('#sgLyrics').value, credit: $('#sgCredit').value, tags: $('#sgTags').value, arrangement: $('#sgArr').value } });
       if (!r.ok) { app.showMsg(r.error, 'error'); return null; }
       return r.result;
     };

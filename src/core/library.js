@@ -58,6 +58,9 @@ class Library {
       tags TEXT NOT NULL DEFAULT '',
       updated_at TEXT
     );`);
+    // 부를 순서(편곡) 칸: 예전 DB 에는 없으면 추가
+    const cols = this.db.prepare('PRAGMA table_info(Songs)').all().map(c => c.name);
+    if (!cols.includes('arrangement')) this.db.exec("ALTER TABLE Songs ADD COLUMN arrangement TEXT NOT NULL DEFAULT ''");
   }
 
   // ---------------- 찬양 ----------------
@@ -78,14 +81,14 @@ class Library {
 
   getSong(id) {
     const r = this.db.prepare('SELECT * FROM Songs WHERE id = ?').get(String(id));
-    return r ? { id: r.id, title: r.title, lyrics: r.lyrics, credit: r.credit, tags: r.tags, updatedAt: r.updated_at } : null;
+    return r ? { id: r.id, title: r.title, lyrics: r.lyrics, credit: r.credit, tags: r.tags, arrangement: r.arrangement || '', updatedAt: r.updated_at } : null;
   }
 
   saveSong(s) {
     if (!s || !String(s.title || '').trim()) throw new Error('찬양 제목을 입력하세요.');
     const id = /^[a-z0-9]{4,40}$/i.test(s.id || '') ? s.id : newId('s');
-    this.db.prepare('INSERT OR REPLACE INTO Songs (id, title, lyrics, credit, tags, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(id, str(s.title, 200).trim(), str(s.lyrics, 50000), str(s.credit, 300), str(s.tags, 300), new Date().toISOString());
+    this.db.prepare('INSERT OR REPLACE INTO Songs (id, title, lyrics, credit, tags, arrangement, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(id, str(s.title, 200).trim(), str(s.lyrics, 50000), str(s.credit, 300), str(s.tags, 300), str(s.arrangement, 300), new Date().toISOString());
     return this.getSong(id);
   }
 

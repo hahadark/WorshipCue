@@ -177,7 +177,7 @@
         slides.forEach(s => { s.bg = bg; });
       }
     }
-    else if (it.type === 'song') slides = SL.buildText({ title: it.title, showTitle: it.showTitle, chunks: SL.lyricsChunks(it.lyrics) }, opts);
+    else if (it.type === 'song') slides = SL.buildText({ title: it.title, showTitle: it.showTitle, chunks: SL.arrange(SL.lyricsChunks(it.lyrics), songOrder(it)).chunks }, opts);
     else if (it.type === 'text') slides = SL.buildText({ title: it.title, showTitle: true, chunks: SL.textChunks(it.body) }, opts);
     else if (it.type === 'image' && it.image) slides = [{ kind: 'image', image: it.image, ref: it.title, label: '이미지', parts: [] }];
     else if (it.type === 'video' && it.file) slides = [{ kind: 'video', image: it.file, ref: it.title, label: '영상', parts: [], caption: '', video: { volume: it.volume ?? 1, sound: it.sound !== false, loop: !!it.loop, endAction: it.endAction || 'hold' } }];
@@ -187,6 +187,13 @@
     // 순서별 배경 이미지 (글자 슬라이드)
     if (it.bg) slides.forEach(s => { if (s.kind === 'text' || s.kind === 'title') s.bg = it.bg; });
     return slides;
+  }
+
+  /** 부를 순서: 이 순서에 적은 것 → (라이브러리 찬양이면) 라이브러리의 기본 순서 */
+  function songOrder(it) {
+    if (it.order && it.order.trim()) return it.order;
+    const s = it.songId && st.songs.get(it.songId);
+    return s ? s.arrangement || '' : '';
   }
 
   // ---------------- 찬양 라이브러리 연결 ----------------
@@ -304,7 +311,9 @@
         <label>소리 크기</label><div class="ce-row"><input type="range" data-k="volume" min="0" max="1" step="0.05" value="${it.volume ?? 1}" style="flex:1"><label class="tc-toggle"><input type="checkbox" data-k="loop" ${it.loop ? 'checked' : ''}> 반복</label><label class="tc-toggle"><input type="checkbox" data-k="fadeOnLeave" ${it.fadeOnLeave !== false ? 'checked' : ''}> 다른 화면을 송출하면 페이드아웃</label></div>`,
       song: `${it.songId ? `<label>라이브러리</label><div class="ce-row note">📚 라이브러리 찬양과 연결됨 — 가사를 고치면 이 찬양을 쓰는 모든 큐시트에 반영 <button data-act="unlink">연결 끊기</button></div>` : `<label>라이브러리</label><div class="ce-row note"><button data-act="tolib">📚 라이브러리에 저장</button> 저장하면 다음 주에도 검색해서 바로 넣을 수 있습니다</div>`}
         <label>가사</label><textarea data-k="lyrics" rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
-        <span></span><div class="ce-row note"><label class="tc-toggle"><input type="checkbox" data-k="showTitle" ${it.showTitle ? 'checked' : ''}> 화면에 제목 표시</label> · 빈 줄 = 다음 슬라이드 · [1절] 줄은 슬라이드 이름</div>`,
+        <span></span><div class="ce-row note"><label class="tc-toggle"><input type="checkbox" data-k="showTitle" ${it.showTitle ? 'checked' : ''}> 화면에 제목 표시</label> · 빈 줄 = 다음 슬라이드 · [1절] 줄은 슬라이드 이름</div>
+        <label>부를 순서</label><div class="ce-col"><input type="text" data-k="order" value="${esc(it.order || '')}" placeholder="${esc(songOrder({ ...it, order: '' }) || '비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴 후렴 (또는 1 C 2 C C)')}">
+          <div class="ce-row ce-chips">${SL.lyricGroups(SL.lyricsChunks(it.lyrics)).filter(g => g.label).map(g => `<button type="button" data-chip="${esc(g.label)}" title="부를 순서 끝에 넣기">${esc(g.label)}</button>`).join('')}<button type="button" data-chip="" title="부를 순서 지우기 (가사 순서대로)">지우기</button><span id="ceOrderMsg" class="note"></span></div></div>`,
       text: `<label>내용</label><textarea data-k="body" rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="note">'---' 줄 = 다음 슬라이드</div>`,
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">`,
       image: `<label>이미지</label><div class="ce-row">${it.image ? thumbTag(it.image) : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,
@@ -323,10 +332,17 @@
         <label>메모</label><input type="text" data-k="note" value="${esc(it.note || '')}" placeholder="조작자만 보는 메모 (예: 설교 후 바로)">
       </div>`;
     if (it.type === 'bible') checkRef(it);
+    if (it.type === 'song') showOrderMsg(it);
   }
 
   /** 편집칸 썸네일 (영상이면 첫 장면) */
   const thumbTag = url => (window.BCRender.isVideo(url) ? `<video class="ce-thumb" muted preload="metadata" src="${esc(url)}#t=1"></video>` : `<img class="ce-thumb" src="${esc(url)}" alt="">`);
+  function showOrderMsg(it) {
+    const m = $('#ceOrderMsg');
+    if (!m) return;
+    const r = SL.arrange(SL.lyricsChunks(it.lyrics), songOrder(it));
+    m.innerHTML = r.missing.length ? `<span class="err-text">가사에 없는 이름: ${esc(r.missing.join(', '))}</span>` : songOrder(it) ? `<span class="ok-text">✓ 슬라이드 ${r.chunks.length}장</span>` : '';
+  }
   function tplSelect(k, label, val) {
     const ts = app.state.settings.templates;
     return `<select data-k="${k}" title="이 순서에만 쓸 ${label} 템플릿"><option value="">${label}: 기본 템플릿</option>${ts.map(t => `<option value="${esc(t.id)}" ${t.id === val ? 'selected' : ''}>${label}: ${esc(t.name)}</option>`).join('')}</select>`;
@@ -351,6 +367,7 @@
     const k = el.dataset.k;
     it[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? Number(el.value) : el.value;
     if (it.type === 'song' && it.songId && k === 'lyrics') saveLinkedSong(it);
+    if (it.type === 'song' && k === 'order') showOrderMsg(it);
     if (it.type === 'audio' && k === 'volume' && window.BCLib) window.BCLib.audio.setVolumeIf(it.file, it.volume);
     if (k === 'background' || k === 'mode' || k === 'versionId' || k === 'showTitle') { /* 바로 */ }
     $('#cueSaved').textContent = '저장 중…';
@@ -365,6 +382,15 @@
   $('#cueEditor').addEventListener('input', e => { if (e.target.dataset.k) editChanged(e.target); });
   $('#cueEditor').addEventListener('change', e => { if (e.target.dataset.k && (e.target.tagName === 'SELECT' || e.target.type === 'checkbox')) editChanged(e.target); });
   $('#cueEditor').addEventListener('keydown', e => { if (e.key === 'Escape' && e.target.matches('input, textarea')) { e.target.blur(); } });
+  // 부를 순서 단추: 이름표를 순서 끝에 붙이기 / 지우기
+  $('#cueEditor').addEventListener('click', e => {
+    const c = e.target.closest('[data-chip]');
+    if (!c) return;
+    const inp = $('#cueEditor [data-k=order]');
+    if (!inp) return;
+    inp.value = c.dataset.chip ? (inp.value.trim() + ' ' + c.dataset.chip).trim() : '';
+    editChanged(inp);
+  });
   $('#cueEditor').addEventListener('click', async e => {
     const b = e.target.closest('button[data-act]');
     if (!b) return;
@@ -376,6 +402,7 @@
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;
       case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); forceEditor(); break; }
       case 'del': removeItem(i); break;
+      case 'chip': break;
       case 'videopick': if (window.BCLib) window.BCLib.pickVideo(url => { it.file = url; if (!it.title || it.title === TYPE.video) it.title = fileName(url).replace(/\.[^.]+$/, ''); save(); forceEditor(); render(); previewItem(i); }); break;
       case 'audiopick': if (window.BCLib) window.BCLib.pickAudio(f => { it.file = f.url; if (!it.title || it.title === TYPE.audio) it.title = f.name; save(); forceEditor(); render(); }); break;
       case 'audioplay': playAudio(it); break;
