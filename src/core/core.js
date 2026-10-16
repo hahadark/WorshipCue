@@ -292,6 +292,9 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.songDownloadDir === 'string') d.songDownloadDir = p.songDownloadDir.trim().slice(0, 500);
       if (typeof p.songInboxDir === 'string') d.songInboxDir = p.songInboxDir.trim().slice(0, 500);
       if (typeof p.bethlehemDir === 'string') d.bethlehemDir = p.bethlehemDir.trim().slice(0, 500);
+      if (typeof p.previewMode === 'boolean') d.previewMode = p.previewMode;
+      if (typeof p.dockLocked === 'boolean') d.dockLocked = p.dockLocked;
+      if (typeof p.dockLayout === 'string' && p.dockLayout.length <= 300000) d.dockLayout = p.dockLayout;
       if (typeof p.reservedKeys === 'string') d.reservedKeys = p.reservedKeys.slice(0, 1000);
       if (p.output && typeof p.output.cursorHidden === 'boolean') d.output.cursorHidden = p.output.cursorHidden;
       if (p.output && typeof p.output.autoOnSend === 'boolean') d.output.autoOnSend = p.output.autoOnSend;
@@ -404,6 +407,13 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  /** 조작 화면 독 배치 저장 (다른 화면에 알릴 필요 없음) */
+  saveDockLayout(a) {
+    const s = String(a.layout || '');
+    if (s.length > 300000) throw new Error('배치 정보가 너무 큽니다.');
+    this.settings.update(d => { d.dockLayout = s; });
+    return {};
+  },
   songInboxStop() { return this.songInbox.disarm(); },
   /** 폴더 고르기 창 (데스크톱에서만) */
   pickFolder(a) {

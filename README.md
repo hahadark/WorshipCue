@@ -21,6 +21,12 @@
 |---|---|
 | ![가사](docs/images/out-song.png) | ![성경](docs/images/out-bible.png) |
 
+## 화면 배치 (독) · 미리보기 끄기
+
+- 조작 화면의 패널(큐시트·성경 책 / 본문·편집 / 빠른 설정 / 미리보기 / LIVE)을 **OBS 독처럼** 탭을 끌어 원하는 곳에 붙이고, 탭으로 합치고, ⧉ 로 띄울 수 있습니다. 경계선을 끌어 크기 조절, 배치는 자동 저장됩니다.
+- 상단 `화면 배치` 에서 패널 보이기·숨기기, **배치 잠그기**, 기본 배치로 되돌리기.
+- 상단 `미리보기 켜짐` 을 누르면 **미리보기 끔 · 바로 송출** (OBS 스튜디오 모드 끄기와 같음): 미리보기 패널이 사라지고, 클릭한 순서·본문·슬라이드가 바로 송출됩니다. 다시 누르면 원래대로.
+
 ## 큐시트 항목
 
 | 종류 | 입력 | 화면 |
@@ -141,6 +147,10 @@ npm run dist       # Windows 설치판·휴대판 (dist/)
 | 항목 종류별 표시 | `src/web/shared/render.js` (text · title · image · blank) |
 
 외부 연동 명령: `POST http://127.0.0.1:37528/api/command` (헤더 `X-WorshipCue: 1`) — `listCues`, `getCue`, `saveCue`, `nextSlide`, `toggleLive` …
+
+## 함께 쓰는 공개 라이브러리
+
+- [dockview-core](https://github.com/dockview/dockview) 8.4.0 — MIT (`src/web/shared/vendor/dockview-core.LICENCE.md`)
 
 ## 알림
 

@@ -21,14 +21,18 @@
     <option value="text">본문</option>
   </select>
   <select id="version" title="성경 번역본"></select>
+  <button id="btnStudio" class="studio on" title="미리보기를 끄면 클릭한 본문·순서가 바로 송출됩니다 (OBS 스튜디오 모드 끄기와 같음)">미리보기 켜짐</button>
+  <button id="btnLayout" title="패널 배치: 보이기·숨기기 · 잠그기 · 기본 배치">화면 배치</button>
   <button id="btnHistory" title="송출 기록 (Ctrl+H)">기록</button>
   <button id="btnSettings" title="설정">설정</button>
 </header>
 <div id="msg" class="msg" hidden></div>
 <div id="conn" class="conn" hidden>프로그램 코어와 연결이 끊겼습니다. 다시 연결하는 중…</div>
 
-<main class="grid">
-  <aside class="books">
+<!-- 독(dock): 아래 패널들을 끌어서 원하는 대로 배치 (dock.js) -->
+<main id="dock" class="dock"></main>
+<div id="dockPark" class="dock-park">
+  <aside id="panelCue" class="books">
     <div class="view-tabs side-tabs" id="sideTabs">
       <button data-s="cue" class="on">큐시트 (예배 순서)</button><button data-s="books">성경 책</button>
     </div>
@@ -56,7 +60,7 @@
     </div>
   </aside>
 
-  <section class="center">
+  <section id="panelMain" class="center">
     <div class="center-head">
       <span class="view-tabs" id="centerTabs">
         <button data-c="text" class="on">본문</button><button data-c="cm" title="미리보기 중인 본문의 주석 (조작 화면에만 보이고 송출되지 않습니다)">주석 <span id="cmCount"></span></button>
@@ -68,6 +72,7 @@
     <div id="cueEditor" class="cue-editor" hidden></div>
     <div id="results" class="results" tabindex="0"></div>
     <div id="cmView" class="results cm-view" hidden></div>
+  </section>
     <!-- 자주 쓰는 설정: 바꾸면 해당 출력 화면에 바로 반영 -->
     <div id="quick" class="quick">
       <div class="quick-head">
@@ -97,10 +102,8 @@
         <div id="qControls"></div>
       </div>
     </div>
-  </section>
 
-  <section class="right">
-    <div class="pane preview">
+    <div id="panelPreview" class="pane preview">
       <div class="pane-head">
         <b class="badge pv">미리보기</b>
         <span id="pvInfo" class="pane-info"></span>
@@ -117,7 +120,7 @@
       </div>
       <div id="pvSlides" class="thumbs"></div>
     </div>
-    <div class="pane live">
+    <div id="panelLive" class="pane live">
       <div class="pane-head">
         <b class="badge onair">LIVE</b>
         <span id="lvInfo" class="pane-info"></span>
@@ -133,8 +136,7 @@
       </div>
       <div id="lvSlides" class="thumbs" title="더블클릭하면 해당 슬라이드를 바로 송출합니다"></div>
     </div>
-  </section>
-</main>
+</div>
 
 <footer class="bottom">
   <button id="bPrev" class="big">◀ 이전 <kbd>F5</kbd></button>
@@ -154,11 +156,13 @@
   </div>
 </div>
 
+<script src="/shared/vendor/dockview-core.min.js"></script>
 <script src="/shared/render.js"></script>
 <script src="/shared/slides.js"></script>
 <script src="/control/tplcontrols.js"></script>
 <script src="/control/control.js"></script>
 <script src="/control/settings.js"></script>
 <script src="/control/cue.js"></script>
+<script src="/control/dock.js"></script>
 </body>
 </html>

@@ -78,6 +78,7 @@
       if (d.what === 'commentaries') { cm.key = ''; updateCommentary(); }
       if (d.what === 'templates' || d.what === 'settings') { rebuildPreview(); renderLive(); }
       syncControls();
+      renderStudio();
       renderQuick(false);
       if (window.BCSettings) window.BCSettings.onState(d.what);
     });
@@ -100,6 +101,8 @@
 
   // ---------------- 초기화 ----------------
   async function init2() {
+    if (window.BCDock) window.BCDock.init(app);
+    renderStudio();
     const b = await cmd('getBooks');
     app.books = b.ok ? b.result : [];
     fillVersions();
@@ -263,6 +266,7 @@
     else markResults();
     const r = await cmd('setPreview', { passage: passageMeta(passage, query), slides, index: app.preview.index });
     if (!r.ok) showMsg(r.error, 'error');
+    else await directSend();
   }
   app.loadPassage = loadPassage;
 
@@ -275,8 +279,37 @@
     renderPreview();
     const r = await cmd('setPreview', { passage: passageMeta(pseudo, query), slides, index: app.preview.index });
     if (!r.ok) showMsg(r.error, 'error');
+    else await directSend();
   }
   app.loadSlides = loadSlides;
+
+  // ---------------- 미리보기 끔 (바로 송출) ----------------
+  // OBS 의 스튜디오 모드 끄기처럼, 사용자가 클릭·키로 고른 본문·순서·슬라이드를 바로 송출한다.
+  // (프로그램을 켤 때 등 사용자가 조작하지 않은 미리보기는 송출하지 않는다)
+  let lastUserAct = 0;
+  ['pointerdown', 'keydown'].forEach(t => window.addEventListener(t, () => { lastUserAct = Date.now(); }, true));
+  const directMode = () => !!(app.state && app.state.settings.previewMode === false);
+  async function directSend() {
+    if (directMode() && Date.now() - lastUserAct < 2500) await sendPreview();
+  }
+  function renderStudio() {
+    const b = $('#btnStudio');
+    if (!b || !app.state) return;
+    const on = !directMode();
+    b.textContent = on ? '미리보기 켜짐' : '미리보기 끔 · 바로 송출';
+    b.classList.toggle('on', on);
+    b.classList.toggle('off', !on);
+  }
+  app.renderStudio = renderStudio;
+  $('#btnStudio').onclick = async () => {
+    const next = directMode(); // 지금 끔이면 켠다
+    const r = await cmd('updateSettings', { patch: { previewMode: next } });
+    if (!r.ok) return showMsg(r.error, 'error');
+    if (window.BCDock) { if (next) window.BCDock.show('preview'); else window.BCDock.hide('preview'); }
+    renderStudio();
+    showMsg(next ? '미리보기를 켰습니다. 고른 본문은 미리보기에 놓이고 F9 로 송출합니다.' : '미리보기를 껐습니다. 이제 클릭한 본문·순서·슬라이드가 바로 송출됩니다.', next ? 'ok' : 'info', 3500);
+  };
+  $('#btnLayout').onclick = () => window.BCDock && window.BCDock.openMenu();
   app.splitOpts = () => splitOpts();
 
   /** 템플릿·분할 설정이 바뀌면 미리보기를 다시 분할 (Live 는 그대로) */
@@ -308,7 +341,7 @@
     app.preview.index = ni;
     renderPreview();
     markResults();
-    cmd('setPreviewIndex', { index: ni });
+    cmd('setPreviewIndex', { index: ni }).then(r => { if (r.ok) directSend(); });
   }
 
   function slideSnippet(s) {
@@ -400,7 +433,8 @@
     vt.dataset.pane === 'pv' ? renderPreview() : renderLive();
   }));
 
-  new ResizeObserver(() => { renderPreview(); renderLive(); }).observe($('.right'));
+  const ro = new ResizeObserver(() => { renderPreview(); renderLive(); });
+  ro.observe($('#panelPreview')); ro.observe($('#panelLive'));
 
   // ---------------- 주석 (조작 화면 참고용) ----------------
   const cm = { tab: 'text', key: '', items: [], timer: null };

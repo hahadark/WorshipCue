@@ -311,3 +311,33 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .hymn-list .empty button { margin-top: 10px; font-size: 15px; padding: 8px 14px; }
 .ce-col { display: flex; flex-direction: column; gap: 4px; }
 .ce-col textarea { width: 100%; }
+
+/* ---------------- 독(dock) 배치 ---------------- */
+.dock { flex: 1; min-height: 0; position: relative; }
+.dock-park { display: none; }
+.wc-dock {
+  --dv-background-color: var(--bg);
+  --dv-group-view-background-color: var(--bg);
+  --dv-tabs-and-actions-container-background-color: var(--panel);
+  --dv-activegroup-visiblepanel-tab-background-color: #2a3242;
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--panel);
+  --dv-inactivegroup-visiblepanel-tab-background-color: #222833;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--panel);
+  --dv-activegroup-visiblepanel-tab-color: #fff;
+  --dv-inactivegroup-visiblepanel-tab-color: #c8ccd4;
+  --dv-separator-border: var(--line);
+  --dv-paneview-header-border-color: var(--line);
+  --dv-tabs-and-actions-container-height: 30px;
+  --dv-tabs-and-actions-container-font-size: 13px;
+}
+.dock-body { height: 100%; width: 100%; overflow: auto; display: flex; flex-direction: column; background: var(--bg); }
+.dock-body > .books, .dock-body > .center { flex: 1; min-height: 0; border-right: 0; }
+.dock-body > .quick { flex: 1; max-height: none; border-top: 0; }
+.dock-body > .pane { border-bottom: 0; }
+.dock-body .screen { width: 100%; }
+.dock-actions { display: flex; align-items: center; height: 100%; padding: 0 4px; }
+.dock-actions button { padding: 0 7px; font-size: 13px; line-height: 20px; }
+.dock-locked .dock-actions { display: none; }
+.dock-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.studio.on { }
+.studio.off { background: #6b4b10; border-color: #c9922a; color: #fff; font-weight: 700; }
