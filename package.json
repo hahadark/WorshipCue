@@ -1,0 +1,61 @@
+{
+  "name": "worshipcue",
+  "productName": "WorshipCue",
+  "version": "1.0.0",
+  "description": "교회 예배 순서(큐시트) 통합 송출 프로그램 — 성경·찬양 가사·공지·제목·이미지",
+  "main": "src/main/main.js",
+  "author": "WorshipCue",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "headless": "node src/headless.js",
+    "test": "node --test tests/",
+    "import": "node tools/import.js",
+    "dist": "electron-builder --win",
+    "dist:personal": "electron-builder --win --config build-personal.json",
+    "import:bethlehem": "node tools/import-bethlehem.js",
+    "import:commentary": "node tools/import-commentary.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devDependencies": {
+    "electron": "44.7.2",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "org.worshipcue.app",
+    "productName": "WorshipCue",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "data/bible.db",
+        "to": "bible.db"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "WorshipCue",
+      "artifactName": "WorshipCue-${version}-Setup.${ext}",
+      "include": "build/installer.nsh"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "portable": {
+      "artifactName": "WorshipCue-${version}-Portable.${ext}"
+    }
+  }
+}

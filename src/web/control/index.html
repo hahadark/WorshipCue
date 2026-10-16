@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WorshipCue</title>
+<link rel="stylesheet" href="/shared/render.css">
+<link rel="stylesheet" href="/control/control.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">WorshipCue</div>
+  <div class="search-wrap">
+    <input id="q" type="text" autocomplete="off" spellcheck="false"
+      placeholder="장절 또는 단어 검색 — 예: 요3:16 · 행5:27-32 · 롬 8 · 사랑   (Ctrl+K)">
+    <div id="suggest" class="suggest" hidden></div>
+  </div>
+  <select id="mode" title="검색 방식">
+    <option value="auto">자동</option>
+    <option value="reference">장절</option>
+    <option value="text">본문</option>
+  </select>
+  <select id="version" title="성경 번역본"></select>
+  <button id="btnHistory" title="송출 기록 (Ctrl+H)">기록</button>
+  <button id="btnSettings" title="설정">설정</button>
+</header>
+<div id="msg" class="msg" hidden></div>
+<div id="conn" class="conn" hidden>프로그램 코어와 연결이 끊겼습니다. 다시 연결하는 중…</div>
+
+<main class="grid">
+  <aside class="books">
+    <div class="view-tabs side-tabs" id="sideTabs">
+      <button data-s="cue" class="on">큐시트 (예배 순서)</button><button data-s="books">성경 책</button>
+    </div>
+    <!-- 큐시트: 예배 순서를 미리 만들어 두고 차례로 송출 -->
+    <div id="cuePanel" class="cue-panel">
+      <div class="cue-head">
+        <select id="cueSel" title="큐시트 고르기"></select>
+        <button id="cueMenu" title="새로 만들기·이름 변경·복제·내보내기·가져오기·삭제">⋯</button>
+      </div>
+      <div id="cueList" class="cue-list" tabindex="0"></div>
+      <div class="cue-add" id="cueAdd">
+        <button data-add="bible">📖 성경</button><button data-add="song">🎵 찬양</button><button data-add="text">📢 공지</button>
+        <button data-add="title">🏷 제목</button><button data-add="image">🖼 이미지</button><button data-add="blank">⬛ 빈 화면</button>
+      </div>
+      <div class="cue-help">클릭: 미리보기 · 더블클릭: 송출 · F2: 편집 · Ctrl+↑↓: 이전/다음 순서 · 끌어서 순서 바꾸기</div>
+    </div>
+    <div id="booksPanel" class="books-panel" hidden>
+      <input id="bookFilter" type="text" placeholder="책 찾기 (Ctrl+B)" autocomplete="off">
+      <div id="bookList" class="book-list" tabindex="-1"></div>
+      <div id="chapterBox" class="chapter-box" hidden>
+        <div id="chapterTitle" class="chapter-title"></div>
+        <div id="chapterGrid" class="chapter-grid"></div>
+      </div>
+    </div>
+  </aside>
+
+  <section class="center">
+    <div class="center-head">
+      <span class="view-tabs" id="centerTabs">
+        <button data-c="text" class="on">본문</button><button data-c="cm" title="미리보기 중인 본문의 주석 (조작 화면에만 보이고 송출되지 않습니다)">주석 <span id="cmCount"></span></button>
+      </span>
+      <span id="resultTitle">검색 결과</span>
+      <span id="resultInfo" class="muted"></span>
+    </div>
+    <div id="results" class="results" tabindex="0"></div>
+    <div id="cmView" class="results cm-view" hidden></div>
+    <!-- 자주 쓰는 설정: 바꾸면 해당 출력 화면에 바로 반영 -->
+    <div id="quick" class="quick">
+      <div class="quick-head">
+        <b>빠른 설정</b>
+        <span class="view-tabs" id="qTarget">
+          <button data-out="main" class="on" title="예배당 전체 화면(보조 모니터)과 OBS 전체 화면">예배당 화면</button><button data-out="overlay" title="OBS 투명 자막">OBS 자막</button>
+        </span>
+        <select id="qTpl" title="이 출력에 쓸 템플릿"></select>
+        <button id="qTheme" title="구세군 테마 고르기">테마</button>
+        <select id="splitMode" title="슬라이드 나누기">
+          <option value="auto">분할: 자동</option>
+          <option value="1">분할: 한 절씩</option>
+          <option value="2">분할: 2절씩</option>
+          <option value="3">분할: 3절씩</option>
+          <option value="4">분할: 4절씩</option>
+        </select>
+        <select id="navMode" title="F5/F6 으로 범위 끝에 닿았을 때">
+          <option value="range">이동: 범위 안</option>
+          <option value="continuous">이동: 다음 절로 계속</option>
+        </select>
+        <span class="grow"></span>
+        <span id="qSaved" class="muted"></span>
+        <button id="qMore" title="굵기·줄 간격·여백·장절 색 등 모든 디자인 항목">자세히 ▸</button>
+        <button id="qToggle" title="빠른 설정 접기/펴기">접기 ▾</button>
+      </div>
+      <div class="quick-body">
+        <div id="qControls"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="right">
+    <div class="pane preview">
+      <div class="pane-head">
+        <b class="badge pv">미리보기</b>
+        <span id="pvInfo" class="pane-info"></span>
+        <span class="view-tabs" data-pane="pv">
+          <button data-view="main" class="on">예배당</button><button data-view="overlay">OBS</button>
+        </span>
+      </div>
+      <div id="pvScreen" class="screen"></div>
+      <div class="pane-tools">
+        <button id="pvPrev" title="미리보기 이전 슬라이드 (PageUp)">◀</button>
+        <span id="pvCount" class="count"></span>
+        <button id="pvNext" title="미리보기 다음 슬라이드 (PageDown)">▶</button>
+        <span id="pvNextHint" class="next-hint"></span>
+      </div>
+      <div id="pvSlides" class="thumbs"></div>
+    </div>
+    <div class="pane live">
+      <div class="pane-head">
+        <b class="badge onair">LIVE</b>
+        <span id="lvInfo" class="pane-info"></span>
+        <span id="lvHidden" class="hidden-badge" hidden>숨김 중</span>
+        <span class="view-tabs" data-pane="lv">
+          <button data-view="main" class="on">예배당</button><button data-view="overlay">OBS</button>
+        </span>
+      </div>
+      <div id="lvScreen" class="screen"></div>
+      <div class="pane-tools">
+        <span id="lvCount" class="count"></span>
+        <span id="lvNextHint" class="next-hint"></span>
+      </div>
+      <div id="lvSlides" class="thumbs" title="더블클릭하면 해당 슬라이드를 바로 송출합니다"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="bottom">
+  <button id="bPrev" class="big">◀ 이전 <kbd>F5</kbd></button>
+  <button id="bNext" class="big">다음 ▶ <kbd>F6</kbd></button>
+  <button id="bSend" class="big send">송출 <kbd>F9</kbd></button>
+  <button id="bClear" class="big">숨김 / 복원 <kbd>F10</kbd></button>
+  <button id="bOutput" class="big output-toggle" hidden title="보조 모니터(예배당 화면) 전체 화면 출력을 켜고 끕니다">보조 화면 <span id="bOutputState">꺼짐</span> <kbd id="bOutputKey">Ctrl+Shift+F</kbd></button>
+  <span class="sep"></span>
+  <div id="status" class="status"></div>
+</footer>
+
+<!-- 공용 모달 -->
+<div id="modal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head"><b id="modalTitle"></b><button id="modalClose" title="닫기 (Esc)">✕</button></div>
+    <div id="modalBody" class="modal-body"></div>
+  </div>
+</div>
+
+<script src="/shared/render.js"></script>
+<script src="/shared/slides.js"></script>
+<script src="/control/tplcontrols.js"></script>
+<script src="/control/control.js"></script>
+<script src="/control/settings.js"></script>
+<script src="/control/cue.js"></script>
+</body>
+</html>

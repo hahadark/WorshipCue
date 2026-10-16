@@ -1,0 +1,140 @@
+'use strict';
+// Settings Manager: JSON 파일 자동 저장(원자적 쓰기 + 백업)
+
+const fs = require('fs');
+const path = require('path');
+const { defaultTemplates, normalizeTemplate } = require('./templates');
+
+const DEFAULT_SHORTCUTS = {
+  focusSearch: 'Ctrl+K',
+  sendNow: 'Ctrl+Enter',
+  prevSlide: 'F5',
+  nextSlide: 'F6',
+  sendPreview: 'F9',
+  toggleClear: 'F10',
+  openBooks: 'Ctrl+B',
+  openHistory: 'Ctrl+H',
+  previewPrevSlide: 'PageUp',
+  previewNextSlide: 'PageDown',
+  previewPrevVerse: 'Alt+ArrowLeft',
+  previewNextVerse: 'Alt+ArrowRight',
+  previewChapterStart: 'Ctrl+Home',
+  toggleOutputWindow: 'Ctrl+Shift+F',
+  outputOff: 'Escape',
+  cuePrev: 'Ctrl+ArrowUp',
+  cueNext: 'Ctrl+ArrowDown',
+  cueEdit: 'F2',
+};
+
+const SHORTCUT_LABELS = {
+  focusSearch: '검색창으로 이동',
+  sendNow: '선택한 본문 즉시 송출',
+  prevSlide: '이전 슬라이드 (Live)',
+  nextSlide: '다음 슬라이드 (Live)',
+  sendPreview: '현재 미리보기 송출',
+  toggleClear: '출력 숨김·복원',
+  openBooks: '성경 책 목록',
+  openHistory: '송출 기록',
+  previewPrevSlide: '미리보기 이전 슬라이드',
+  previewNextSlide: '미리보기 다음 슬라이드',
+  previewPrevVerse: '미리보기 이전 절',
+  previewNextVerse: '미리보기 다음 절',
+  previewChapterStart: '미리보기 현재 장 처음으로',
+  toggleOutputWindow: '보조 화면 출력 켜기·끄기',
+  outputOff: '보조 화면 출력 끄기',
+  cuePrev: '큐시트 이전 순서 미리보기',
+  cueNext: '큐시트 다음 순서 미리보기',
+  cueEdit: '선택한 순서 편집',
+};
+
+function defaults() {
+  return {
+    schema: 1,
+    port: 37528,
+    versionId: '',
+    searchMode: 'auto', // auto | reference | text
+    split: { mode: 'auto', count: 2 }, // auto | count (count=1 이면 한 절씩)
+    navMode: 'range', // range: 선택 범위 안에서만 | continuous: 범위 끝에서 다음 절로 이어감(책 경계에서 멈춤)
+    output: { enabled: false, displayId: null, cursorHidden: true, autoOnSend: true },
+    templates: defaultTemplates(),
+    activeTemplates: { main: 'worship', overlay: 'overlay' },
+    shortcuts: { ...DEFAULT_SHORTCUTS },
+    globalShortcuts: false,
+    reservedKeys: '', // OBS 등 다른 프로그램에서 쓰는 단축키(충돌 검사용), 쉼표 구분
+    history: [],
+    guide: { bethlehemDone: false },
+    activeCueId: '',     // 열어 둔 큐시트
+    cueAdvance: true,    // 항목의 마지막 슬라이드에서 F6 → 다음 순서로 // 처음 실행 안내를 다시 보지 않기
+  };
+}
+
+function deepMergeDefaults(def, val) {
+  if (val === undefined || val === null) return def;
+  if (typeof def !== 'object' || def === null || Array.isArray(def)) return val;
+  const out = { ...def };
+  for (const k of Object.keys(val)) out[k] = k in def ? deepMergeDefaults(def[k], val[k]) : val[k];
+  return out;
+}
+
+class Settings {
+  constructor(dir, logger) {
+    this.dir = dir;
+    this.file = path.join(dir, 'settings.json');
+    this.backup = path.join(dir, 'settings.backup.json');
+    this.logger = logger;
+    this.timer = null;
+    this.data = this.load();
+  }
+
+  load() {
+    for (const f of [this.file, this.backup]) {
+      try {
+        if (!fs.existsSync(f)) continue;
+        const raw = JSON.parse(fs.readFileSync(f, 'utf8'));
+        const data = deepMergeDefaults(defaults(), raw);
+        data.shortcuts = { ...DEFAULT_SHORTCUTS, ...(raw.shortcuts || {}) };
+        data.templates = (Array.isArray(raw.templates) && raw.templates.length ? raw.templates : defaultTemplates()).map(normalizeTemplate);
+        if (f === this.file) {
+          try { fs.copyFileSync(f, this.backup); } catch { /* 백업 실패는 무시 */ }
+        } else {
+          this.logger?.warn('설정 파일이 손상되어 백업에서 복구했습니다.');
+        }
+        return data;
+      } catch (e) {
+        this.logger?.error(`설정 읽기 실패 (${path.basename(f)}): ${e.message}`);
+      }
+    }
+    return defaults();
+  }
+
+  get() { return this.data; }
+
+  /** 변경 후 자동 저장(디바운스) */
+  update(mutator) {
+    mutator(this.data);
+    this.scheduleSave();
+  }
+
+  scheduleSave() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.saveNow(), 250);
+  }
+
+  saveNow() {
+    clearTimeout(this.timer);
+    this.timer = null;
+    try {
+      fs.mkdirSync(this.dir, { recursive: true });
+      const tmp = this.file + '.tmp';
+      const fd = fs.openSync(tmp, 'w');
+      fs.writeSync(fd, JSON.stringify(this.data, null, 2));
+      fs.fsyncSync(fd);
+      fs.closeSync(fd);
+      fs.renameSync(tmp, this.file);
+    } catch (e) {
+      this.logger?.error('설정 저장 실패: ' + e.message);
+    }
+  }
+}
+
+module.exports = { Settings, DEFAULT_SHORTCUTS, SHORTCUT_LABELS, defaults };

@@ -1,0 +1,33 @@
+{
+  "appId": "org.worshipcue.app",
+  "productName": "WorshipCue",
+  "files": [
+    "src/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "data-personal/bible.db",
+      "to": "bible.db"
+    }
+  ],
+  "win": {
+    "target": [
+      "nsis",
+      "portable"
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "shortcutName": "WorshipCue",
+    "artifactName": "WorshipCue-${version}-개인용-Setup.${ext}"
+  },
+  "directories": {
+    "output": "dist-personal"
+  },
+  "portable": {
+    "artifactName": "WorshipCue-${version}-개인용-Portable.${ext}"
+  }
+}

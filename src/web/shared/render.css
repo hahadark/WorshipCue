@@ -1,0 +1,47 @@
+/* 공용 렌더링 스타일 */
+.bc-stage {
+  position: absolute; left: 0; top: 0;
+  transform-origin: 0 0;
+  overflow: hidden;
+  contain: layout paint;
+}
+.bc-bg, .bc-dim { position: absolute; inset: 0; transition: opacity var(--bc-fade, 300ms) ease; }
+.bc-area {
+  position: absolute;
+  display: flex; flex-direction: column;
+  transition: opacity var(--bc-fade, 300ms) ease;
+}
+.bc-block { box-sizing: border-box; max-width: 100%; }
+.bc-text {
+  word-break: keep-all;          /* 한국어는 어절 단위 줄바꿈 */
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.bc-ref { margin: 0 0 0.45em; line-height: 1.25; }
+.bc-text + .bc-ref { margin: 0.45em 0 0; }
+.bc-version { margin-top: 0.4em; line-height: 1.2; }
+.bc-heading { display: block; margin-bottom: 0.3em; line-height: 1.3; }
+.bc-verse.bc-break { display: block; }
+.bc-vn { vertical-align: 0.45em; margin-right: 0.25em; font-weight: 700; line-height: 0; }
+/* 왼쪽 정렬 + 내어쓰기: 절 번호 칸(오른쪽 맞춤) | 본문(왼쪽 맞춤) */
+.bc-hang { display: grid; align-items: baseline; text-align: left; }
+.bc-hn { text-align: right; font-weight: 700; white-space: nowrap; }
+.bc-ht { min-width: 0; }
+.bc-checker {
+  background-image:
+    linear-gradient(45deg, #2a2f38 25%, transparent 25%), linear-gradient(-45deg, #2a2f38 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2a2f38 75%), linear-gradient(-45deg, transparent 75%, #2a2f38 75%);
+  background-size: 64px 64px; background-position: 0 0, 0 32px, 32px -32px, -32px 0;
+  background-color: #1d2129;
+}
+.bc-measure { position: fixed; left: -200000px; top: 0; visibility: hidden; pointer-events: none; }
+.bc-measure .bc-stage { transform: none; }
+
+/* 큐시트 항목 종류 */
+.bc-pre { white-space: pre-line; }
+.bc-titlecard .bc-t1 { font-size: 1.3em; font-weight: 700; line-height: 1.3; }
+.bc-titlecard .bc-t2 { font-size: 0.62em; margin-top: 0.5em; line-height: 1.4; }
+.bc-imgslide { position: absolute; inset: 0; }
+.bc-imgslide img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.bc-blank { position: absolute; inset: 0; }
+.bc-blank.bc-black { background: #000; }

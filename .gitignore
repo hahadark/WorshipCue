@@ -1,0 +1,12 @@
+# 의존성·빌드 결과
+node_modules/
+dist/
+dist-personal/
+# 개인용 성경 데이터 (저작권 있는 번역본 포함) — 절대 올리지 않음
+data-personal/
+# 실행 중 생기는 파일
+*.log
+*.db-wal
+*.db-shm
+*.tmp
+import-tmp/
