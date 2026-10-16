@@ -67,9 +67,12 @@
     }
     if (tab !== 'themes' || !$('#setBody')) return;
     const act = S().activeTemplates;
-    $('#setBody').innerHTML = `<div class="note" style="margin-bottom:10px">구세군 레드 쉴드·크레스트 로고와 상징색으로 만든 테마입니다. 테마마다 <b>예배당 화면</b>과 <b>OBS 자막</b> 디자인이 짝으로 들어 있습니다.
-        적용한 뒤 빠른 설정이나 템플릿에서 글꼴·크기 등을 고칠 수 있고, 테마를 다시 적용하면 처음 모양으로 돌아갑니다.</div>
-      <div class="theme-grid">${themeCache.map(th => {
+    const groups = [...new Set(themeCache.map(th => th.group || '구세군'))];
+    const GROUP_NOTE = {
+      '구세군': '구세군 레드 쉴드·크레스트 로고와 상징색으로 만든 테마',
+      '방송 스타일': '국내 여러 교회 예배 영상의 자막 화면 구성(위치·상자·색 계열)을 참고해 만든 테마. 로고·글꼴은 들어 있지 않습니다',
+    };
+    const card = th => {
         const onMain = act.main === th.main.id, onOver = act.overlay === th.overlay.id;
         return `<div class="theme-card ${onMain || onOver ? 'on' : ''}" data-th="${esc(th.id)}">
           <div class="theme-head"><b>${esc(th.name)}</b>${onMain && onOver ? '<span class="ok-text">사용 중</span>' : onMain ? '<span class="ok-text">예배당 사용 중</span>' : onOver ? '<span class="ok-text">OBS 사용 중</span>' : ''}</div>
@@ -77,7 +80,11 @@
           <div class="theme-prev"><div class="screen" data-pv="main"></div><div class="screen" data-pv="overlay"></div></div>
           <div class="row-flex"><button data-apply="all">두 화면 모두 적용</button><button data-apply="main">예배당만</button><button data-apply="overlay">OBS 자막만</button></div>
         </div>`;
-      }).join('')}</div>`;
+    };
+    $('#setBody').innerHTML = `<div class="note" style="margin-bottom:10px">테마마다 <b>예배당 화면</b>과 <b>OBS 자막</b> 디자인이 짝으로 들어 있습니다.
+        적용한 뒤 빠른 설정이나 템플릿에서 글꼴·크기 등을 고칠 수 있고, 테마를 다시 적용하면 처음 모양으로 돌아갑니다.</div>`
+      + groups.map(g => `<h4 class="theme-group">${esc(g)} <span class="muted">— ${esc(GROUP_NOTE[g] || '')}</span></h4>
+        <div class="theme-grid">${themeCache.filter(th => (th.group || '구세군') === g).map(card).join('')}</div>`).join('');
     const sample = app.preview ? app.preview.slides[app.preview.index] : {
       ref: '요한복음 3:16', title: '요한복음 3:16', parts: [{ book: 43, chapter: 3, verse: 16, text: '하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라' }],
     };

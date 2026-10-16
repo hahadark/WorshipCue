@@ -143,7 +143,7 @@
     const justify = { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[t.valign] || 'center';
     area.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;justify-content:${justify};`;
     const b = t.box;
-    const boxCss = b.enabled ? `background:${hexToRgba(b.color, b.opacity)};border-radius:${b.radius}px;padding:${b.padding}px;` : '';
+    const boxCss = b.enabled ? `background:${b.gradient ? b.gradient : hexToRgba(b.color, b.opacity)};border-radius:${b.radius}px;padding:${b.padding}px;` : '';
     const ver = t.versionLabel.show && versionName
       ? `<div class="bc-version" style="font-size:${t.versionLabel.size}px;color:${t.versionLabel.color};text-align:${textAlign(t.align)}">${esc(versionName)}</div>` : '';
     if (kind === 'title') {

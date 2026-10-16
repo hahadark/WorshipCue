@@ -346,3 +346,6 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .results .srow .sboth { display: flex; gap: 16px; align-items: center; }
 .results .srow .sboth .sthumb { flex: none; max-width: 45%; }
 .results .srow .scap { white-space: pre-line; font-size: 16px; line-height: 1.6; }
+
+.theme-group { margin: 18px 0 8px; font-size: 15px; }
+.theme-group .muted { font-weight: 400; font-size: 12px; }

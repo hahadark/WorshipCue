@@ -20,7 +20,7 @@ function base() {
     reference: { show: true, position: 'top', size: 44, color: '#ffd479', weight: 700, align: 'center', mode: 'slide', offset: 60 },
     versionLabel: { show: false, size: 28, color: '#bbbbbb' },
     headings: { show: false, size: 36, color: '#cccccc' },
-    box: { enabled: false, color: '#000000', opacity: 0.6, radius: 16, padding: 32 },
+    box: { enabled: false, color: '#000000', opacity: 0.6, radius: 16, padding: 32, gradient: '' }, // gradient: 상자 그라데이션(있으면 색 대신)
     stroke: { width: 0, color: '#000000' },
     shadow: { enabled: true, blur: 8, x: 0, y: 3, color: 'rgba(0,0,0,0.8)' },
     animation: { type: 'dissolve', duration: 400 }, // dissolve(디졸브: 새 화면이 이전 화면 위로 서서히) | cut(컷: 바로 바뀜)
