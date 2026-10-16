@@ -25,11 +25,30 @@ try {
   # (PowerShell 변수는 대소문자를 가리지 않는다)
   $outW = 1920; $outH = [int](1920 * $sh / $sw)
   $n = 0
+  $texts = New-Object System.Collections.ArrayList
+  # 슬라이드 글자: 글상자(그룹 안 포함)를 위에서 아래 순서로. 쪽 번호·바닥글·날짜 자리는 뺀다
+  function Get-Texts($shapes) {
+    $out = @()
+    foreach ($sh in $shapes) {
+      try {
+        if ($sh.Type -eq 6) { $out += Get-Texts $sh.GroupItems; continue }
+        if ($sh.Type -eq 14) { $pt = $sh.PlaceholderFormat.Type; if ($pt -eq 13 -or $pt -eq 15 -or $pt -eq 16) { continue } }
+        if ($sh.HasTextFrame -and $sh.TextFrame.HasText) {
+          $out += [pscustomobject]@{ top = [double]$sh.Top; left = [double]$sh.Left; text = [string]$sh.TextFrame.TextRange.Text }
+        }
+      } catch { }
+    }
+    return $out
+  }
   foreach ($s in $p.Slides) {
     if ($s.SlideShowTransition.Hidden) { continue }
     $n++
     $s.Export((Join-Path $env:WC_PPT_OUT ('slide-{0:D3}.png' -f $n)), 'PNG', $outW, $outH)
+    $parts = @(Get-Texts $s.Shapes | Sort-Object top, left | ForEach-Object { $_.text })
+    [void]$texts.Add(($parts -join [char]10))
   }
+  $json = ConvertTo-Json -InputObject @($texts) -Compress
+  [IO.File]::WriteAllText((Join-Path $env:WC_PPT_OUT 'texts.json'), $json, (New-Object Text.UTF8Encoding $false))
   $p.Close()
   Write-Output "OK $n $outW $outH"
 } finally {
@@ -53,7 +72,12 @@ function exportWithPowerPoint(file, outDir) {
         return reject(new Error('PowerPoint 로 슬라이드를 만들지 못했습니다. ' + (msg.split('\n').find(l => l.trim()) || '')));
       }
       const files = fs.readdirSync(outDir).filter(f => /^slide-\d{3}\.png$/.test(f)).sort();
-      resolve({ files, width: +m[2], height: +m[3] });
+      // 슬라이드 글자 (PowerPoint 줄바꿈 \r · 세로탭 정리)
+      let texts = [];
+      try { texts = JSON.parse(fs.readFileSync(path.join(outDir, 'texts.json'), 'utf8').replace(/^﻿/, '')); } catch { /* 글자 없음 */ }
+      if (!Array.isArray(texts)) texts = [texts];
+      texts = texts.map(t => String(t || '').replace(/\r\n?|\u000b/g, '\n').replace(/\n{3,}/g, '\n\n').trim());
+      resolve({ files, texts, width: +m[2], height: +m[3] });
     });
   });
 }

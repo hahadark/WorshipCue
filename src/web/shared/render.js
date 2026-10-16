@@ -107,11 +107,23 @@
   }
 
   /** 슬라이드 본문 DOM 생성 (아직 크기 맞춤 전) */
+  /** 이 출력에서 PPT·찬송가 슬라이드를 가사 글자만으로 보이는가 */
+  function lyricsOnly(t) {
+    return t.pptMode ? t.pptMode === 'lyrics' : !!(t.background && t.background.type === 'transparent');
+  }
+
   function buildContent(slide, t, versionName) {
     const rect = contentRect(t);
     const area = document.createElement('div');
     area.className = 'bc-area';
-    const kind = slide.kind || 'bible';
+    let kind = slide.kind || 'bible';
+    const asLyrics = lyricsOnly(t);
+    // PPT·찬송가 그림 슬라이드 → 가사만 (예: OBS 하단 자막). 가사가 없으면 아무것도 안 보인다
+    if (asLyrics && (kind === 'score' || kind === 'image') && typeof slide.caption === 'string') {
+      if (!slide.caption.trim()) { area.style.cssText = `left:0;top:0;width:${t.width}px;height:${t.height}px;`; return area; }
+      slide = { kind: 'text', ref: '', label: slide.label, parts: [{ book: 0, chapter: 0, verse: 0, text: slide.caption.trim() }] };
+      kind = 'text';
+    }
     // 이미지·빈 화면: 화면 전체를 쓴다
     if (kind === 'image' || kind === 'blank' || kind === 'score') {
       area.style.cssText = `left:0;top:0;width:${t.width}px;height:${t.height}px;`;
@@ -127,7 +139,7 @@
       return area;
     }
     // 슬라이드 자체 배경 (예: 교독문의 원래 배경): 화면 전체에 깔고 그 위에 글자
-    const slideBg = slide.bg ? `<div class="bc-slidebg" style="left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:${slide.bg.startsWith('#') ? esc(slide.bg) : `#000 url('${encodeURI(slide.bg)}') center/cover no-repeat`}"></div>` : '';
+    const slideBg = slide.bg && !asLyrics ? `<div class="bc-slidebg" style="left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:${slide.bg.startsWith('#') ? esc(slide.bg) : `#000 url('${encodeURI(slide.bg)}') center/cover no-repeat`}"></div>` : '';
     const justify = { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[t.valign] || 'center';
     area.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;justify-content:${justify};`;
     const b = t.box;
@@ -273,5 +285,5 @@
     return { stage, ...result };
   }
 
-  global.BCRender = { esc, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { esc, lyricsOnly, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

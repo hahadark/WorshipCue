@@ -21,6 +21,7 @@ function validateSlides(slides) {
       subtitle: String(s.subtitle || '').slice(0, 300),
       image: String(s.image || '').slice(0, 300),
       bg: String(s.bg || '').slice(0, 300), // 슬라이드 자체 배경 (찬송가 원래 배경·지정 이미지)
+      ...(typeof s.caption === 'string' ? { caption: s.caption.slice(0, 2000) } : {}), // PPT·찬송가 슬라이드의 가사 (OBS '가사만' 출력용)
       mode: s.mode === 'background' ? 'background' : 'black',
       ref: String(s.ref || ''),
       title: String(s.title || ''), // 전체 범위 (장절 '전체 범위 고정' 표시용)

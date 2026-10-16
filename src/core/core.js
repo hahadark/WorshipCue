@@ -17,6 +17,7 @@ const { findDirs, listBibles, metaFor } = require('./bethlehem');
 const { normalizeCue, newId, sampleItems } = require('./cues');
 const { Hymns } = require('./hymns');
 const { SongInbox, onlineSearchUrl } = require('./songinbox');
+const { HymnLyrics } = require('./hymnlyrics');
 const { BOOKS, getBook } = require('./books');
 const { formatTitle } = require('./db');
 
@@ -38,6 +39,7 @@ class WorshipCueCore extends EventEmitter {
     this.presentation = new Presentation(this.logger);
     this.hymns = new Hymns(this);
     this.songInbox = new SongInbox(this);
+    this.hymnLyrics = new HymnLyrics(this);
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
@@ -289,6 +291,7 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.songSearchUrl === 'string') d.songSearchUrl = p.songSearchUrl.trim().slice(0, 500);
       if (typeof p.songDownloadDir === 'string') d.songDownloadDir = p.songDownloadDir.trim().slice(0, 500);
       if (typeof p.songInboxDir === 'string') d.songInboxDir = p.songInboxDir.trim().slice(0, 500);
+      if (typeof p.bethlehemDir === 'string') d.bethlehemDir = p.bethlehemDir.trim().slice(0, 500);
       if (typeof p.reservedKeys === 'string') d.reservedKeys = p.reservedKeys.slice(0, 1000);
       if (p.output && typeof p.output.cursorHidden === 'boolean') d.output.cursorHidden = p.output.cursorHidden;
       if (p.output && typeof p.output.autoOnSend === 'boolean') d.output.autoOnSend = p.output.autoOnSend;
@@ -400,6 +403,7 @@ WorshipCueCore.prototype.commands = {
     return { url, ...this.songInbox.arm() };
   },
   songInboxStatus() { return this.songInbox.status(); },
+  hymnLyricsStatus() { return this.hymnLyrics.status(); },
   songInboxStop() { return this.songInbox.disarm(); },
   /** 폴더 고르기 창 (데스크톱에서만) */
   pickFolder(a) {

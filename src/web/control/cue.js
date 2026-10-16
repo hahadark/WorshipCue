@@ -111,6 +111,12 @@
     return b;
   }
 
+  /** OBS 자막(가사만)용 슬라이드별 가사: 직접 입력 → 자동(PPT 글자·새찬송가 가사 DB) */
+  function hymnCaptions(it, meta) {
+    if (it.obsLyrics && it.obsLyrics.trim()) return SL.lyricsChunks(it.obsLyrics).map(c => c.text);
+    return meta.captions || [];
+  }
+
   // ---------------- 미리보기·송출 ----------------
   function textPseudo(it) { return { title: it.title, versionName: '', verses: [], book: null }; }
 
@@ -150,10 +156,11 @@
     let slides = [];
     if (it.type === 'hymn' && meta) {
       const bg = hymnBg(it, meta);
+      const cap = hymnCaptions(it, meta);
       if (meta.slides && meta.slides.length) { // PowerPoint 로 만든 '화면 그대로' 슬라이드
-        slides = meta.slides.map((img, k) => ({ kind: 'image', image: img, ref: it.title, label: String(k + 1), parts: [] }));
+        slides = meta.slides.map((img, k) => ({ kind: 'image', image: img, ref: it.title, label: String(k + 1), parts: [], caption: cap[k] || '' }));
       } else if (meta.scores.length) {
-        slides = meta.scores.map((img, k) => ({ kind: 'score', image: img, bg, ref: it.title, label: String(k + 1), parts: [] }));
+        slides = meta.scores.map((img, k) => ({ kind: 'score', image: img, bg, ref: it.title, label: String(k + 1), parts: [], caption: cap[k] || '' }));
       } else if (meta.texts.some(t => t.length)) { // 교독문 등 글자 슬라이드
         slides = SL.buildText({ title: it.title, showTitle: false, chunks: meta.texts.map((t, k) => ({ label: String(k + 1), text: t.join('\n') })) }, opts);
         slides.forEach(s => { s.bg = bg; });
@@ -228,6 +235,8 @@
     };
     const fields = {
       hymn: `<label>파일</label><div class="ce-row"><span class="muted ce-file">${esc((it.file || '').split(/[\\/]/).pop())}</span><button data-act="rehymn">다른 찬송가로 바꾸기</button></div>
+        <label>OBS 가사</label><div class="ce-col"><textarea data-k="obsLyrics" rows="3" placeholder="${esc(obsHint(it))}">${esc(it.obsLyrics || '')}</textarea>
+          <div class="ce-row note">OBS 자막처럼 'PPT 슬라이드: 가사만'인 출력에 나옵니다. 슬라이드마다 빈 줄로 구분 · 비우면 자동 <button data-act="obsfill" title="자동 가사를 칸에 넣어 직접 고칠 수 있게">자동 가사 넣어 고치기</button></div></div>
         <label>배경</label><div class="ce-row">${(st.hymnMeta.get(it.file) || {}).mode === 'slides' ? '<span class="muted">PPT 화면 그대로 송출합니다 (배경 바꾸기 없음). 폴더 읽는 방식을 \'자동\'으로 바꾸면 악보·배경을 나눠 꺼낼 수 있습니다.</span>' : hymnBgSel()}</div>`,
       bible: `<label>장절</label><div class="ce-row"><input type="text" data-k="ref" value="${esc(it.ref || '')}" placeholder="예: 롬 8:18-25 · 시 23" style="flex:1"><select data-k="versionId"><option value="">현재 번역본</option>${vs.map(v => `<option value="${esc(v.id)}" ${it.versionId === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></div><span></span><div id="ceRefMsg" class="note"></div>`,
       song: `<label>가사</label><textarea data-k="lyrics" rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
@@ -295,8 +304,22 @@
       case 'image': pickImage(url => { it.image = url; if (!it.title || it.title === TYPE.image) it.title = '이미지'; save(); forceEditor(); previewItem(i); }); break;
       case 'bgimg': pickImage(url => { it.background = url; save(); forceEditor(); previewItem(i, { keepIndex: true }); }); break;
       case 'rehymn': openHymnPicker({ replace: i }); break;
+      case 'obsfill': {
+        const m = st.hymnMeta.get(it.file);
+        const cap = m ? m.captions || [] : [];
+        if (!cap.some(Boolean)) { app.showMsg('자동으로 찾은 가사가 없습니다. 직접 입력하세요.', 'info', 3000); break; }
+        it.obsLyrics = cap.map((c, k) => `[${k + 1}]\n${c || ''}`).join('\n\n');
+        save(); forceEditor(); previewItem(i, { keepIndex: true });
+        break;
+      }
     }
   });
+  function obsHint(it) {
+    const m = st.hymnMeta.get(it.file);
+    if (!m) return '비우면 자동';
+    return m.captionSource ? `비우면 자동: ${m.captionSource}` : '자동 가사 없음 — 슬라이드마다 빈 줄로 구분해 입력하세요';
+  }
+
   function forceEditor() { $('#cueEditor').dataset.id = ''; renderEditor(); }
 
   function pickImage(done) {

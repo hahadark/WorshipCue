@@ -108,6 +108,14 @@
         + slider('logo.size', '로고 크기', lg.size || 120, 40, 400, 5)
         + (opts.basic ? '' : slider('logo.opacity', '로고 진하기', lg.opacity ?? 1, 0.1, 1, 0.05, '') + slider('logo.margin', '가장자리 거리', lg.margin ?? 40, 0, 200, 5)) : '');
 
+    // 전환: 디졸브 / 컷 (+ 디졸브 시간)
+    const animType = ['dissolve', 'fade'].includes(t.animation && t.animation.type) ? 'dissolve' : 'cut';
+    const fxBlock = `<div class="tc-row"><span class="tc-label">전환</span><div class="tc-seg tc-seg-sm" data-seg="animation.type">${[['dissolve', '디졸브'], ['cut', '컷']].map(([v, l]) => `<button type="button" data-v="${v}" class="${animType === v ? 'on' : ''}" title="${v === 'cut' ? '바로 바뀝니다' : '새 화면이 이전 화면 위로 서서히 겹쳐 나타납니다'}">${l}</button>`).join('')}</div></div>`
+      + (animType === 'dissolve' ? slider('animation.duration', '디졸브 시간', t.animation.duration ?? 400, 100, 2000, 50, 'ms') : '');
+    // PPT·찬송가 슬라이드: 그림 그대로 / 가사만 (OBS 하단 자막)
+    const pptMode = t.pptMode || (t.background.type === 'transparent' ? 'lyrics' : 'image');
+    const pptBlock = `<div class="tc-row"><span class="tc-label">PPT 슬라이드</span><div class="tc-seg tc-seg-sm" data-seg="pptMode">${[['image', '그림 그대로'], ['lyrics', '가사만']].map(([v, l]) => `<button type="button" data-v="${v}" class="${pptMode === v ? 'on' : ''}" title="${v === 'lyrics' ? 'PPT·찬송가를 그림 대신 가사 글자만 이 템플릿의 위치·글꼴로 (OBS 하단 자막용)' : 'PPT 화면을 그대로'}">${l}</button>`).join('')}</div></div>`;
+
     if (opts.basic) {
       // 빠른 설정: 예배 중 자주 바꾸는 것만
       container.innerHTML = `
@@ -123,6 +131,8 @@
           ${refPosSeg}
           <div class="tc-row"><span class="tc-label"></span>${toggle('reference.show', '장절 표시', t.reference.show)}${toggle('reference.mode', '전체 범위 고정', t.reference.mode === 'passage')}${toggle('verseNumbers.show', '절 번호', t.verseNumbers.show)}</div>
           ${logoBlock}
+          ${fxBlock}
+          ${pptBlock}
         </section>
       </div>`;
     } else {
@@ -170,6 +180,12 @@
           ${refModeSeg}
           ${refOffset}
           ${slider('reference.size', '장절 크기', t.reference.size, 14, 120, 2)}
+        </section>
+
+        <section class="tc-sec">
+          <h5>전환 · PPT</h5>
+          ${fxBlock}
+          ${pptBlock}
         </section>
 
         <section class="tc-sec">
@@ -309,6 +325,7 @@
         seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
         emit(true);
         if (p === 'reference.position' && !opts.basic) render(container, t, onChange, opts); // 고정이면 '가장자리 거리' 표시
+        if (p === 'animation.type') render(container, t, onChange, opts); // 디졸브면 시간 조절 표시
       }
     });
   }

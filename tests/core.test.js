@@ -370,6 +370,34 @@ test('찬송가 폴더: .pps 에서 배경·악보·교독문 글자 꺼내기',
   core.store.close();
 });
 
+test('전환·PPT 표시: 예전 템플릿 값 바꾸기, 새찬송가 가사 나누기', async () => {
+  const { normalizeTemplate } = require('../src/core/templates');
+  assert.equal(normalizeTemplate({ animation: { type: 'fade', duration: 300 } }).animation.type, 'dissolve');
+  assert.equal(normalizeTemplate({ animation: { type: 'none' } }).animation.type, 'cut');
+  assert.equal(normalizeTemplate({ pptMode: 'x' }).pptMode, '');
+  const { alignLyrics, parseHtext } = require('../src/core/hymnlyrics');
+  const lyr = parseHtext("<b>1</b>. 가 나 다 라 마 바 사 아 <br><br><small><font color='#0099CC'>[후렴]</font></small> 후 렴 하 나<br><br><b>2</b>. 자 차 카 타 파 하 거 너<br><br><b>3</b>. 더 러 머 버 서 어 저 처<br>");
+  assert.deepEqual(lyr.verses.length, 3);
+  assert.equal(lyr.chorus, '후 렴 하 나');
+  // 1절(2장) 후렴(1장) 2절(2장) 3절(2장) 후렴(1장) = 8장
+  const c = alignLyrics(lyr, 8);
+  assert.equal(c.length, 8);
+  assert.match(c[2], /후/); assert.match(c[7], /후/);
+  assert.match(c[3], /자/); assert.match(c[5], /더/);
+  // 실제 새찬송가 31장 (베들레헴·찬송가 폴더가 있을 때만)
+  const root = 'D:/OneDrive - The Salvation Army Korea Territory/자료실/새찬송가및 구세군찬송가/';
+  const core = newCore('lyrics');
+  if (core.hymnLyrics.status().found && fs.existsSync(root + '새찬송가')) {
+    core.command('addHymnFolder', { path: root + '새찬송가' });
+    const h = (await core.command('loadHymn', { file: root + '새찬송가/031 찬양하라 복되신 구세주 예수.pps' })).result;
+    assert.equal(h.captions.length, 11);
+    assert.match(h.captionSource, /새찬송가 가사 DB/);
+    assert.match(h.captions[3], /높으신 권세/); // 후렴
+    assert.match(h.captions[4], /우리 대신/);   // 2절
+  }
+  core.store.close();
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

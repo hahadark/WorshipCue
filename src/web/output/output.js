@@ -1,7 +1,7 @@
 /* 출력 화면 (전체 화면 창 / OBS 브라우저 소스 공용)
  * - SSE 로 Live 상태를 받아 그린다. 연결이 끊겨도 마지막 화면을 그대로 유지하고,
  *   재연결되면 서버가 최신 상태를 다시 보내준다.
- * - 본문 전환은 두 층을 교차 페이드해 깜빡임이나 이전 본문 노출이 없도록 한다.
+ * - 전환: 디졸브(새 층이 이전 층 위로 서서히 나타난 뒤 이전 층을 지움) / 컷(바로 바꿈)
  */
 (function () {
   'use strict';
@@ -26,7 +26,7 @@
     tpl = t;
     screenEl.innerHTML = '';
     stage = R.buildStage(t);
-    stage.style.setProperty('--bc-fade', (t.animation.type === 'fade' ? t.animation.duration : 0) + 'ms');
+    stage.style.setProperty('--bc-fade', fadeMs() + 'ms');
     screenEl.appendChild(stage);
     current = null;
     // 투명 템플릿이 아니고 OBS 가 아닌 창이면 여백(레터박스)을 검게
@@ -40,7 +40,7 @@
   }
   window.addEventListener('resize', rescale);
 
-  function fadeMs() { return tpl && tpl.animation.type === 'fade' ? tpl.animation.duration : 0; }
+  function fadeMs() { return tpl && tpl.animation && ['dissolve', 'fade'].includes(tpl.animation.type) ? Math.max(0, Number(tpl.animation.duration) || 0) : 0; }
 
   function removeLater(el) {
     const ms = fadeMs();
@@ -60,21 +60,24 @@
     if (!stageChanged && key === lastKey) { ack(p); return; }
     lastKey = key;
 
-    // 기존 본문 페이드아웃
-    if (current) {
-      const old = current;
-      old.style.opacity = '0';
-      removeLater(old);
-      current = null;
-    }
+    const ms = fadeMs();
+    const old = current;
+    current = null;
     if (show) {
       const area = R.buildContent(p.slide, tpl, p.versionName);
-      area.style.opacity = '0';
-      stage.appendChild(area);
+      if (ms) area.style.opacity = '0';
+      stage.appendChild(area); // 이전 층 위에 쌓인다
       R.fit(area, tpl);
-      // 다음 프레임에서 페이드인 (레이아웃 확정 후)
-      requestAnimationFrame(() => requestAnimationFrame(() => { area.style.opacity = '1'; }));
       current = area;
+      if (!ms) { if (old) old.remove(); }
+      else {
+        // 다음 프레임에서 서서히 나타남 (레이아웃 확정 후). 이전 층은 그대로 두었다가 다 덮으면 지운다
+        requestAnimationFrame(() => requestAnimationFrame(() => { area.style.opacity = '1'; }));
+        if (old) { old.style.transition = 'none'; setTimeout(() => old.remove(), ms + 50); }
+      }
+    } else if (old) {
+      // 숨김: 디졸브면 서서히 사라짐
+      if (ms) { old.style.opacity = '0'; removeLater(old); } else old.remove();
     }
     ack(p);
   }

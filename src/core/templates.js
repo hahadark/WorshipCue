@@ -23,7 +23,9 @@ function base() {
     box: { enabled: false, color: '#000000', opacity: 0.6, radius: 16, padding: 32 },
     stroke: { width: 0, color: '#000000' },
     shadow: { enabled: true, blur: 8, x: 0, y: 3, color: 'rgba(0,0,0,0.8)' },
-    animation: { type: 'fade', duration: 300 },
+    animation: { type: 'dissolve', duration: 400 }, // dissolve(디졸브: 새 화면이 이전 화면 위로 서서히) | cut(컷: 바로 바뀜)
+    // PPT·찬송가 슬라이드를 이 출력에서 어떻게: image(그림 그대로) | lyrics(가사 글자만, 템플릿 위치에) | ''(자동: 투명 배경이면 가사만)
+    pptMode: '',
     // 로고 층 (배경과 함께 고정 표시). position: top-left|top-center|top-right|bottom-left|bottom-right
     logo: { show: false, image: '', position: 'top-right', size: 120, opacity: 1, margin: 40 },
   };
@@ -82,7 +84,12 @@ function defaultTemplates() {
 
 /** 저장된 템플릿에 새 버전의 기본 필드를 채워 넣는다 */
 function normalizeTemplate(t) {
-  return merge(base(), JSON.parse(JSON.stringify(t)));
+  const out = merge(base(), JSON.parse(JSON.stringify(t)));
+  // 예전 값: fade → 디졸브, none → 컷
+  if (out.animation.type === 'fade') out.animation.type = 'dissolve';
+  if (out.animation.type !== 'dissolve') out.animation.type = 'cut';
+  if (!['', 'image', 'lyrics'].includes(out.pptMode)) out.pptMode = '';
+  return out;
 }
 
 module.exports = { defaultTemplates, normalizeTemplate, mergeDeep: merge, makeTemplate: make };

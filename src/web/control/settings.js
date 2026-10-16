@@ -232,7 +232,7 @@
     ['logo.opacity', '로고 불투명도 (0~1)', 'number', 0.05],
     ['logo.margin', '로고 가장자리 거리 (px)', 'number', 5],
     ['h', '전환'],
-    ['animation.type', '전환 효과', 'select', [['none', '없음'], ['fade', '페이드']]],
+    ['animation.type', '전환 효과', 'select', [['dissolve', '디졸브'], ['cut', '컷']]],
     ['animation.duration', '전환 시간 (ms)', 'number', 50],
   ];
   const RES = [[1920, 1080, 'Full HD 1920×1080'], [3840, 2160, '4K 3840×2160'], [1280, 720, 'HD 1280×720']];

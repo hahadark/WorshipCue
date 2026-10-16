@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { extractPps } = require('./ppt');
 const { hasPowerPoint, exportWithPowerPoint, extractPptx } = require('./pptrender');
+const { alignLyrics } = require('./hymnlyrics');
 
 const EXT = /\.(pps|ppt|ppsx|pptx)$/i;
 
@@ -98,11 +99,26 @@ class Hymns {
     const pp = await hasPowerPoint();
     const xml = /\.(pptx|ppsx)$/i.test(file);
     const mode = xml ? (pp ? 'slides' : 'pptx') : (folder && folder.render === 'slides' && pp ? 'slides' : 'auto');
-    const key = crypto.createHash('sha1').update(`${path.resolve(file)}|${st.size}|${st.mtimeMs}|${mode}`).digest('hex').slice(0, 16);
-    if (this.loading.has(key)) return this.loading.get(key);
-    const job = this.build(file, key, mode, pp).finally(() => this.loading.delete(key));
-    this.loading.set(key, job);
-    return job;
+    const key = crypto.createHash('sha1').update(`${path.resolve(file)}|${st.size}|${st.mtimeMs}|${mode}|v2`).digest('hex').slice(0, 16);
+    if (!this.loading.has(key)) this.loading.set(key, this.build(file, key, mode, pp).finally(() => this.loading.delete(key)));
+    const meta = await this.loading.get(key);
+    return this.withCaptions(meta, folder);
+  }
+
+  /**
+   * 슬라이드마다 OBS 자막(가사만)에 쓸 글자: PPT 안의 글자 → (새찬송가 폴더면) 베들레헴 새찬송가 가사 DB
+   * captions[i] = i번째 슬라이드 가사 ('' 이면 없음)
+   */
+  withCaptions(meta, folder) {
+    const n = meta.slides ? meta.slides.length : meta.scores.length;
+    const own = meta.slides ? meta.slideTexts || [] : meta.texts.length === n ? meta.texts.map(t => t.join('\n')) : [];
+    if (own.some(t => t && t.trim())) return { ...meta, captions: own.map(t => String(t || '').replace(/\n\s*\n/g, '\n').trim()), captionSource: 'PPT 안의 글자' };
+    const isNew = folder && /새찬송가/.test(`${folder.name} ${path.basename(folder.path)}`);
+    if (isNew && meta.number && n) {
+      const lyr = this.core.hymnLyrics.get(meta.number);
+      if (lyr) return { ...meta, captions: alignLyrics(lyr, n), captionSource: `새찬송가 가사 DB (${lyr.number}장 ${lyr.title})` };
+    }
+    return { ...meta, captions: [], captionSource: '' };
   }
 
   async build(file, key, mode, pp) {
@@ -121,7 +137,7 @@ class Hymns {
     if (mode === 'slides') {
       const e = await exportWithPowerPoint(file, dir);
       if (!e.files.length) throw new Error('슬라이드가 없는 파일입니다.');
-      const meta = { key, ...parseName(file), file, mode, background: null, scores: [], texts: [], slides: e.files.map(url), aspect: e.width / e.height };
+      const meta = { key, ...parseName(file), file, mode, background: null, scores: [], texts: [], slides: e.files.map(url), slideTexts: e.texts || [], aspect: e.width / e.height };
       fs.writeFileSync(metaFile, JSON.stringify(meta));
       return meta;
     }
