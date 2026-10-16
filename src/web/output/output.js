@@ -42,10 +42,43 @@
 
   function fadeMs() { return tpl && tpl.animation && ['dissolve', 'fade'].includes(tpl.animation.type) ? Math.max(0, Number(tpl.animation.duration) || 0) : 0; }
 
-  function removeLater(el) {
-    const ms = fadeMs();
-    if (!ms) { el.remove(); return; }
-    setTimeout(() => el.remove(), ms + 50);
+  let renderSeq = 0;
+
+  function fadeIn(el, ms, delay) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.style.transition = `opacity ${ms}ms ease ${delay}ms`;
+      el.style.opacity = '1';
+    }));
+  }
+
+  function fadeOut(els, ms, delay) {
+    for (const el of els) {
+      if (!ms) { el.remove(); continue; }
+      el.style.transition = `opacity ${ms}ms ease ${delay}ms`;
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), ms + delay + 50);
+    }
+  }
+
+  /** 이 슬라이드가 화면을 꽉 채우는(불투명한) 그림인가 */
+  function coversScreen(slide) {
+    if (R.lyricsOnly(tpl) && typeof slide.caption === 'string') return false; // 가사만 출력
+    if (slide.kind === 'score') return !!slide.bg;
+    if (slide.kind === 'image') return true;
+    if (slide.kind === 'blank') return slide.mode !== 'background';
+    return false;
+  }
+
+  /** 층 안의 그림과 슬라이드 배경 그림을 다 불러올 때까지 (최대 1.5초) */
+  function whenReady(area, slide) {
+    const jobs = [...area.querySelectorAll('img')].map(img => (img.decode ? img.decode() : Promise.resolve()).catch(() => {}));
+    if (slide && slide.bg && !slide.bg.startsWith('#')) {
+      const im = new Image();
+      im.src = slide.bg;
+      jobs.push((im.decode ? im.decode() : Promise.resolve()).catch(() => {}));
+    }
+    if (!jobs.length) return Promise.resolve();
+    return Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, 1500))]);
   }
 
   function render(p) {
@@ -60,25 +93,39 @@
     if (!stageChanged && key === lastKey) { ack(p); return; }
     lastKey = key;
 
-    const ms = fadeMs();
-    const old = current;
+    const token = ++renderSeq;
+    // 지금 무대에 있는 본문층은 모두 '이전 층' (전환 중에 또 넘겨도 남는 층이 없게)
+    const olds = [...stage.querySelectorAll(':scope > .bc-area')];
     current = null;
-    if (show) {
-      const area = R.buildContent(p.slide, tpl, p.versionName);
-      if (ms) area.style.opacity = '0';
-      stage.appendChild(area); // 이전 층 위에 쌓인다
-      R.fit(area, tpl);
-      current = area;
-      if (!ms) { if (old) old.remove(); }
-      else {
-        // 다음 프레임에서 서서히 나타남 (레이아웃 확정 후). 이전 층은 그대로 두었다가 다 덮으면 지운다
-        requestAnimationFrame(() => requestAnimationFrame(() => { area.style.opacity = '1'; }));
-        if (old) { old.style.transition = 'none'; setTimeout(() => old.remove(), ms + 50); }
-      }
-    } else if (old) {
+    if (!show) {
       // 숨김: 디졸브면 서서히 사라짐
-      if (ms) { old.style.opacity = '0'; removeLater(old); } else old.remove();
+      fadeOut(olds, fadeMs(), 0);
+      ack(p);
+      return;
     }
+    const area = R.buildContent(p.slide, tpl, p.versionName);
+    area.style.transition = 'none';
+    area.style.opacity = '0';
+    stage.appendChild(area); // 이전 층 위에 쌓인다
+    R.fit(area, tpl);
+    current = area;
+    // 그림(악보·PPT·배경)을 다 불러온 뒤에 바꾼다 → 빈 화면이 잠깐 보이는 깜빡임 방지
+    whenReady(area, p.slide).then(() => {
+      if (token !== renderSeq) return; // 그 사이 다음 슬라이드가 왔으면 그쪽이 처리
+      const ms = fadeMs();
+      if (!ms) { area.style.opacity = '1'; olds.forEach(o => o.remove()); return; }
+      if (coversScreen(p.slide)) {
+        // 화면을 꽉 채우는 그림: 이전 화면 위로 새 화면이 서서히 덮는다 (진짜 디졸브)
+        fadeIn(area, ms, 0);
+        olds.forEach(o => { o.style.transition = 'none'; });
+        setTimeout(() => olds.forEach(o => o.remove()), ms + 50);
+      } else {
+        // 글자(배경이 비치는 층): 이전 글이 먼저 사라지고 새 글이 나타난다 → 두 글이 겹쳐 보이지 않음
+        const half = Math.round(ms / 2);
+        fadeOut(olds, half, 0);
+        fadeIn(area, ms - half, olds.length ? half : 0);
+      }
+    });
     ack(p);
   }
 

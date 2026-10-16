@@ -269,7 +269,7 @@
 
   /** 미리보기/모니터용: 컨테이너에 슬라이드를 즉시 그린다 */
   function renderInto(container, slide, t, opts = {}) {
-    container.innerHTML = '';
+    const prev = [...container.children];
     const stage = buildStage(t);
     if (opts.checker && t.background.type === 'transparent') stage.classList.add('bc-checker');
     if (opts.hidden && t.clearHidesBackground) stage.firstChild.style.opacity = '0';
@@ -282,6 +282,14 @@
       result = fit(area, t);
     }
     scaleStage(stage, container, t);
+    // 이전 화면은 새 화면의 그림이 준비될 때까지 뒤에 둔다
+    const imgs = [...stage.querySelectorAll('img')].filter(i => !i.complete);
+    if (!imgs.length) prev.forEach(n => n.remove());
+    else {
+      stage.style.visibility = 'hidden';
+      const swap = () => { stage.style.visibility = ''; prev.forEach(n => n.remove()); };
+      Promise.race([Promise.all(imgs.map(i => (i.decode ? i.decode() : Promise.resolve()).catch(() => {}))), new Promise(r => setTimeout(r, 1000))]).then(swap);
+    }
     return { stage, ...result };
   }
 
