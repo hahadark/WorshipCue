@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#111418">
+<title>WorshipCue 리모컨</title>
+<style>
+  :root { --bg: #111418; --panel: #1a1f27; --line: #2c3340; --text: #e8ebf0; --muted: #8a93a6; --live: #e04b4b; --pv: #2e9e57; --accent: #3d7bff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { padding: 12px 12px 90px; max-width: 720px; margin: 0 auto; }
+  button { font: inherit; color: var(--text); background: #252c38; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; touch-action: manipulation; }
+  button:active { background: #33405a; }
+  input { font: inherit; color: var(--text); background: #0d1014; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  h1 { font-size: 18px; margin: 0 0 10px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .live { border-color: var(--live); }
+  .live .t { font-size: 18px; font-weight: 700; margin: 4px 0; }
+  .live .txt { font-size: 15px; line-height: 1.5; min-height: 2.4em; }
+  .live .nx { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .badge { display: inline-block; background: var(--live); color: #fff; font-size: 12px; padding: 1px 8px; border-radius: 6px; }
+  .badge.off { background: #555; }
+  .big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .big button { font-size: 22px; font-weight: 800; padding: 22px 0; }
+  .big .next { background: #1f3a63; border-color: #3d7bff; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .row button { flex: 1 1 auto; }
+  .labels button.on { border-color: var(--live); background: #4a2427; }
+  .cue button { display: flex; width: 100%; text-align: left; gap: 8px; margin-bottom: 6px; padding: 12px; }
+  .cue button.on { border-color: var(--live); background: #3a1d20; }
+  .cue .n { color: var(--muted); min-width: 1.6em; }
+  .login { max-width: 360px; margin: 18vh auto; text-align: center; }
+  .login input { width: 100%; font-size: 28px; text-align: center; letter-spacing: 8px; margin: 12px 0; }
+  .login button { width: 100%; font-size: 18px; background: var(--accent); border-color: var(--accent); }
+  .err { color: #ff8a8a; margin-top: 8px; min-height: 1.4em; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: #0b0d10ee; border-top: 1px solid var(--line); padding: 10px 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .bar button { font-size: 18px; font-weight: 800; padding: 14px 0; }
+  .bar .nx { background: #1f3a63; border-color: #3d7bff; }
+  .warn { background: #3a2c08; border-color: #806a20; }
+</style>
+</head>
+<body>
+<div id="login" class="login" hidden>
+  <h1>WorshipCue 리모컨</h1>
+  <div class="muted">조작 PC 의 '무대·타이머' 패널에 보이는 PIN 6자리를 입력하세요</div>
+  <input id="pin" inputmode="numeric" maxlength="6" autocomplete="off">
+  <button id="go">연결</button>
+  <div class="err" id="loginErr"></div>
+</div>
+<div id="main" hidden>
+  <div class="card warn" id="noctl" hidden>조작 화면(WorshipCue)이 꺼져 있습니다. 다음·이전은 되지만 큐시트 순서 송출은 안 됩니다.</div>
+  <div class="card live">
+    <span class="badge" id="badge">LIVE</span> <span class="muted" id="count"></span>
+    <div class="t" id="title">송출 중인 화면 없음</div>
+    <div class="txt" id="text"></div>
+    <div class="nx" id="next"></div>
+    <div class="row labels" id="labels"></div>
+  </div>
+  <div class="big"><button id="bPrev">◀ 이전</button><button id="bNext" class="next">다음 ▶</button></div>
+  <div class="card" style="margin-top:12px">
+    <b>큐시트</b> <span class="muted" id="cueName"></span> <span class="muted">— 누르면 송출</span>
+    <div class="cue" id="cue" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <b>무대 화면</b>
+    <div class="row"><input id="msg" placeholder="설교자에게 보낼 메시지" style="flex:1"><button id="msgSend">보내기</button><button id="msgClear">지우기</button></div>
+    <div class="row"><button data-msg="5분 남았습니다">5분 남음</button><button data-msg="마무리해 주세요">마무리</button><button data-msg="마이크 확인해 주세요">마이크</button></div>
+    <div class="row"><button data-tm="30">타이머 30분</button><button data-tm="40">40분</button><button data-op="pause">❚❚</button><button data-op="resume">▶</button><button data-op="reset">지우기</button></div>
+  </div>
+</div>
+<div class="bar" id="bar" hidden><button id="xPrev">◀</button><button id="xHide">숨김</button><button id="xNext" class="nx">▶</button></div>
+<script src="/remote.js"></script>
+</body>
+</html>

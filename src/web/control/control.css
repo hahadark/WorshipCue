@@ -445,3 +445,7 @@ video.ce-thumb { background: #000; }
 .jump-hint { background: #22314d; color: #9ec5ff; border-radius: 4px; padding: 0 6px; font-size: 12px; }
 
 .suggest .item.hdr { cursor: default; color: var(--muted); font-size: 12px; padding: 6px 14px 3px; border-top: 1px solid var(--line); background: transparent; }
+
+.stg-remote { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.stg-url { font-size: 18px; font-weight: 700; color: #9ec5ff; user-select: all; }
+.stg-pin { font-size: 22px; letter-spacing: 3px; color: #ffd479; margin: 0 6px; }

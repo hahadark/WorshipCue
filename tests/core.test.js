@@ -577,6 +577,53 @@ test('찬양 부를 순서(편곡): 이름표 묶음, 줄임말(1·C·B), 없는
   core.store.close();
 });
 
+test('휴대폰 리모컨: PIN 확인·잠금, 다음·숨김·메시지, 순서 송출 요청', async () => {
+  const core = newCore('remote');
+  const rport = 39000 + Math.floor(Math.random() * 500);
+  core.settings.update(d => { d.remote = { enabled: false, pin: '', port: rport }; });
+  const port = 38500 + Math.floor(Math.random() * 400);
+  const srv = await startServer(core, { webDir: path.join(__dirname, '..', 'src', 'web'), port });
+  try {
+    const st = await core.command('setRemote', { enabled: true });
+    assert.equal(st.ok, true, st.error);
+    assert.equal(st.result.running, true);
+    assert.match(st.result.pin, /^\d{6}$/);
+    const pin = st.result.pin;
+    const rget = p => new Promise((res, rej) => http.get({ host: '127.0.0.1', port: rport, path: p }, r => { let d = ''; r.on('data', c => d += c); r.on('end', () => res({ status: r.statusCode, body: d })); }).on('error', rej));
+    const rpost = body => new Promise((res, rej) => {
+      const data = JSON.stringify(body);
+      const req = http.request({ host: '127.0.0.1', port: rport, path: '/r/do', method: 'POST', headers: { 'Content-Type': 'application/json' } }, r => { let d = ''; r.on('data', c => d += c); r.on('end', () => res({ status: r.statusCode, body: JSON.parse(d) })); });
+      req.on('error', rej); req.end(data);
+    });
+    assert.equal((await rget('/')).status, 200);
+    assert.equal((await rget('/r/state?pin=000000')).status, 401);
+    const ok = await rget('/r/state?pin=' + pin);
+    assert.equal(ok.status, 200);
+    assert.equal(JSON.parse(ok.body).live.has, false);
+    // 조작 서버의 다른 기능은 리모컨 주소로 쓸 수 없다
+    assert.equal((await rget('/api/state')).status, 404);
+    const sl = n => ({ kind: 'text', ref: 'x', label: String(n), parts: [{ book: 0, chapter: 0, verse: 0, text: 't' + n }] });
+    core.command('sendLive', { passage: { title: 'x' }, slides: [sl(1), sl(2)], index: 0 });
+    assert.equal((await rpost({ pin, action: 'next' })).body.ok, true);
+    assert.equal(core.presentation.getLiveState().index, 1);
+    await rpost({ pin, action: 'toggle' });
+    assert.equal(core.presentation.getLiveState().visible, false);
+    await rpost({ pin, action: 'message', text: '5분' });
+    assert.equal(core.stage.message, '5분');
+    // 조작 화면이 없으면 순서 송출은 안 됨
+    assert.equal((await rpost({ pin, action: 'cue', index: 0 })).body.ok, false);
+    assert.equal((await rpost({ pin: 'x', action: 'next' })).status, 401);
+    // 5번 틀리면 잠시 잠금
+    for (let i = 0; i < 4; i++) await rget('/r/state?pin=1');
+    assert.equal((await rget('/r/state?pin=' + pin)).status, 429);
+    await core.command('setRemote', { enabled: false });
+    assert.equal(core.remote.status().running, false);
+  } finally {
+    await srv.close();
+    core.store.close();
+  }
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

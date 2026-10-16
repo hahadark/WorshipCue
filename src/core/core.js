@@ -465,6 +465,19 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  // ---- 휴대폰 리모컨 ----
+  remoteStatus() { return this.remote ? this.remote.status() : { enabled: false, running: false, urls: [], error: '리모컨을 쓸 수 없습니다.' }; },
+  async setRemote(a) {
+    const { newPin } = require('./remote');
+    this.settings.update(d => {
+      d.remote = { enabled: false, pin: '', port: 37540, ...(d.remote || {}) };
+      if (typeof a.enabled === 'boolean') d.remote.enabled = a.enabled;
+      if (a.newPin || !d.remote.pin) d.remote.pin = newPin();
+    });
+    if (this.remote) await this.remote.sync();
+    this.settingsChanged('settings');
+    return this.remote ? this.remote.status() : { enabled: false, running: false, urls: [] };
+  },
   // ---- 화면 지우기 ----
   toggleBackground(a) { this.layers.hideBg = a && typeof a.on === 'boolean' ? a.on : !this.layers.hideBg; this.emit('live'); return this.layersPayload(); },
   toggleLogoScreen(a) { this.layers.logo = a && typeof a.on === 'boolean' ? a.on : !this.layers.logo; this.emit('live'); return this.layersPayload(); },

@@ -117,6 +117,8 @@
     es.addEventListener('cue-next', e => window.BCCue && window.BCCue.onCueNext(JSON.parse(e.data)));
     es.addEventListener('song-downloaded', e => window.BCCue && window.BCCue.onSongDownloaded(JSON.parse(e.data)));
     es.addEventListener('song-inbox', e => window.BCCue && window.BCCue.onSongInbox(JSON.parse(e.data)));
+    es.addEventListener('remote', e => window.BCStage && window.BCStage.drawRemote(JSON.parse(e.data)));
+    es.addEventListener('remote-cue', e => { const d = JSON.parse(e.data); if (window.BCCue) window.BCCue.sendItem(d.index); });
     es.addEventListener('songs', e => { const d = JSON.parse(e.data); if (window.BCLib) window.BCLib.onSongs(d); if (window.BCCue) window.BCCue.onSongs(d); });
     es.addEventListener('cues', e => window.BCCue && window.BCCue.onCues(JSON.parse(e.data)));
     es.onerror = () => {

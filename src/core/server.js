@@ -22,6 +22,12 @@ const MIME = {
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
 
 function startServer(core, { webDir, port, host = '127.0.0.1' }) {
+  // 휴대폰 리모컨 (켜져 있으면 같이 시작)
+  if (!core.remote) {
+    const { RemoteServer } = require('./remote');
+    core.remote = new RemoteServer(core, webDir);
+    core.remote.sync();
+  }
   const clients = new Map(); // id → { res, client }
   let seq = 0;
 
@@ -47,6 +53,8 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   core.on('cue-next', d => broadcastControl('cue-next', d));
   core.on('cues', d => broadcastControl('cues', d));
   core.on('songs', d => broadcastControl('songs', d));
+  core.on('remote-cue', d => broadcastControl('remote-cue', d));
+  core.on('remote', () => broadcastControl('remote', core.remote ? core.remote.status() : null));
   core.on('song-downloaded', d => broadcastControl('song-downloaded', d));
   core.on('song-inbox', d => broadcastControl('song-inbox', d));
   core.on('outputs', () => broadcastControl('outputs', core.outputStatus()));
@@ -219,7 +227,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
       core.logger.info(`로컬 서버 시작: http://${host}:${port}`);
       resolve({
         server, port,
-        close: () => new Promise(r => { clearInterval(heartbeat); for (const c of clients.values()) c.res.end(); server.close(() => r()); server.closeAllConnections(); }),
+        close: () => new Promise(r => { clearInterval(heartbeat); if (core.remote) core.remote.stop(); for (const c of clients.values()) c.res.end(); server.close(() => r()); server.closeAllConnections(); }),
       });
     });
   });

@@ -759,7 +759,8 @@
 
   window.BCCue = {
     init, render, onCueNext, move, showSide, onSongDownloaded, onSongInbox: showInbox,
-    addItem: (type, extra) => addItem(type, extra), openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
+    addItem: (type, extra) => addItem(type, extra),
+    sendItem: i => { showSide('cue'); return sendItem(i); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
     selected: () => (st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null),
     /** 고른 순서를 바꾸고 저장·미리보기 갱신 */
     updateSelected: fn => { const it = st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null; if (!it) return false; fn(it); save(); forceEditor(); previewItem(st.sel, { keepIndex: true }); return true; },
