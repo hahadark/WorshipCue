@@ -130,7 +130,7 @@
     const it = st.cue.items[i];
     const prevIdx = keepIndex && app.preview && app.preview.cue && app.preview.cue.index === i ? app.preview.index : 0;
     st.sel = i;
-    const cue = { id: st.cue.id, index: i, title: it.title };
+    const cue = { id: st.cue.id, index: i, title: it.title, note: it.note || '' };
     const tpl = itemTpl(it);
     if (it.type === 'audio') { // 음악: 화면은 그대로, 가운데에 정보만
       showAudioInfo(i, it);

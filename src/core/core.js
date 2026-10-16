@@ -42,6 +42,7 @@ class WorshipCueCore extends EventEmitter {
     this.songInbox = new SongInbox(this);
     this.hymnLyrics = new HymnLyrics(this);
     this.library = new Library(this);
+    this.stage = { timer: { running: false, endAt: 0, remaining: 0, duration: 0 }, message: '' };
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
@@ -69,6 +70,23 @@ class WorshipCueCore extends EventEmitter {
 
   versionId(args) {
     return (args && args.versionId) || this.settings.get().versionId;
+  }
+
+  // ---------------- 무대 화면 (설교자·찬양팀 모니터) ----------------
+  /** 무대 화면에 보낼 데이터: 지금·다음 슬라이드, 순서 이름·메모, 타이머, 전달 메시지 */
+  stagePayload() {
+    const live = this.presentation.getLiveState();
+    const t = this.stage.timer;
+    const remaining = t.running ? t.endAt - Date.now() : t.remaining;
+    return {
+      output: 'stage', version: live.version, hasLive: live.hasLive, visible: live.visible,
+      slide: live.slide, nextSlide: live.nextSlide, index: live.index, count: live.count,
+      title: live.passage ? (live.passage.cueIndex >= 0 && live.passage.itemTitle ? live.passage.itemTitle : live.passage.title) : '',
+      versionName: live.passage ? live.passage.versionName : '',
+      note: live.passage ? live.passage.note || '' : '',
+      timer: { running: t.running, remaining, duration: t.duration, now: Date.now() },
+      message: this.stage.message,
+    };
   }
 
   // ---------------- 영상 재생 (큐시트 '영상' 순서) ----------------
@@ -129,6 +147,7 @@ class WorshipCueCore extends EventEmitter {
     const s = this.settings.get();
     return {
       live: { ...this.presentation.getLiveState(), video: this.videoPayload() },
+      stage: this.stagePayload(),
       preview: this.presentation.preview ? {
         passage: this.presentation.preview.passage,
         index: this.presentation.preview.index,
@@ -433,6 +452,27 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  /** 무대 타이머: start(minutes) | pause | resume | reset | add(minutes) */
+  stageTimer(a) {
+    const t = this.stage.timer;
+    const now = Date.now();
+    const cur = t.running ? t.endAt - now : t.remaining;
+    const act = String(a.action || '');
+    if (act === 'start') { const ms = Math.round((Number(a.minutes) || 0) * 60000); if (ms <= 0) throw new Error('시간(분)을 입력하세요.'); Object.assign(t, { running: true, endAt: now + ms, remaining: ms, duration: ms }); }
+    else if (act === 'pause') Object.assign(t, { running: false, remaining: cur });
+    else if (act === 'resume') Object.assign(t, { running: true, endAt: now + cur });
+    else if (act === 'reset') Object.assign(t, { running: false, endAt: 0, remaining: 0, duration: 0 });
+    else if (act === 'add') { const ms = Math.round((Number(a.minutes) || 0) * 60000); if (t.running) t.endAt += ms; else t.remaining = cur + ms; t.duration += ms; }
+    else throw new Error('알 수 없는 타이머 조작입니다.');
+    this.emit('live');
+    return this.stagePayload().timer;
+  },
+  /** 무대 화면에 전달 메시지 (빈 글이면 지움) */
+  stageMessage(a) {
+    this.stage.message = String(a.text || '').slice(0, 300);
+    this.emit('live');
+    return { message: this.stage.message };
+  },
   /** 영상 재생 조작: play | pause | toggle | restart | seek(time) */
   videoControl(a) {
     const v = this.video;

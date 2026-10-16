@@ -13,6 +13,7 @@
     { id: 'main', title: '본문 · 편집', node: () => $('#panelMain') },
     { id: 'quick', title: '빠른 설정', node: () => $('#quick') },
     { id: 'library', title: '라이브러리', node: () => $('#panelLibrary') },
+    { id: 'stage', title: '무대·타이머', node: () => $('#panelStage') },
     { id: 'preview', title: '미리보기', node: () => $('#panelPreview') },
     { id: 'live', title: 'LIVE', node: () => $('#panelLive') },
   ];
@@ -68,6 +69,7 @@
     api.addPanel({ id: 'live', component: 'live', title: byId.live.title, position: { referencePanel: 'preview', direction: 'below' } });
     api.addPanel({ id: 'quick', component: 'quick', title: byId.quick.title, position: { referencePanel: 'main', direction: 'below' } });
     api.addPanel({ id: 'library', component: 'library', title: byId.library.title, position: { referencePanel: 'quick', direction: 'within' } });
+    api.addPanel({ id: 'stage', component: 'stage', title: byId.stage.title, position: { referencePanel: 'library', direction: 'within' } });
     const W = $('#dock').clientWidth || 1600, H = $('#dock').clientHeight || 800;
     try {
       api.getPanel('cue').group.api.setSize({ width: 300 });
@@ -97,6 +99,7 @@
     else if (id === 'quick' && isOpen('main')) position = { referencePanel: 'main', direction: 'below' };
     else if (id === 'library' && isOpen('quick')) position = { referencePanel: 'quick', direction: 'within' };
     else if (id === 'library' && isOpen('main')) position = { referencePanel: 'main', direction: 'below' };
+    else if (id === 'stage' && (isOpen('library') || isOpen('quick'))) position = { referencePanel: isOpen('library') ? 'library' : 'quick', direction: 'within' };
     else if (id === 'cue' && isOpen('main')) position = { referencePanel: 'main', direction: 'left' };
     else { const any = api.panels[0]; position = any ? { referencePanel: any.id, direction: 'right' } : undefined; }
     api.addPanel({ id, component: id, title: def.title, ...(position ? { position } : {}) });

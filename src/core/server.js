@@ -32,6 +32,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   function broadcastLive() {
     for (const c of clients.values()) {
       if (c.client === 'control') send(c.res, 'state', core.getState());
+      else if (c.client === 'stage') send(c.res, 'render', core.stagePayload());
       else send(c.res, 'render', core.outputPayload(c.client));
     }
   }
@@ -113,6 +114,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
     if (req.method === 'GET') {
       if (p === '/' || p === '/control') { res.writeHead(302, { Location: '/control/' }); return res.end(); }
       if (p === '/outputs/main' || p === '/outputs/overlay') return serveFile(res, path.join(webDir, 'output', 'index.html'), webDir);
+      if (p === '/outputs/stage') return serveFile(res, path.join(webDir, 'output', 'stage.html'), webDir);
       if (p.startsWith('/control/')) return serveFile(res, path.join(webDir, 'control', p.slice(9) || 'index.html'), webDir);
       if (p.startsWith('/outputs/')) return serveFile(res, path.join(webDir, 'output', p.slice(9)), webDir);
       if (p.startsWith('/shared/')) return serveFile(res, path.join(webDir, 'shared', p.slice(8)), webDir);
@@ -131,7 +133,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
       if (p === '/api/state') return json(res, 200, core.getState());
       if (p === '/api/live') return json(res, 200, core.presentation.getLiveState());
       if (p === '/events') {
-        const client = ['main', 'overlay', 'control'].includes(url.searchParams.get('client')) ? url.searchParams.get('client') : 'main';
+        const client = ['main', 'overlay', 'control', 'stage'].includes(url.searchParams.get('client')) ? url.searchParams.get('client') : 'main';
         const kind = url.searchParams.get('window') ? 'window' : /OBS/i.test(req.headers['user-agent'] || '') ? 'obs' : 'browser';
         const id = ++seq;
         res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
@@ -140,6 +142,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
         core.outputClients.set(id, { client, kind, connectedAt: Date.now(), ack: null });
         // 접속(재접속) 즉시 최신 상태 전송
         if (client === 'control') send(res, 'state', core.getState());
+        else if (client === 'stage') send(res, 'render', core.stagePayload());
         else send(res, 'render', core.outputPayload(client));
         core.emit('outputs');
         req.on('close', () => {

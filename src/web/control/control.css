@@ -408,3 +408,14 @@ video.ce-thumb { background: #000; }
 .vbar { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 6px 8px; background: #2a1517; border: 1px solid #6a2a30; border-radius: 6px; }
 .vbar button { padding: 2px 10px; }
 .vbar input[type=range] { flex: 1; }
+
+/* 무대·타이머 패널 */
+.stg { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; height: 100%; box-sizing: border-box; overflow: auto; background: var(--panel); }
+.stg h4 { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+.stg-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.stg-row button { padding: 3px 9px; }
+.stg-time { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 800; min-width: 96px; text-align: center; padding: 2px 8px; border-radius: 6px; background: #13261b; color: #6ee59a; }
+.stg-time.warn { background: #3a2c08; color: #ffd166; }
+.stg-time.over { background: #4a0f12; color: #ff6b6b; }
+.stg-prev { flex: 1; min-height: 160px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; aspect-ratio: 16 / 9; max-width: 520px; }
+.stg-prev iframe { width: 1280px; height: 720px; border: 0; transform-origin: 0 0; transform: scale(var(--s, 0.4)); }

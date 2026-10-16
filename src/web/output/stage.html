@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WorshipCue 무대 화면</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font-family: 'Malgun Gothic', 'Noto Sans KR', sans-serif; overflow: hidden; }
+  body.nocursor, body.nocursor * { cursor: none !important; }
+  .stage { position: fixed; inset: 0; display: grid; grid-template-rows: auto auto 1fr auto auto; gap: 1.2vh; padding: 2vh 2.5vw; box-sizing: border-box; }
+  .top { display: flex; align-items: center; gap: 2vw; font-size: 3.2vh; }
+  .top .title { flex: 1; font-weight: 700; color: #ffd479; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .top .count { color: #8a93a6; }
+  .top .clock { font-variant-numeric: tabular-nums; font-size: 4.2vh; font-weight: 700; }
+  .msg { display: none; background: #f2b31b; color: #000; font-weight: 800; font-size: 5vh; padding: 1.2vh 2vw; border-radius: 1vh; text-align: center; animation: blink 1.6s ease-in-out infinite; }
+  .msg.on { display: block; }
+  @keyframes blink { 50% { opacity: .55; } }
+  .cur { display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; border: 2px solid #c0392b; border-radius: 1.2vh; padding: 2vh 3vw; position: relative; }
+  .cur.hidden { border-style: dashed; opacity: .55; }
+  .cur .t { font-size: var(--fs, 7vh); line-height: 1.35; font-weight: 600; white-space: pre-line; word-break: keep-all; }
+  .cur .ref { position: absolute; top: 1vh; left: 1.5vw; font-size: 2.6vh; color: #ffd479; }
+  .cur .badge { position: absolute; top: 1vh; right: 1.5vw; font-size: 2.2vh; background: #c0392b; padding: .2vh .8vw; border-radius: .6vh; }
+  .next { border: 2px solid #2d3340; border-radius: 1.2vh; padding: 1.2vh 2vw; min-height: 9vh; max-height: 20vh; overflow: hidden; color: #9aa3b5; font-size: 3.6vh; line-height: 1.35; white-space: pre-line; position: relative; }
+  .next::before { content: '다음'; position: absolute; top: -1.6vh; left: 1vw; background: #000; padding: 0 .6vw; font-size: 2vh; color: #6d7588; }
+  .bottom { display: flex; gap: 2vw; align-items: center; }
+  .note { flex: 1; font-size: 3vh; color: #9ec5ff; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .timer { font-variant-numeric: tabular-nums; font-size: 7vh; font-weight: 800; padding: .3vh 1.5vw; border-radius: 1vh; background: #13261b; color: #6ee59a; min-width: 22vw; text-align: center; }
+  .timer.warn { background: #3a2c08; color: #ffd166; }
+  .timer.over { background: #4a0f12; color: #ff6b6b; }
+  .timer.off { visibility: hidden; }
+  .conn { position: fixed; bottom: 1vh; left: 1vw; font-size: 1.8vh; color: #ff6b6b; display: none; }
+  .conn.on { display: block; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="top"><span class="title" id="title"></span><span class="count" id="count"></span><span class="clock" id="clock"></span></div>
+  <div class="msg" id="msg"></div>
+  <div class="cur" id="cur"><span class="ref" id="ref"></span><span class="badge" id="badge">LIVE</span><div class="t" id="text"></div></div>
+  <div class="next" id="next"></div>
+  <div class="bottom"><span class="note" id="note"></span><span class="timer off" id="timer">00:00</span></div>
+</div>
+<div class="conn" id="conn">연결 끊김 — 다시 연결하는 중…</div>
+<script src="/outputs/stage.js"></script>
+</body>
+</html>

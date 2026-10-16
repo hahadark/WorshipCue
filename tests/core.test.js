@@ -509,6 +509,30 @@ test('영상 재생 순서: 재생 상태, 일시정지·처음부터, 끝나면
   core.store.close();
 });
 
+test('무대 화면: 지금·다음 슬라이드, 순서 메모, 타이머, 메시지', () => {
+  const core = newCore('stage');
+  const sl = n => ({ kind: 'text', ref: '광고', label: String(n), parts: [{ book: 0, chapter: 0, verse: 0, text: '광고 ' + n }] });
+  core.command('sendLive', { passage: { title: '광고', itemTitle: '교회소식', cueId: 'c', cueIndex: 3, note: '사회자' }, slides: [sl(1), sl(2)], index: 0 });
+  let p = core.stagePayload();
+  assert.equal(p.title, '교회소식');
+  assert.equal(p.note, '사회자');
+  assert.equal(p.slide.parts[0].text, '광고 1');
+  assert.equal(p.nextSlide.parts[0].text, '광고 2');
+  assert.equal(core.command('stageTimer', { action: 'start', minutes: 0 }).ok, false);
+  const t = core.command('stageTimer', { action: 'start', minutes: 30 }).result;
+  assert.equal(t.running, true);
+  assert.ok(t.remaining > 29 * 60000);
+  const paused = core.command('stageTimer', { action: 'pause' }).result;
+  assert.equal(paused.running, false);
+  const added = core.command('stageTimer', { action: 'add', minutes: 5 }).result;
+  assert.ok(added.remaining > 34 * 60000);
+  assert.equal(core.command('stageTimer', { action: 'reset' }).result.duration, 0);
+  assert.equal(core.command('stageMessage', { text: '5분 남았습니다' }).result.message, '5분 남았습니다');
+  assert.equal(core.stagePayload().message, '5분 남았습니다');
+  assert.equal(core.getState().stage.message, '5분 남았습니다');
+  core.store.close();
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

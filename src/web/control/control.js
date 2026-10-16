@@ -138,6 +138,7 @@
     renderQuick(true);
     if (window.BCCue) await window.BCCue.init();
     if (window.BCLib) window.BCLib.init();
+    if (window.BCStage) window.BCStage.init();
     if (!app.state.versions.length) showWelcome();
     // 개역한글만 있으면(또는 아무것도 없으면) 베들레헴 설치 안내를 한 번 보여 준다
     else if (app.state.versions.length <= 1 && !(settings().guide && settings().guide.bethlehemDone)) showBethlehemGuide();
@@ -269,7 +270,7 @@
   function passageMeta(p, query) {
     const v = p.verses || [];
     const cue = app.preview && app.preview.passage === p ? app.preview.cue : null;
-    const cueMeta = cue ? { cueId: cue.id, cueIndex: cue.index, itemTitle: cue.title } : {};
+    const cueMeta = cue ? { cueId: cue.id, cueIndex: cue.index, itemTitle: cue.title, note: cue.note || '' } : {};
     const tpl = app.preview && app.preview.passage === p && app.preview.tpl ? { tpl: app.preview.tpl } : {};
     if (!v.length) return { title: p.title, versionId: '', versionName: p.versionName || '', book: null, query: query || p.title, first: null, last: null, ...cueMeta, ...tpl };
     return {
