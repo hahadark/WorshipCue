@@ -181,7 +181,7 @@
     $('#resultTitle').textContent = `${i + 1}. ${it.title}`;
     $('#resultInfo').textContent = `${TYPE[it.type]} · 슬라이드 ${app.preview.slides.length}장`;
     $('#results').innerHTML = app.preview.slides.map((s, k) => {
-      const body = s.kind === 'score' || (s.kind === 'image' && it.type === 'hymn') ? `<img class="sthumb" src="${esc(s.image)}" alt="">`
+      const body = s.kind === 'score' || (s.kind === 'image' && it.type === 'hymn') ? `<span class="sboth"><img class="sthumb" src="${esc(s.image)}" alt=""><span class="scap">${s.caption ? esc(s.caption) : '<span class="muted">(가사 없음 — 편집칸의 OBS 가사에 입력)</span>'}</span></span>`
         : esc(s.kind === 'text' ? s.parts[0].text : s.kind === 'title' ? [s.ref, s.subtitle].filter(Boolean).join('\n') : s.kind === 'image' ? '🖼 이미지' : '⬛ ' + (s.mode === 'background' ? '배경·로고만' : '검은 화면'));
       return `<div class="srow ${k === app.preview.index ? 'in-pv' : ''}" data-k="${k}"><span class="vn">${esc(s.label || String(k + 1))}</span><span class="stext">${body}</span></div>`;
     }).join('');

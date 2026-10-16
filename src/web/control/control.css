@@ -341,3 +341,8 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .dock-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .studio.on { }
 .studio.off { background: #6b4b10; border-color: #c9922a; color: #fff; font-weight: 700; }
+
+/* 찬송가·PPT 슬라이드 목록: 왼쪽 그림 + 오른쪽 가사 */
+.results .srow .sboth { display: flex; gap: 16px; align-items: center; }
+.results .srow .sboth .sthumb { flex: none; max-width: 45%; }
+.results .srow .scap { white-space: pre-line; font-size: 16px; line-height: 1.6; }
