@@ -419,3 +419,16 @@ video.ce-thumb { background: #000; }
 .stg-time.over { background: #4a0f12; color: #ff6b6b; }
 .stg-prev { flex: 1; min-height: 160px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; aspect-ratio: 16 / 9; max-width: 520px; }
 .stg-prev iframe { width: 1280px; height: 720px; border: 0; transform-origin: 0 0; transform: scale(var(--s, 0.4)); }
+
+/* 슬라이드 썸네일 격자 */
+.sg-size { margin-left: 6px; }
+.sg-size input { width: 90px; }
+.slide-grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--sg, 240px), 1fr)); gap: 10px; padding: 10px; align-content: start; outline: none; }
+.sg-cell { border: 3px solid transparent; border-radius: 6px; background: #0d0f13; cursor: pointer; user-select: none; }
+.sg-cell:hover { border-color: #3a4252; }
+.sg-cell.in-pv { border-color: var(--pv); }
+.sg-cell.on-air { border-color: var(--live); box-shadow: 0 0 0 1px var(--live); }
+.sg-cell.in-pv.on-air { border-color: var(--live); outline: 2px solid var(--pv); outline-offset: 1px; }
+.sg-screen { width: 100% !important; border: 0 !important; border-radius: 3px 3px 0 0; }
+.sg-label { font-size: 12px; padding: 3px 6px; color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sg-label b { color: #9ec5ff; }

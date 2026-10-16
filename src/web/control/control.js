@@ -139,6 +139,7 @@
     if (window.BCCue) await window.BCCue.init();
     if (window.BCLib) window.BCLib.init();
     if (window.BCStage) window.BCStage.init();
+    if (window.BCGrid) window.BCGrid.init();
     if (!app.state.versions.length) showWelcome();
     // 개역한글만 있으면(또는 아무것도 없으면) 베들레헴 설치 안내를 한 번 보여 준다
     else if (app.state.versions.length <= 1 && !(settings().guide && settings().guide.bethlehemDone)) showBethlehemGuide();
@@ -407,6 +408,7 @@
     $('#pvSlides').innerHTML = p.slides.map((s, i) => `<button data-i="${i}" class="${i === p.index ? 'on' : ''}" title="${esc(slideSnippet(s))}">${i + 1}. ${esc(s.label || shortRef(s.ref) || slideSnippet(s).slice(0, 12))}</button>`).join('');
     $('#pvSlides button.on')?.scrollIntoView({ block: 'nearest' });
     updateCommentary();
+    if (window.BCGrid) window.BCGrid.update();
   }
 
   function shortRef(ref) {
@@ -451,6 +453,7 @@
     $('#lvSlides').innerHTML = live.slides.map((ref, i) => `<button data-i="${i}" class="${i === live.index ? 'on' : ''}">${i + 1}. ${esc(ref.startsWith('¶') ? ref.slice(1) : shortRef(ref))}</button>`).join('');
     $('#lvSlides button.on')?.scrollIntoView({ block: 'nearest' });
     renderVideoBar();
+    if (window.BCGrid) window.BCGrid.update();
   }
   // ---------------- 영상 재생 조작 (LIVE 아래) ----------------
   const fmtT = t => (isFinite(t) ? `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}` : '0:00');
@@ -511,6 +514,7 @@
     $('#results').hidden = cm.tab !== 'text';
     $('#cmView').hidden = cm.tab !== 'cm';
     if (cm.tab === 'cm') renderCommentary();
+    if (window.BCGrid) window.BCGrid.update();
   });
 
   /** 미리보기 본문이 바뀌면 그 범위의 주석을 불러온다 */
