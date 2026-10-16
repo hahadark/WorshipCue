@@ -443,3 +443,5 @@ video.ce-thumb { background: #000; }
 .ce-chips button { padding: 1px 8px; font-size: 12px; }
 
 .jump-hint { background: #22314d; color: #9ec5ff; border-radius: 4px; padding: 0 6px; font-size: 12px; }
+
+.suggest .item.hdr { cursor: default; color: var(--muted); font-size: 12px; padding: 6px 14px 3px; border-top: 1px solid var(--line); background: transparent; }

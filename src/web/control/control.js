@@ -819,14 +819,39 @@
       if (mode === 'auto') items.push({ label: `본문 검색: “${q}”`, act: doSearch });
     }
     openSuggest(items);
+    // 통합 검색: 찬양·찬송가·이미지·영상·음악도 함께 (고르면 큐시트의 고른 순서 다음에 넣기)
+    const lib = await libraryHits(q);
+    if (seq !== sugSeq || !lib.length) return;
+    openSuggest([...items, { hdr: true, label: '라이브러리 — 고르면 큐시트에 넣기' }, ...lib]);
+  }
+
+  async function libraryHits(q) {
+    if (q.length < 1 || !window.BCCue) return [];
+    const [songs, hymns, imgs, auds] = await Promise.all([
+      cmd('listSongs', { query: q }), cmd('searchHymns', { query: q }),
+      cmd('searchLibFiles', { kind: 'image', query: q }), cmd('searchLibFiles', { kind: 'audio', query: q }),
+    ]);
+    const out = [];
+    const add = (type, extra, label) => () => { window.BCCue.addItem(type, extra); showMsg(`'${label}' 을(를) 큐시트에 넣었습니다.`, 'ok', 1500); };
+    for (const s of (songs.ok ? songs.result : []).slice(0, 4)) out.push({ label: '🎵 ' + s.title, sub: s.first, act: async () => { const r = await cmd('getSong', { id: s.id }); if (r.ok) add('song', { songId: s.id, title: r.result.title, lyrics: r.result.lyrics }, s.title)(); } });
+    for (const h of (hymns.ok ? hymns.result : []).slice(0, 4)) {
+      const title = h.number != null && !/^교독문/.test(h.title) ? `${h.number}장 ${h.title}` : h.title;
+      out.push({ label: '🎼 ' + title, sub: h.folder, act: add('hymn', { title, file: h.file, number: h.number, background: 'default' }, title) });
+    }
+    if (q.length >= 2) {
+      for (const f of (imgs.ok ? imgs.result : []).slice(0, 3)) out.push({ label: (f.video ? '🎬 ' : '🖼 ') + f.name, sub: f.folder, act: f.video ? add('video', { file: f.url, title: f.name, sound: true, volume: 1, loop: false, endAction: 'hold' }, f.name) : add('image', { image: f.url, title: f.name }, f.name) });
+      for (const f of (auds.ok ? auds.result : []).slice(0, 2)) out.push({ label: '🔊 ' + f.name, sub: f.folder, act: add('audio', { file: f.url, title: f.name, volume: 1, fadeOnLeave: true }, f.name) });
+    }
+    return out;
   }
 
   function openSuggest(items, header) {
     app.suggest = { items, sel: -1 };
     const el = $('#suggest');
     if (!items.length) return hideSuggest();
+    let no = 0;
     el.innerHTML = (header ? `<div class="item err">${esc(header)}</div>` : '')
-      + items.map((it, i) => `<div class="item${it.err ? ' err' : ''}" data-i="${i}"><span class="k">${it.err ? '' : i + 1}</span><span>${esc(it.label)}</span>${it.sub ? `<span class="s">${esc(it.sub)}</span>` : ''}</div>`).join('');
+      + items.map((it, i) => (it.hdr || it.err ? it : (it.no = ++no, it))).map((it, i) => it.hdr ? `<div class="item hdr">${esc(it.label)}</div>` : `<div class="item${it.err ? ' err' : ''}" data-i="${i}"><span class="k">${it.err ? '' : it.no}</span><span>${esc(it.label)}</span>${it.sub ? `<span class="s">${esc(it.sub)}</span>` : ''}</div>`).join('');
     el.hidden = false;
   }
   function hideSuggest() { $('#suggest').hidden = true; app.suggest = { items: [], sel: -1 }; }
@@ -834,7 +859,7 @@
     const its = app.suggest.items;
     if (!its.length) return false;
     let i = app.suggest.sel;
-    do { i += d; } while (i >= 0 && i < its.length && its[i].err);
+    do { i += d; } while (i >= 0 && i < its.length && (its[i].err || its[i].hdr));
     if (i < 0 || i >= its.length) return false;
     app.suggest.sel = i;
     document.querySelectorAll('#suggest .item[data-i]').forEach(x => x.classList.toggle('on', +x.dataset.i === i));
