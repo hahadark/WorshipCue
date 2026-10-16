@@ -18,6 +18,7 @@ const { normalizeCue, newId, sampleItems } = require('./cues');
 const { Hymns } = require('./hymns');
 const { SongInbox, onlineSearchUrl } = require('./songinbox');
 const { HymnLyrics } = require('./hymnlyrics');
+const { Library } = require('./library');
 const { BOOKS, getBook } = require('./books');
 const { formatTitle } = require('./db');
 
@@ -40,6 +41,7 @@ class WorshipCueCore extends EventEmitter {
     this.hymns = new Hymns(this);
     this.songInbox = new SongInbox(this);
     this.hymnLyrics = new HymnLyrics(this);
+    this.library = new Library(this);
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
@@ -71,7 +73,10 @@ class WorshipCueCore extends EventEmitter {
 
   templateFor(output) {
     const s = this.settings.get();
-    const id = s.activeTemplates[output];
+    // 송출 중인 순서에 따로 정한 템플릿이 있으면 그것
+    const live = this.presentation.live;
+    const over = live && live.passage && live.passage.tpl ? live.passage.tpl[output] : '';
+    const id = (over && s.templates.some(t => t.id === over)) ? over : s.activeTemplates[output];
     return s.templates.find(t => t.id === id) || s.templates[0];
   }
 
@@ -86,6 +91,7 @@ class WorshipCueCore extends EventEmitter {
       slide: live.slide,
       versionName: live.passage ? live.passage.versionName : '',
       template: this.templateFor(output),
+      overlays: this.library.activeFor(output),
       cursorHidden: this.settings.get().output.cursorHidden,
     };
   }
@@ -407,6 +413,21 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  // ---- 라이브러리: 찬양 ----
+  listSongs(a) { return this.library.listSongs(a.query); },
+  getSong(a) { const s = this.library.getSong(a.id); if (!s) throw new Error('찬양을 찾을 수 없습니다.'); return s; },
+  saveSong(a) { const s = this.library.saveSong(a.song || {}); this.emit('songs', { id: s.id }); return s; },
+  deleteSong(a) { this.library.deleteSong(a.id); this.emit('songs', { id: a.id }); return {}; },
+  // ---- 라이브러리: 이미지·음악 폴더 ----
+  listLibFolders(a) { return this.library.folders(a.kind); },
+  addLibFolder(a) { const r = this.library.addFolder(a.kind, a.path, a.name); this.settingsChanged('settings'); return r; },
+  removeLibFolder(a) { this.library.removeFolder(a.kind, String(a.path)); this.settingsChanged('settings'); return {}; },
+  searchLibFiles(a) { return this.library.searchFiles(a.kind, a.query, a.folder || ''); },
+  // ---- 오버레이 ----
+  listOverlays() { return this.library.overlays(); },
+  saveOverlay(a) { const o = this.library.saveOverlay(a.overlay || {}); this.settingsChanged('overlays'); this.emit('live'); return o; },
+  deleteOverlay(a) { this.library.deleteOverlay(String(a.id)); this.settingsChanged('overlays'); this.emit('live'); return {}; },
+  toggleOverlay(a) { const o = this.library.toggleOverlay(String(a.id), a.on); this.settingsChanged('overlays'); this.emit('live'); return o; },
   /** 조작 화면 독 배치 저장 (다른 화면에 알릴 필요 없음) */
   saveDockLayout(a) {
     const s = String(a.layout || '');

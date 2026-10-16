@@ -8,8 +8,8 @@
 //   blank  빈 화면    { mode: 'black' | 'background' }
 // 공통: id, type, title, note(조작자 메모)
 
-const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn'];
-const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가' };
+const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn', 'audio'];
+const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가', audio: '음악' };
 
 const str = (v, max = 20000) => String(v ?? '').slice(0, max);
 
@@ -22,7 +22,8 @@ function normalizeItem(x) {
   const it = { id: /^[a-z0-9]{4,40}$/i.test(x.id || '') ? x.id : newId(), type: x.type, title: str(x.title, 200).trim(), note: str(x.note, 1000) };
   switch (x.type) {
     case 'bible': it.ref = str(x.ref, 200).trim(); it.versionId = str(x.versionId, 40); break;
-    case 'song': it.lyrics = str(x.lyrics); it.showTitle = !!x.showTitle; it.credit = str(x.credit, 300); break;
+    case 'song': it.lyrics = str(x.lyrics); it.showTitle = !!x.showTitle; it.credit = str(x.credit, 300); it.songId = str(x.songId, 60); break;
+    case 'audio': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.loop = !!x.loop; it.fadeOnLeave = x.fadeOnLeave !== false; break;
     case 'text': it.body = str(x.body); break;
     case 'title': it.subtitle = str(x.subtitle, 300); break;
     case 'image': it.image = str(x.image, 300); break;
@@ -33,6 +34,10 @@ function normalizeItem(x) {
       it.obsLyrics = str(x.obsLyrics); // OBS 자막(가사만) 직접 입력: 슬라이드마다 빈 줄로 구분. 비우면 자동
       break;
   }
+  // 순서별 배경 이미지·템플릿 (글자 순서)
+  if (['song', 'text', 'title', 'bible'].includes(x.type)) it.bg = str(x.bg, 1500);
+  it.tplMain = str(x.tplMain, 80);
+  it.tplOverlay = str(x.tplOverlay, 80);
   if (!it.title) it.title = TYPE_NAMES[x.type];
   return it;
 }

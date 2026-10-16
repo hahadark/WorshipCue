@@ -267,6 +267,66 @@
     return r.fits;
   }
 
+  // ---------- 오버레이 층 (로고·시계·카운트다운·배너·글자) ----------
+  const pad2 = n => String(n).padStart(2, '0');
+  function clockText(o, now = new Date()) {
+    let h = now.getHours();
+    const ap = o.format === '12' ? (h < 12 ? '오전 ' : '오후 ') : '';
+    if (o.format === '12') h = h % 12 || 12;
+    return ap + pad2(h) + ':' + pad2(now.getMinutes()) + (o.showSeconds ? ':' + pad2(now.getSeconds()) : '');
+  }
+  /** 카운트다운 남은 시간: target "HH:MM" = 오늘 그 시각까지, 숫자 = 켠 뒤 그 분만큼 */
+  function countdownText(o, now = Date.now()) {
+    let end = 0;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(o.target || '');
+    if (m) { const d = new Date(now); d.setHours(+m[1], +m[2], 0, 0); end = d.getTime(); }
+    else end = (o.startedAt || now) + (Number(o.target) || 5) * 60000;
+    const left = Math.max(0, Math.ceil((end - now) / 1000));
+    if (!left && o.doneText) return o.doneText;
+    const h = Math.floor(left / 3600), mm = Math.floor(left / 60) % 60, ss = left % 60;
+    return (h ? h + ':' + pad2(mm) : pad2(mm)) + ':' + pad2(ss);
+  }
+  function ovPosCss(o) {
+    const m = Number(o.margin) || 0;
+    const [v, h] = o.position === 'center' ? ['middle', 'center'] : String(o.position).split('-');
+    const css = [];
+    const tr = [];
+    if (v === 'top') css.push(`top:${m}px`); else if (v === 'bottom') css.push(`bottom:${m}px`); else { css.push('top:50%'); tr.push('translateY(-50%)'); }
+    if (o.full) css.push(`left:${m}px`, `right:${m}px`);
+    else if (h === 'left') css.push(`left:${m}px`); else if (h === 'right') css.push(`right:${m}px`); else { css.push('left:50%'); tr.push('translateX(-50%)'); }
+    if (tr.length) css.push('transform:' + tr.join(' '));
+    return css.join(';');
+  }
+  function buildOverlays(list, t) {
+    const layer = document.createElement('div');
+    layer.className = 'bc-ovl';
+    for (const o of list || []) {
+      const box = o.bg ? `background:${esc(o.bg)};padding:${Math.round(o.size * 0.35)}px ${Math.round(o.size * 0.6)}px;border-radius:${Math.round(o.size * 0.25)}px;` : '';
+      const font = `font-family:${t.font.family};font-size:${o.size}px;color:${esc(o.color)};font-weight:700;${o.bg ? '' : 'text-shadow:0 2px 8px rgba(0,0,0,.85);'}`;
+      const base = `position:absolute;${ovPosCss(o)};opacity:${o.opacity ?? 1};`;
+      let html;
+      if (o.type === 'logo') html = o.image ? `<img class="bc-ov" alt="" src="${encodeURI(o.image)}" style="${base}height:${o.size}px">` : '';
+      else if (o.type === 'clock') html = `<div class="bc-ov" data-ov="clock" data-o='${esc(JSON.stringify({ format: o.format, showSeconds: o.showSeconds }))}' style="${base}${font}${box}white-space:nowrap">${esc(clockText(o))}</div>`;
+      else if (o.type === 'countdown') html = `<div class="bc-ov" data-ov="countdown" data-o='${esc(JSON.stringify({ target: o.target, startedAt: o.startedAt, doneText: o.doneText }))}' style="${base}${font}${box}white-space:nowrap">${esc(countdownText(o))}</div>`;
+      else html = `<div class="bc-ov" style="${base}${font}${box}${o.full ? 'text-align:center;' : 'max-width:90%;'}white-space:pre-line;line-height:1.35">${esc(o.text)}</div>`;
+      layer.insertAdjacentHTML('beforeend', html);
+    }
+    startTicking();
+    return layer;
+  }
+  let ticking = null;
+  function startTicking() {
+    if (ticking) return;
+    ticking = setInterval(() => {
+      for (const el of document.querySelectorAll('.bc-ov[data-ov]')) {
+        let o = {};
+        try { o = JSON.parse(el.dataset.o || '{}'); } catch { /* 무시 */ }
+        const txt = el.dataset.ov === 'clock' ? clockText(o) : countdownText(o);
+        if (el.textContent !== txt) el.textContent = txt;
+      }
+    }, 250);
+  }
+
   /** 미리보기/모니터용: 컨테이너에 슬라이드를 즉시 그린다 */
   function renderInto(container, slide, t, opts = {}) {
     const prev = [...container.children];
@@ -281,6 +341,7 @@
       stage.appendChild(area);
       result = fit(area, t);
     }
+    if (opts.overlays && opts.overlays.length) stage.appendChild(buildOverlays(opts.overlays, t));
     scaleStage(stage, container, t);
     // 이전 화면은 새 화면의 그림이 준비될 때까지 뒤에 둔다
     const imgs = [...stage.querySelectorAll('img')].filter(i => !i.complete);
@@ -293,5 +354,5 @@
     return { stage, ...result };
   }
 
-  global.BCRender = { esc, lyricsOnly, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { esc, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

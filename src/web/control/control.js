@@ -40,8 +40,20 @@
 
   const settings = () => app.state.settings;
   const tplById = id => settings().templates.find(t => t.id === id) || settings().templates[0];
-  const tplFor = output => tplById(settings().activeTemplates[output]);
+  /**
+   * 출력 템플릿. over = { main, overlay } 순서별 템플릿 (큐시트 순서에 따로 정한 것)
+   * 미리보기는 미리보기 중인 순서의 것, LIVE 는 송출 중인 순서의 것을 쓴다
+   */
+  const tplFor = (output, over) => {
+    const id = over && over[output] && settings().templates.some(t => t.id === over[output]) ? over[output] : settings().activeTemplates[output];
+    return tplById(id);
+  };
   app.tplFor = tplFor;
+  const pvOver = () => (app.preview && app.preview.tpl) || null;
+  const lvOver = () => (app.state.live.passage && app.state.live.passage.tpl) || null;
+  /** 모니터에 함께 보일 오버레이 (켜져 있고 그 출력에 나가는 것) */
+  const overlaysFor = output => (settings().overlays || []).filter(o => o.on && (o.outputs || []).includes(output));
+  app.overlaysFor = overlaysFor;
 
   // ---------------- 메시지 ----------------
   let msgTimer = null;
@@ -88,6 +100,8 @@
       if (d.what === 'versions') { fillVersions(); loadStructure(); }
       if (d.what === 'commentaries') { cm.key = ''; updateCommentary(); }
       if (d.what === 'templates' || d.what === 'settings') { rebuildPreview(); renderLive(); }
+      if (d.what === 'overlays') { renderPreview(); renderLive(); if (window.BCLib) window.BCLib.onOverlays(); }
+      if (window.BCLib) window.BCLib.onSettings(d.what);
       syncControls();
       renderStudio();
       renderQuick(false);
@@ -103,6 +117,7 @@
     es.addEventListener('cue-next', e => window.BCCue && window.BCCue.onCueNext(JSON.parse(e.data)));
     es.addEventListener('song-downloaded', e => window.BCCue && window.BCCue.onSongDownloaded(JSON.parse(e.data)));
     es.addEventListener('song-inbox', e => window.BCCue && window.BCCue.onSongInbox(JSON.parse(e.data)));
+    es.addEventListener('songs', e => { const d = JSON.parse(e.data); if (window.BCLib) window.BCLib.onSongs(d); if (window.BCCue) window.BCCue.onSongs(d); });
     es.addEventListener('cues', e => window.BCCue && window.BCCue.onCues(JSON.parse(e.data)));
     es.onerror = () => {
       app.connected = false;
@@ -122,6 +137,7 @@
     renderPreview();
     renderQuick(true);
     if (window.BCCue) await window.BCCue.init();
+    if (window.BCLib) window.BCLib.init();
     if (!app.state.versions.length) showWelcome();
     // 개역한글만 있으면(또는 아무것도 없으면) 베들레헴 설치 안내를 한 번 보여 준다
     else if (app.state.versions.length <= 1 && !(settings().guide && settings().guide.bethlehemDone)) showBethlehemGuide();
@@ -254,24 +270,25 @@
     const v = p.verses || [];
     const cue = app.preview && app.preview.passage === p ? app.preview.cue : null;
     const cueMeta = cue ? { cueId: cue.id, cueIndex: cue.index, itemTitle: cue.title } : {};
-    if (!v.length) return { title: p.title, versionId: '', versionName: p.versionName || '', book: null, query: query || p.title, first: null, last: null, ...cueMeta };
+    const tpl = app.preview && app.preview.passage === p && app.preview.tpl ? { tpl: app.preview.tpl } : {};
+    if (!v.length) return { title: p.title, versionId: '', versionName: p.versionName || '', book: null, query: query || p.title, first: null, last: null, ...cueMeta, ...tpl };
     return {
-      ...cueMeta,
+      ...cueMeta, ...tpl,
       title: p.title, versionId: p.versionId, versionName: p.versionName, book: p.book, query: query || p.title,
       first: { chapter: v[0].chapter, verse: v[0].verse }, last: { chapter: v[v.length - 1].chapter, verse: v[v.length - 1].verse },
     };
   }
 
-  function splitOpts() {
+  function splitOpts(over = pvOver()) {
     const s = settings();
-    return { mode: s.split.mode, count: s.split.count, templates: [tplFor('main'), tplFor('overlay')] };
+    return { mode: s.split.mode, count: s.split.count, templates: [tplFor('main', over), tplFor('overlay', over)] };
   }
 
   /** 본문을 미리보기로 불러온다 (Live 영향 없음) */
-  async function loadPassage(passage, { query = '', focus = null, index = 0, keepList = false } = {}) {
-    const slides = SL.build(passage, splitOpts());
+  async function loadPassage(passage, { query = '', focus = null, index = 0, keepList = false, tpl = null, bg = '' } = {}) {
+    const slides = withBg(SL.build(passage, splitOpts(tpl)), bg);
     if (focus) index = SL.indexOfVerse(slides, focus.chapter, focus.verse);
-    app.preview = { passage, slides, index: Math.min(index, slides.length - 1), query };
+    app.preview = { passage, slides, index: Math.min(index, slides.length - 1), query, tpl, bg };
     renderPreview();
     if (!keepList && (app.results.type !== 'text' || !focus)) showPassageList(passage);
     else markResults();
@@ -280,13 +297,15 @@
     else await directSend();
   }
   app.loadPassage = loadPassage;
+  /** 순서별 배경 이미지를 글자 슬라이드에 */
+  function withBg(slides, bg) { if (bg) slides.forEach(x => { x.bg = bg; }); return slides; }
 
   /**
    * 미리 만든 슬라이드를 미리보기로 (큐시트의 가사·공지·제목·이미지 항목)
    * rebuild: 템플릿이 바뀌었을 때 다시 나누는 함수
    */
-  async function loadSlides(pseudo, slides, { query = '', index = 0, cue = null, rebuild = null } = {}) {
-    app.preview = { passage: pseudo, slides, index: Math.max(0, Math.min(index, slides.length - 1)), query, cue, rebuild };
+  async function loadSlides(pseudo, slides, { query = '', index = 0, cue = null, rebuild = null, tpl = null } = {}) {
+    app.preview = { passage: pseudo, slides, index: Math.max(0, Math.min(index, slides.length - 1)), query, cue, rebuild, tpl };
     renderPreview();
     const r = await cmd('setPreview', { passage: passageMeta(pseudo, query), slides, index: app.preview.index });
     if (!r.ok) showMsg(r.error, 'error');
@@ -321,7 +340,7 @@
     showMsg(next ? '미리보기를 켰습니다. 고른 본문은 미리보기에 놓이고 F9 로 송출합니다.' : '미리보기를 껐습니다. 이제 클릭한 본문·순서·슬라이드가 바로 송출됩니다.', next ? 'ok' : 'info', 3500);
   };
   $('#btnLayout').onclick = () => window.BCDock && window.BCDock.openMenu();
-  app.splitOpts = () => splitOpts();
+  app.splitOpts = over => splitOpts(over === undefined ? pvOver() : over);
 
   /** 템플릿·분할 설정이 바뀌면 미리보기를 다시 분할 (Live 는 그대로) */
   function rebuildPreview() {
@@ -335,7 +354,7 @@
       cmd('setPreview', { passage: passageMeta(app.preview.passage, app.preview.query), slides: app.preview.slides, index: app.preview.index });
       return;
     }
-    const slides = SL.build(app.preview.passage, splitOpts());
+    const slides = withBg(SL.build(app.preview.passage, splitOpts()), app.preview.bg);
     app.preview.slides = slides;
     app.preview.index = cur ? SL.indexOfVerse(slides, cur.chapter, cur.verse) : 0;
     renderPreview();
@@ -366,10 +385,10 @@
   function renderPreview() {
     const scr = $('#pvScreen');
     if (!app.state) return;
-    const tpl = tplFor(app.view.pv);
+    const tpl = tplFor(app.view.pv, pvOver());
     const p = app.preview;
     if (!p) {
-      R.renderInto(scr, null, tpl, { checker: true });
+      R.renderInto(scr, null, tpl, { checker: true, overlays: overlaysFor(app.view.pv) });
       scr.insertAdjacentHTML('beforeend', '<div class="ph">검색한 본문이 여기에 표시됩니다</div>');
       $('#pvInfo').textContent = '';
       $('#pvCount').textContent = '';
@@ -378,7 +397,7 @@
       return;
     }
     const slide = p.slides[p.index];
-    R.renderInto(scr, slide, tpl, { checker: true, versionName: p.passage.versionName });
+    R.renderInto(scr, slide, tpl, { checker: true, versionName: p.passage.versionName, overlays: overlaysFor(app.view.pv) });
     $('#pvInfo').textContent = [p.passage.title, p.passage.versionName].filter(Boolean).join(' · ');
     $('#pvCount').textContent = `${p.index + 1} / ${p.slides.length}`;
     const nx = p.slides[p.index + 1];
@@ -408,12 +427,12 @@
   function renderLive() {
     if (!app.state) return;
     const live = app.state.live;
-    const tpl = tplFor(app.view.lv);
+    const tpl = tplFor(app.view.lv, lvOver());
     const pane = $('.pane.live');
     pane.classList.toggle('is-hidden', live.hasLive && !live.visible);
     $('#lvHidden').hidden = !(live.hasLive && !live.visible);
     if (!live.hasLive) {
-      R.renderInto($('#lvScreen'), null, tpl, { checker: true });
+      R.renderInto($('#lvScreen'), null, tpl, { checker: true, overlays: overlaysFor(app.view.lv) });
       $('#lvScreen').insertAdjacentHTML('beforeend', '<div class="ph">송출 중인 본문 없음</div>');
       $('#lvInfo').textContent = '';
       $('#lvCount').textContent = '';
@@ -421,7 +440,7 @@
       $('#lvSlides').innerHTML = '';
       return;
     }
-    R.renderInto($('#lvScreen'), live.slide, tpl, { checker: true, hidden: !live.visible, versionName: live.passage.versionName });
+    R.renderInto($('#lvScreen'), live.slide, tpl, { checker: true, hidden: !live.visible, versionName: live.passage.versionName, overlays: overlaysFor(app.view.lv) });
     $('#lvInfo').textContent = [live.passage.cueIndex >= 0 && live.slide.kind !== 'bible' ? live.passage.itemTitle || live.slide.ref : live.slide.ref, live.passage.versionName].filter(Boolean).join(' · ');
     $('#lvCount').textContent = `${live.index + 1} / ${live.count}`;
     const nx = live.nextSlide;
@@ -808,6 +827,7 @@
   async function sendPreview() {
     const p = app.preview;
     if (!p) { showMsg('송출할 미리보기 본문이 없습니다. 먼저 검색하세요.', 'error'); return; }
+    if (window.BCLib) window.BCLib.audio.onVisualSend(); // '다른 화면을 송출하면 페이드아웃' 음악
     const r = await cmd('sendLive', { passage: passageMeta(p.passage, p.query), slides: p.slides, index: p.index });
     if (!r.ok) showMsg('송출 실패: ' + r.error, 'error');
   }
@@ -849,7 +869,7 @@
       const r = await cmd('adjacentVerse', { versionId: pass.versionId, book: pass.book.id, chapter: edge.chapter, verse: edge.verse, dir });
       if (!r.ok) { showMsg(r.error + ' 더 이동하지 않습니다.', 'info', 2500); return; }
       const np = r.result.passage;
-      const slides = SL.build(np, splitOpts());
+      const slides = SL.build(np, splitOpts(lvOver()));
       const v = np.verses[0];
       const first = dir > 0 ? pass.first : { chapter: v.chapter, verse: v.verse };
       const last = dir > 0 ? { chapter: v.chapter, verse: v.verse } : pass.last;

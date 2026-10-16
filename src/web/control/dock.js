@@ -12,6 +12,7 @@
     { id: 'cue', title: '큐시트 · 성경 책', node: () => $('#panelCue') },
     { id: 'main', title: '본문 · 편집', node: () => $('#panelMain') },
     { id: 'quick', title: '빠른 설정', node: () => $('#quick') },
+    { id: 'library', title: '라이브러리', node: () => $('#panelLibrary') },
     { id: 'preview', title: '미리보기', node: () => $('#panelPreview') },
     { id: 'live', title: 'LIVE', node: () => $('#panelLive') },
   ];
@@ -66,6 +67,7 @@
     api.addPanel({ id: 'preview', component: 'preview', title: byId.preview.title, position: { referencePanel: 'main', direction: 'right' } });
     api.addPanel({ id: 'live', component: 'live', title: byId.live.title, position: { referencePanel: 'preview', direction: 'below' } });
     api.addPanel({ id: 'quick', component: 'quick', title: byId.quick.title, position: { referencePanel: 'main', direction: 'below' } });
+    api.addPanel({ id: 'library', component: 'library', title: byId.library.title, position: { referencePanel: 'quick', direction: 'within' } });
     const W = $('#dock').clientWidth || 1600, H = $('#dock').clientHeight || 800;
     try {
       api.getPanel('cue').group.api.setSize({ width: 300 });
@@ -79,7 +81,7 @@
     if (restoring) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      try { app.cmd('saveDockLayout', { layout: JSON.stringify(api.toJSON()) }); } catch { /* 무시 */ }
+      try { app.cmd('saveDockLayout', { layout: JSON.stringify({ v: 2, known: PANELS.map(p => p.id), layout: api.toJSON() }) }); } catch { /* 무시 */ }
     }, 700);
   }
 
@@ -93,6 +95,8 @@
     if (id === 'preview' && isOpen('live')) position = { referencePanel: 'live', direction: 'above' };
     else if (id === 'live' && isOpen('preview')) position = { referencePanel: 'preview', direction: 'below' };
     else if (id === 'quick' && isOpen('main')) position = { referencePanel: 'main', direction: 'below' };
+    else if (id === 'library' && isOpen('quick')) position = { referencePanel: 'quick', direction: 'within' };
+    else if (id === 'library' && isOpen('main')) position = { referencePanel: 'main', direction: 'below' };
     else if (id === 'cue' && isOpen('main')) position = { referencePanel: 'main', direction: 'left' };
     else { const any = api.panels[0]; position = any ? { referencePanel: any.id, direction: 'right' } : undefined; }
     api.addPanel({ id, component: id, title: def.title, ...(position ? { position } : {}) });
@@ -135,16 +139,23 @@
       className: 'dockview-theme-abyss wc-dock',
       disableFloatingGroups: false,
       floatingGroupBounds: 'boundedWithinViewport',
+      // 탭 뒤에 가려진 패널도 내용(DOM)을 그대로 둔다 (조작 코드가 늘 찾을 수 있게)
+      defaultRenderer: 'always',
     });
     let saved = null;
+    let known = null;
     try { saved = app.state.settings.dockLayout ? JSON.parse(app.state.settings.dockLayout) : null; } catch { saved = null; }
+    if (saved && saved.v === 2) { known = saved.known || []; saved = saved.layout; } else if (saved) known = ['cue', 'main', 'quick', 'preview', 'live'];
     restoring = true;
     try {
       if (saved) api.fromJSON(saved); else defaultLayout();
       // 저장된 배치에 없어진 필수 패널이 하나도 없으면 기본 배치
       if (!api.panels.length) defaultLayout();
+      // 이번 버전에 새로 생긴 패널은 한 번 보여 준다
+      if (known) PANELS.filter(p => !known.includes(p.id) && !isOpen(p.id)).forEach(p => show(p.id));
     } catch { defaultLayout(); }
     restoring = false;
+    if (known && PANELS.some(p => !known.includes(p.id))) save();
     // 미리보기 끔(바로 송출)이면 미리보기 패널은 닫는다
     if (app.state.settings.previewMode === false) hide('preview');
     setLocked(!!app.state.settings.dockLocked);

@@ -357,3 +357,45 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; }
 
 .theme-group { margin: 18px 0 8px; font-size: 15px; }
 .theme-group .muted { font-weight: 400; font-size: 12px; }
+
+/* ---------------- 라이브러리 패널 ---------------- */
+.lib { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--panel); }
+.lib-tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px 0; }
+.lib-tabs button { padding: 4px 10px; }
+.lib-bar { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.lib-bar input[type=text] { min-width: 140px; }
+.lib-body { flex: 1; min-height: 0; overflow: auto; padding: 4px 0; outline: none; }
+.lib-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #1f242d; cursor: pointer; user-select: none; }
+.lib-row:hover { background: #1e232c; }
+.lib-row.sel { background: var(--sel); }
+.lib-row .lib-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lib-row .lib-t b, .lib-row .lib-t .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-row .lib-t .muted { font-size: 12px; }
+.lib-row button { padding: 2px 8px; font-size: 12px; }
+.lib-no { min-width: 2.6em; text-align: right; color: #9ec5ff; font-weight: 700; }
+.lib-ico { width: 1.4em; text-align: center; }
+.lib-play { width: 30px; }
+.lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; padding: 8px; }
+.lib-cell { position: relative; background: #0d0f13; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; }
+.lib-cell.sel { outline: 2px solid var(--accent); }
+.lib-cell img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #000; display: block; }
+.lib-cell > span { font-size: 12px; padding: 3px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-cell-act { position: absolute; top: 4px; right: 4px; display: none; gap: 3px; }
+.lib-cell:hover .lib-cell-act { display: flex; }
+.lib-cell-act button { padding: 1px 6px; font-size: 11px; }
+.lib-tgrid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.lib-tcell { background: #0d0f13; border: 1px solid var(--line); border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.lib-tcell .screen { width: 100%; }
+.lib-tcell .row-flex button { padding: 2px 6px; font-size: 11px; }
+.lib-player { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--line); background: #141922; flex-wrap: wrap; }
+.lib-player button { padding: 2px 8px; }
+.lib-now { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-pick .lib-grid { max-height: 60vh; overflow: auto; }
+.lib-pick #lpList:not(.lib-grid) { max-height: 60vh; overflow: auto; }
+.ov-row.on { background: #1d2a1d; }
+.ov-switch { position: relative; width: 40px; height: 22px; flex: none; }
+.ov-switch input { opacity: 0; width: 0; height: 0; }
+.ov-switch span { position: absolute; inset: 0; background: #3a3f4a; border-radius: 11px; transition: .15s; cursor: pointer; }
+.ov-switch span::after { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .15s; }
+.ov-switch input:checked + span { background: #2e9e57; }
+.ov-switch input:checked + span::after { left: 21px; }

@@ -398,6 +398,85 @@ test('전환·PPT 표시: 예전 템플릿 값 바꾸기, 새찬송가 가사 �
   core.store.close();
 });
 
+test('라이브러리: 찬양 저장·검색, 큐시트 연결, 음악·배경·순서별 템플릿 항목', () => {
+  const core = newCore('library');
+  const a = core.command('saveSong', { song: { title: '은혜 아니면', lyrics: '[1절]\n어두운 밤 마음에 잠겨\n\n[후렴]\n은혜 아니면' } });
+  assert.equal(a.ok, true, a.error);
+  core.command('saveSong', { song: { title: '나는 예배자입니다', lyrics: '나는 예배자입니다' } });
+  assert.equal(core.command('saveSong', { song: { title: ' ' } }).ok, false);
+  const found = core.command('listSongs', { query: '마음에잠겨' }).result;
+  assert.equal(found.length, 1);
+  assert.equal(found[0].first, '어두운 밤 마음에 잠겨');
+  const upd = core.command('saveSong', { song: { ...core.command('getSong', { id: a.result.id }).result, lyrics: '고친 가사' } });
+  assert.equal(upd.result.id, a.result.id);
+  assert.equal(core.command('getSong', { id: a.result.id }).result.lyrics, '고친 가사');
+  // 큐시트 항목: 찬양 연결 · 음악 · 배경 · 순서별 템플릿
+  const c = core.command('saveCue', { cue: { name: '라이브러리', items: [
+    { type: 'song', title: '은혜 아니면', songId: a.result.id, lyrics: '고친 가사', bg: '/lib/file?p=x.png', tplMain: 'reading' },
+    { type: 'audio', title: '배경음악', file: '/lib/file?p=a.mp3', volume: 0.5, loop: true },
+  ] } });
+  assert.equal(c.ok, true, c.error);
+  const [song, aud] = c.result.items;
+  assert.equal(song.songId, a.result.id);
+  assert.equal(song.bg, '/lib/file?p=x.png');
+  assert.equal(song.tplMain, 'reading');
+  assert.equal(aud.type, 'audio');
+  assert.equal(aud.volume, 0.5);
+  assert.equal(aud.loop, true);
+  assert.equal(aud.fadeOnLeave, true);
+  assert.equal(core.command('deleteSong', { id: a.result.id }).ok, true);
+  assert.equal(core.command('getSong', { id: a.result.id }).ok, false);
+  core.store.close();
+});
+
+test('라이브러리: 이미지·음악 폴더와 파일 제공(구간 요청), 오버레이, 순서별 템플릿 송출', async () => {
+  const core = newCore('libfiles');
+  const img = path.join(tmp, 'libimg'), aud = path.join(tmp, 'libaud');
+  fs.mkdirSync(path.join(img, 'sub'), { recursive: true }); fs.mkdirSync(aud);
+  fs.writeFileSync(path.join(img, '배경 1.png'), Buffer.from([137, 80, 78, 71]));
+  fs.writeFileSync(path.join(img, 'sub', '로고.jpg'), 'x');
+  fs.writeFileSync(path.join(img, 'memo.txt'), 'x');
+  fs.writeFileSync(path.join(aud, '전주.mp3'), Buffer.alloc(1000, 7));
+  assert.equal(core.command('addLibFolder', { kind: 'audio', path: img }).ok, false); // 음악 없음
+  assert.equal(core.command('addLibFolder', { kind: 'image', path: img }).result.count, 2);
+  assert.equal(core.command('addLibFolder', { kind: 'audio', path: aud }).ok, true);
+  const imgs = core.command('searchLibFiles', { kind: 'image', query: '' }).result;
+  assert.deepEqual(imgs.map(f => f.name).sort(), ['로고', '배경 1']);
+  const mp3 = core.command('searchLibFiles', { kind: 'audio', query: '전주' }).result[0];
+  assert.match(mp3.url, /^\/lib\/file\?p=/);
+  // 등록 폴더 밖·다른 확장자는 거부
+  assert.equal(core.library.resolveFile(path.join(img, 'memo.txt')), null);
+  assert.equal(core.library.resolveFile(path.join(tmp, 'fixture.json')), null);
+  // 서버: 전체 / 구간
+  const port = 38000 + Math.floor(Math.random() * 1000);
+  const srv = await startServer(core, { webDir: path.join(__dirname, '..', 'src', 'web'), port });
+  const full = await get(port, mp3.url);
+  assert.equal(full.status, 200);
+  const part = await new Promise((res, rej) => http.get({ host: '127.0.0.1', port, path: mp3.url, headers: { Range: 'bytes=100-199' } }, r => {
+    let n = 0; r.on('data', c => n += c.length); r.on('end', () => res({ status: r.statusCode, n, range: r.headers['content-range'] }));
+  }).on('error', rej));
+  assert.deepEqual(part, { status: 206, n: 100, range: 'bytes 100-199/1000' });
+  assert.equal((await get(port, '/lib/file?p=' + encodeURIComponent(path.join(tmp, 'fixture.json')))).status, 404);
+  // 오버레이: 만들기 → 켜기 → 출력 데이터에 포함 (보일 출력만)
+  const o = core.command('saveOverlay', { overlay: { type: 'countdown', target: '5', outputs: ['main'] } }).result;
+  assert.equal(o.on, false);
+  assert.deepEqual(core.outputPayload('main').overlays, []);
+  const on = core.command('toggleOverlay', { id: o.id, on: true }).result;
+  assert.ok(on.startedAt > 0);
+  assert.equal(core.outputPayload('main').overlays.length, 1);
+  assert.equal(core.outputPayload('overlay').overlays.length, 0);
+  assert.equal(core.command('saveOverlay', { overlay: { type: 'nope' } }).ok, false);
+  // 순서별 템플릿: 송출한 본문에 tpl 이 있으면 그 템플릿으로
+  const slide = { kind: 'title', ref: '설교', parts: [] };
+  core.command('sendLive', { passage: { title: '설교', tpl: { main: 'reading', overlay: '' } }, slides: [slide], index: 0 });
+  assert.equal(core.outputPayload('main').template.id, 'reading');
+  assert.equal(core.outputPayload('overlay').template.id, core.settings.get().activeTemplates.overlay);
+  core.command('sendLive', { passage: { title: '설교' }, slides: [slide], index: 0 });
+  assert.equal(core.outputPayload('main').template.id, core.settings.get().activeTemplates.main);
+  await srv.close();
+  core.store.close();
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

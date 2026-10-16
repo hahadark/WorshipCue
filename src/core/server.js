@@ -15,6 +15,8 @@ const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
+  '.bmp': 'image/bmp', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.ogg': 'audio/ogg',
+  '.oga': 'audio/ogg', '.flac': 'audio/flac', '.opus': 'audio/ogg', '.wma': 'audio/x-ms-wma',
 };
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
 
@@ -42,6 +44,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   core.on('extend-request', d => broadcastControl('extend-request', d));
   core.on('cue-next', d => broadcastControl('cue-next', d));
   core.on('cues', d => broadcastControl('cues', d));
+  core.on('songs', d => broadcastControl('songs', d));
   core.on('song-downloaded', d => broadcastControl('song-downloaded', d));
   core.on('song-inbox', d => broadcastControl('song-inbox', d));
   core.on('outputs', () => broadcastControl('outputs', core.outputStatus()));
@@ -71,6 +74,25 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
     });
   }
 
+  /** 라이브러리 파일 (오디오 구간 요청 Range 지원 → 재생 위치 이동 가능) */
+  function serveLibFile(req, res, file) {
+    fs.stat(file, (err, st) => {
+      if (err) { res.writeHead(404); return res.end(); }
+      const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
+      const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+      if (m) {
+        const start = m[1] ? Number(m[1]) : Math.max(0, st.size - Number(m[2]));
+        const end = m[1] && m[2] ? Math.min(Number(m[2]), st.size - 1) : st.size - 1;
+        if (start > end || start >= st.size) { res.writeHead(416, { 'Content-Range': `bytes */${st.size}` }); return res.end(); }
+        res.writeHead(206, { 'Content-Type': type, 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${st.size}`, 'Accept-Ranges': 'bytes' });
+        fs.createReadStream(file, { start, end }).pipe(res);
+      } else {
+        res.writeHead(200, { 'Content-Type': type, 'Content-Length': st.size, 'Accept-Ranges': 'bytes', 'Cache-Control': 'max-age=60' });
+        fs.createReadStream(file).pipe(res);
+      }
+    });
+  }
+
   function readBody(req, limit, cb) {
     const chunks = [];
     let size = 0;
@@ -94,6 +116,11 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
       if (p.startsWith('/outputs/')) return serveFile(res, path.join(webDir, 'output', p.slice(9)), webDir);
       if (p.startsWith('/shared/')) return serveFile(res, path.join(webDir, 'shared', p.slice(8)), webDir);
       if (p.startsWith('/media/')) return serveFile(res, path.join(core.mediaDir, path.basename(p)), core.mediaDir);
+      if (p === '/lib/file') {
+        const f = core.library.resolveFile(url.searchParams.get('p'));
+        if (!f) { res.writeHead(404); return res.end(); }
+        return serveLibFile(req, res, f);
+      }
       if (p.startsWith('/hymn/')) {
         const [, , key, file] = p.split('/');
         const fp = core.hymns.cachePath(key, file);

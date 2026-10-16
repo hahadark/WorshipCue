@@ -81,6 +81,19 @@
     return Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, 1500))]);
   }
 
+  // 오버레이 층: 슬라이드 전환과 따로, 내용이 바뀔 때만 다시 그린다
+  let ovKey = '';
+  let ovLayer = null;
+  function renderOverlays(p, force) {
+    const list = p.overlays || [];
+    const key = JSON.stringify(list);
+    if (!force && key === ovKey && ovLayer && ovLayer.isConnected) return;
+    ovKey = key;
+    if (ovLayer) ovLayer.remove();
+    ovLayer = list.length ? R.buildOverlays(list, tpl) : null;
+    if (ovLayer) stage.appendChild(ovLayer);
+  }
+
   function render(p) {
     lastPayload = p;
     document.body.classList.toggle('nocursor', p.cursorHidden !== false);
@@ -90,6 +103,7 @@
     const bg = stage.firstChild;
     bg.style.opacity = (!show && p.template.clearHidesBackground) ? '0' : '1';
 
+    renderOverlays(p, stageChanged);
     if (!stageChanged && key === lastKey) { ack(p); return; }
     lastKey = key;
 

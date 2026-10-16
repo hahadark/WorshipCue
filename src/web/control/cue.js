@@ -12,9 +12,11 @@
   const $ = s => document.querySelector(s);
   const cmd = app.cmd;
 
-  const ICON = { hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
-  const TYPE = { hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
-  const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map() };
+  const ICON = { audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
+  const TYPE = { audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
+  const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map(), songs: new Map(), songTimer: null };
+  /** 순서별 템플릿 { main, overlay } (없으면 null = 출력 기본) */
+  const itemTpl = it => (it.tplMain || it.tplOverlay ? { main: it.tplMain || '', overlay: it.tplOverlay || '' } : null);
   const newId = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
   // ---------------- 불러오기·저장 ----------------
@@ -73,6 +75,7 @@
       case 'title': return it.subtitle || '';
       case 'image': return it.image ? '이미지' : '(이미지를 고르세요)';
       case 'blank': return it.mode === 'background' ? '배경·로고만' : '검은 화면';
+      case 'audio': return it.file ? fileName(it.file) : '(음악을 고르세요)';
     }
     return '';
   }
@@ -127,13 +130,20 @@
     const prevIdx = keepIndex && app.preview && app.preview.cue && app.preview.cue.index === i ? app.preview.index : 0;
     st.sel = i;
     const cue = { id: st.cue.id, index: i, title: it.title };
+    const tpl = itemTpl(it);
+    if (it.type === 'audio') { // 음악: 화면은 그대로, 가운데에 정보만
+      showAudioInfo(i, it);
+      render(); renderEditor();
+      return true;
+    }
+    if (it.type === 'song' && it.songId) await syncSong(it);
     if (it.type === 'bible') {
       if (!it.ref) { app.showMsg('장절을 입력하세요.', 'info', 2000); render(); renderEditor(); return false; }
       const r = await cmd('searchReference', { query: it.ref, versionId: it.versionId || undefined });
       if (!r.ok) { app.showMsg(`${i + 1}번 '${it.title}': ${r.error}`, 'error', 5000); render(); renderEditor(); return false; }
       const passage = r.result.passage;
-      const count = SL.build(passage, app.splitOpts()).length;
-      await app.loadPassage(passage, { query: it.ref, index: fromEnd ? count - 1 : Math.min(prevIdx, count - 1) });
+      const count = SL.build(passage, app.splitOpts(tpl)).length;
+      await app.loadPassage(passage, { query: it.ref, index: fromEnd ? count - 1 : Math.min(prevIdx, count - 1), tpl, bg: it.bg || '' });
       app.preview.cue = cue;
       $('#resultTitle').textContent = `${i + 1}. ${it.title} — ${passage.title}`;
     } else {
@@ -143,7 +153,7 @@
       }
       const build = () => buildSlides(it, meta);
       const slides = build();
-      await app.loadSlides(textPseudo(it), slides, { query: it.title, index: fromEnd ? slides.length - 1 : prevIdx, cue, rebuild: build });
+      await app.loadSlides(textPseudo(it), slides, { query: it.title, index: fromEnd ? slides.length - 1 : prevIdx, cue, rebuild: build, tpl });
       showSlideList(i, it);
     }
     render();
@@ -152,7 +162,7 @@
   }
 
   function buildSlides(it, meta) {
-    const opts = app.splitOpts();
+    const opts = app.splitOpts(itemTpl(it));
     let slides = [];
     if (it.type === 'hymn' && meta) {
       const bg = hymnBg(it, meta);
@@ -172,7 +182,45 @@
     else if (it.type === 'blank') slides = [{ kind: 'blank', mode: it.mode, ref: it.title, label: it.mode === 'background' ? '배경' : '검은 화면', parts: [] }];
     // 제목 카드, 또는 내용이 비어 있으면 제목만
     if (!slides.length) slides = [{ kind: 'title', ref: it.title, subtitle: it.subtitle || '', label: '제목', parts: [] }];
+    // 순서별 배경 이미지 (글자 슬라이드)
+    if (it.bg) slides.forEach(s => { if (s.kind === 'text' || s.kind === 'title') s.bg = it.bg; });
     return slides;
+  }
+
+  // ---------------- 찬양 라이브러리 연결 ----------------
+  /** 라이브러리 찬양의 최신 가사를 이 순서에 반영 */
+  async function syncSong(it) {
+    const r = await cmd('getSong', { id: it.songId });
+    if (!r.ok) return;
+    st.songs.set(it.songId, r.result);
+    if (it.lyrics !== r.result.lyrics) { it.lyrics = r.result.lyrics; save(); }
+  }
+  /** 연결된 찬양의 가사를 고치면 라이브러리에도 저장 (모든 큐시트에 반영) */
+  function saveLinkedSong(it) {
+    clearTimeout(st.songTimer);
+    st.songTimer = setTimeout(async () => {
+      const s = st.songs.get(it.songId) || {};
+      const r = await cmd('saveSong', { song: { ...s, id: it.songId, title: s.title || it.title, lyrics: it.lyrics } });
+      if (r.ok) st.songs.set(it.songId, r.result);
+    }, 600);
+  }
+
+  // ---------------- 음악 순서 ----------------
+  const fileName = url => decodeURIComponent(String(url).split('p=').pop()).split(/[\\/]/).pop();
+  function showAudioInfo(i, it) {
+    app.results = { type: 'none', items: [], sel: -1 };
+    $('#resultTitle').textContent = `${i + 1}. ${it.title}`;
+    $('#resultInfo').textContent = '음악 · 화면은 바뀌지 않습니다';
+    $('#results').innerHTML = `<div class="empty">🔊 ${esc(it.file ? fileName(it.file) : '(음악 파일을 고르세요)')}<br>
+      <span class="muted">더블클릭·F9: 재생 · 화면 송출은 그대로 · 큐시트에서 F6 으로 이 순서에 오면 재생하고 다음 화면 순서로 넘어갑니다</span><br>
+      <button data-play="${i}" class="primary">▶ 재생</button> <button data-stop="1">■ 정지</button> <button data-fade="1">페이드아웃</button></div>`;
+    $('#results [data-play]').onclick = () => playAudio(it);
+    $('#results [data-stop]').onclick = () => window.BCLib && window.BCLib.audio.stop();
+    $('#results [data-fade]').onclick = () => window.BCLib && window.BCLib.audio.fadeOut(2500);
+  }
+  function playAudio(it) {
+    if (!it.file) return app.showMsg('음악 파일을 고르세요 (편집칸의 \'음악 고르기\').', 'info', 3000);
+    if (window.BCLib) window.BCLib.audio.play({ url: it.file, title: it.title, volume: it.volume ?? 1, loop: !!it.loop, fadeOnLeave: it.fadeOnLeave !== false });
   }
 
   /** 가운데: 이 항목의 슬라이드 목록 (클릭: 그 슬라이드 미리보기 · 더블클릭: 송출) */
@@ -198,13 +246,20 @@
   });
 
   async function sendItem(i) {
+    const it = st.cue && st.cue.items[i];
+    if (it && it.type === 'audio') { st.sel = i; render(); renderEditor(); playAudio(it); return; }
     if (await previewItem(i)) await app.sendPreview();
   }
 
   /** 송출 중 항목의 끝에서 F6/F5 → 다음/이전 순서 */
   async function onCueNext({ dir, version, cueId, index }) {
     if (!st.cue || st.cue.id !== cueId) { await openCue(cueId); }
-    const next = index + dir;
+    let next = index + dir;
+    // 음악 순서는 재생만 하고 다음 화면 순서로 (뒤로 갈 때는 건너뜀)
+    while (next >= 0 && next < st.cue.items.length && st.cue.items[next].type === 'audio') {
+      if (dir > 0) playAudio(st.cue.items[next]);
+      next += dir;
+    }
     if (next < 0 || next >= st.cue.items.length) { app.showMsg(dir > 0 ? '큐시트의 마지막 순서입니다.' : '큐시트의 첫 순서입니다.', 'info', 2000); return; }
     if (app.state.live.version !== version) return; // 그 사이 다른 송출이 있었으면 무시
     if (await previewItem(next, { fromEnd: dir < 0 })) await app.sendPreview();
@@ -239,7 +294,10 @@
           <div class="ce-row note">OBS 자막처럼 'PPT 슬라이드: 가사만'인 출력에 나옵니다. 슬라이드마다 빈 줄로 구분 · 비우면 자동 <button data-act="obsfill" title="자동 가사를 칸에 넣어 직접 고칠 수 있게">자동 가사 넣어 고치기</button></div></div>
         <label>배경</label><div class="ce-row">${(st.hymnMeta.get(it.file) || {}).mode === 'slides' ? '<span class="muted">PPT 화면 그대로 송출합니다 (배경 바꾸기 없음). 폴더 읽는 방식을 \'자동\'으로 바꾸면 악보·배경을 나눠 꺼낼 수 있습니다.</span>' : hymnBgSel()}</div>`,
       bible: `<label>장절</label><div class="ce-row"><input type="text" data-k="ref" value="${esc(it.ref || '')}" placeholder="예: 롬 8:18-25 · 시 23" style="flex:1"><select data-k="versionId"><option value="">현재 번역본</option>${vs.map(v => `<option value="${esc(v.id)}" ${it.versionId === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></div><span></span><div id="ceRefMsg" class="note"></div>`,
-      song: `<label>가사</label><textarea data-k="lyrics" rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
+      audio: `<label>음악</label><div class="ce-row"><span class="muted ce-file">${esc(it.file ? fileName(it.file) : '(고르지 않음)')}</span><button data-act="audiopick">🔊 음악 고르기…</button><button data-act="audioplay">▶</button><button data-act="audiostop">■</button></div>
+        <label>소리 크기</label><div class="ce-row"><input type="range" data-k="volume" min="0" max="1" step="0.05" value="${it.volume ?? 1}" style="flex:1"><label class="tc-toggle"><input type="checkbox" data-k="loop" ${it.loop ? 'checked' : ''}> 반복</label><label class="tc-toggle"><input type="checkbox" data-k="fadeOnLeave" ${it.fadeOnLeave !== false ? 'checked' : ''}> 다른 화면을 송출하면 페이드아웃</label></div>`,
+      song: `${it.songId ? `<label>라이브러리</label><div class="ce-row note">📚 라이브러리 찬양과 연결됨 — 가사를 고치면 이 찬양을 쓰는 모든 큐시트에 반영 <button data-act="unlink">연결 끊기</button></div>` : `<label>라이브러리</label><div class="ce-row note"><button data-act="tolib">📚 라이브러리에 저장</button> 저장하면 다음 주에도 검색해서 바로 넣을 수 있습니다</div>`}
+        <label>가사</label><textarea data-k="lyrics" rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
         <span></span><div class="ce-row note"><label class="tc-toggle"><input type="checkbox" data-k="showTitle" ${it.showTitle ? 'checked' : ''}> 화면에 제목 표시</label> · 빈 줄 = 다음 슬라이드 · [1절] 줄은 슬라이드 이름</div>`,
       text: `<label>내용</label><textarea data-k="body" rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="note">'---' 줄 = 다음 슬라이드</div>`,
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">`,
@@ -254,9 +312,16 @@
       <div class="form ce-form">
         <label>제목</label><input type="text" data-k="title" value="${esc(it.title)}">
         ${fields}
+        ${['song', 'text', 'title', 'bible'].includes(it.type) ? `<label>배경</label><div class="ce-row">${it.bg ? `<img class="ce-thumb" src="${esc(it.bg)}" alt="">` : '<span class="muted">템플릿 배경</span>'}<button data-act="itembg">🖼 이미지 고르기…</button>${it.bg ? '<button data-act="itembgclear">지우기</button>' : ''}</div>` : ''}
+        ${it.type !== 'audio' ? `<label>템플릿</label><div class="ce-row">${tplSelect('tplMain', '예배당', it.tplMain)}${tplSelect('tplOverlay', 'OBS', it.tplOverlay)}</div>` : ''}
         <label>메모</label><input type="text" data-k="note" value="${esc(it.note || '')}" placeholder="조작자만 보는 메모 (예: 설교 후 바로)">
       </div>`;
     if (it.type === 'bible') checkRef(it);
+  }
+
+  function tplSelect(k, label, val) {
+    const ts = app.state.settings.templates;
+    return `<select data-k="${k}" title="이 순서에만 쓸 ${label} 템플릿"><option value="">${label}: 기본 템플릿</option>${ts.map(t => `<option value="${esc(t.id)}" ${t.id === val ? 'selected' : ''}>${label}: ${esc(t.name)}</option>`).join('')}</select>`;
   }
 
   let refTimer = null;
@@ -276,7 +341,9 @@
     const it = st.cue.items[st.sel];
     if (!it) return;
     const k = el.dataset.k;
-    it[k] = el.type === 'checkbox' ? el.checked : el.value;
+    it[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? Number(el.value) : el.value;
+    if (it.type === 'song' && it.songId && k === 'lyrics') saveLinkedSong(it);
+    if (it.type === 'audio' && k === 'volume' && window.BCLib) window.BCLib.audio.setVolumeIf(it.file, it.volume);
     if (k === 'background' || k === 'mode' || k === 'versionId' || k === 'showTitle') { /* 바로 */ }
     $('#cueSaved').textContent = '저장 중…';
     save();
@@ -301,6 +368,19 @@
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;
       case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); forceEditor(); break; }
       case 'del': removeItem(i); break;
+      case 'audiopick': if (window.BCLib) window.BCLib.pickAudio(f => { it.file = f.url; if (!it.title || it.title === TYPE.audio) it.title = f.name; save(); forceEditor(); render(); }); break;
+      case 'audioplay': playAudio(it); break;
+      case 'audiostop': if (window.BCLib) window.BCLib.audio.stop(); break;
+      case 'itembg': if (window.BCLib) window.BCLib.pickImage(url => { it.bg = url; save(); forceEditor(); previewItem(i, { keepIndex: true }); }); break;
+      case 'itembgclear': it.bg = ''; save(); forceEditor(); previewItem(i, { keepIndex: true }); break;
+      case 'tolib': {
+        const r = await cmd('saveSong', { song: { title: it.title, lyrics: it.lyrics || '', credit: it.credit || '' } });
+        if (!r.ok) { app.showMsg(r.error, 'error'); break; }
+        it.songId = r.result.id; st.songs.set(it.songId, r.result); save(); forceEditor();
+        app.showMsg(`'${it.title}' 을(를) 찬양 라이브러리에 저장했습니다.`, 'ok', 2500);
+        break;
+      }
+      case 'unlink': it.songId = ''; save(); forceEditor(); app.showMsg('라이브러리와 연결을 끊었습니다. 이 순서의 가사는 따로 고쳐집니다.', 'info', 3000); break;
       case 'image': pickImage(url => { it.image = url; if (!it.title || it.title === TYPE.image) it.title = '이미지'; save(); forceEditor(); previewItem(i); }); break;
       case 'bgimg': pickImage(url => { it.background = url; save(); forceEditor(); previewItem(i, { keepIndex: true }); }); break;
       case 'rehymn': openHymnPicker({ replace: i }); break;
@@ -365,9 +445,20 @@
   });
   // 끌어서 순서 바꾸기
   list.addEventListener('dragstart', e => { const r = e.target.closest('.cue-item'); if (r) { st.dragFrom = +r.dataset.i; e.dataTransfer.effectAllowed = 'move'; } });
-  list.addEventListener('dragover', e => { const r = e.target.closest('.cue-item'); if (r) { e.preventDefault(); list.querySelectorAll('.cue-item').forEach(x => x.classList.toggle('drop', x === r)); } });
+  list.addEventListener('dragover', e => {
+    const lib = e.dataTransfer.types.includes('application/x-wc-item');
+    const r = e.target.closest('.cue-item');
+    if (r || lib) { e.preventDefault(); list.querySelectorAll('.cue-item').forEach(x => x.classList.toggle('drop', x === r)); }
+  });
   list.addEventListener('drop', e => {
     const r = e.target.closest('.cue-item');
+    const lib = e.dataTransfer.getData('application/x-wc-item');
+    if (lib) { // 라이브러리에서 끌어 온 항목: 놓은 순서 다음에 넣기
+      e.preventDefault();
+      list.querySelectorAll('.drop').forEach(x => x.classList.remove('drop'));
+      try { const d = JSON.parse(lib); if (r) st.sel = +r.dataset.i; else st.sel = st.cue.items.length - 1; addItem(d.type, d.extra || {}); } catch { /* 무시 */ }
+      return;
+    }
     if (!r || st.dragFrom < 0) return;
     e.preventDefault();
     moveItem(st.dragFrom, +r.dataset.i);
@@ -408,7 +499,11 @@
     save();
     showSide('cue');
     forceEditor();
-    if (type === 'image') { pickImage(url => { it.image = url; save(); forceEditor(); previewItem(at); }); return; }
+    if (type === 'image' && !it.image) { pickImage(url => { it.image = url; save(); forceEditor(); previewItem(at); }); return; }
+    if (type === 'audio') {
+      if (!it.file && window.BCLib) window.BCLib.pickAudio(f => { it.file = f.url; it.title = f.name; save(); forceEditor(); render(); previewItem(at); });
+      previewItem(at); return;
+    }
     if (type === 'hymn') { previewItem(at).then(() => forceEditor()); return; }
     focusTitle();
     previewItem(at);
@@ -623,6 +718,11 @@
 
   window.BCCue = {
     init, render, onCueNext, move, showSide, onSongDownloaded, onSongInbox: showInbox,
+    addItem: (type, extra) => addItem(type, extra), openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
+    selected: () => (st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null),
+    /** 고른 순서를 바꾸고 저장·미리보기 갱신 */
+    updateSelected: fn => { const it = st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null; if (!it) return false; fn(it); save(); forceEditor(); previewItem(st.sel, { keepIndex: true }); return true; },
+    onSongs: d => { if (d && d.id) st.songs.delete(d.id); },
     edit: () => { if (st.cue && st.sel >= 0) { showSide('cue'); forceEditor(); focusTitle(); } },
     onLive: () => render(),
     // 다른 곳(다른 창·외부 연동)에서 바뀐 큐시트는 다시 불러온다. 방금 내가 저장한 것은 제외

@@ -52,6 +52,8 @@ function validatePassage(p) {
     cueId: p.cueId ? String(p.cueId) : '',
     cueIndex: Number.isInteger(p.cueIndex) ? p.cueIndex : -1,
     itemTitle: String(p.itemTitle || ''),
+    // 이 순서에만 쓰는 템플릿 (비우면 출력의 기본 템플릿)
+    tpl: p.tpl ? { main: String(p.tpl.main || ''), overlay: String(p.tpl.overlay || '') } : null,
   };
 }
 

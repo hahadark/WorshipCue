@@ -69,6 +69,9 @@ function defaults() {
     hymnBackground: 'original', // 찬송가 배경 기본값: original(파일의 배경) | template(템플릿 배경) | #ffffff | 이미지 주소
     songSearchUrl: 'https://cwy0675.tistory.com/search/{q}', // 온라인에서 찾기: {q} = 검색어
     songDownloadDir: '', // 지켜볼 다운로드 폴더 (비우면 Windows 다운로드 폴더)
+    imageFolders: [],    // [{ name, path }] 라이브러리 이미지 폴더
+    audioFolders: [],    // [{ name, path }] 라이브러리 음악 폴더
+    overlays: [],        // 출력 위에 겹치는 층 (로고·시계·카운트다운·배너·글자)
     previewMode: true,   // false = 미리보기 끔: 클릭한 본문·순서를 바로 송출 (OBS 스튜디오 모드 끄기)
     dockLayout: '',      // 조작 화면 독 배치 (dockview JSON)
     dockLocked: false,   // 독 배치 잠금

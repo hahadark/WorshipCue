@@ -51,3 +51,7 @@
 .bc-score-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .bc-score-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .bc-slidebg { position: absolute; }
+
+/* 오버레이 층: 슬라이드 위에 늘 겹쳐 보임 */
+.bc-ovl { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+.bc-ov { box-sizing: border-box; }
