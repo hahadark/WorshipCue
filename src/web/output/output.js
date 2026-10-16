@@ -25,6 +25,7 @@
     tplKey = key;
     tpl = t;
     screenEl.innerHTML = '';
+    vUrl = ''; vLayer = null;
     stage = R.buildStage(t);
     stage.style.setProperty('--bc-fade', fadeMs() + 'ms');
     screenEl.appendChild(stage);
@@ -43,6 +44,28 @@
   function fadeMs() { return tpl && tpl.animation && ['dissolve', 'fade'].includes(tpl.animation.type) ? Math.max(0, Number(tpl.animation.duration) || 0) : 0; }
 
   let renderSeq = 0;
+
+  // ---------- 순서 배경 영상 층 ----------
+  let vUrl = '';
+  let vLayer = null;
+  function setVideoBg(url) {
+    if (url === vUrl) return;
+    vUrl = url;
+    const old = vLayer;
+    vLayer = null;
+    const ms = Math.max(300, fadeMs());
+    if (old) { old.style.transition = `opacity ${ms}ms ease`; old.style.opacity = '0'; setTimeout(() => old.remove(), ms + 60); }
+    if (!url) return;
+    const layer = document.createElement('div');
+    layer.className = 'bc-vlayer';
+    layer.style.opacity = '0';
+    layer.innerHTML = `<video src="${R.safeUrl(url)}" autoplay muted loop playsinline preload="auto"></video>`;
+    stage.insertBefore(layer, stage.children[1] || null); // 템플릿 배경 바로 위, 글자 아래
+    const v = layer.querySelector('video');
+    const show = () => { layer.style.transition = `opacity ${ms}ms ease`; layer.style.opacity = '1'; };
+    if (v.readyState >= 2) requestAnimationFrame(show); else { v.addEventListener('loadeddata', show, { once: true }); setTimeout(show, 1500); }
+    vLayer = layer;
+  }
 
   function fadeIn(el, ms, delay) {
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -64,7 +87,7 @@
   function coversScreen(slide) {
     if (R.lyricsOnly(tpl) && typeof slide.caption === 'string') return false; // 가사만 출력
     if (slide.kind === 'score') return !!slide.bg;
-    if (slide.kind === 'image') return true;
+    if (slide.kind === 'image' || slide.kind === 'video') return true;
     if (slide.kind === 'blank') return slide.mode !== 'background';
     return false;
   }
@@ -94,6 +117,27 @@
     if (ovLayer) stage.appendChild(ovLayer);
   }
 
+  // ---------- 영상 재생 슬라이드 ----------
+  // 소리: 예배당 전체화면 창(?window=1 의 main)에서만 (OBS 브라우저 소스는 소리 없음 → 이중 재생 방지)
+  const soundHere = output === 'main' && isWindow;
+  let endedKey = '';
+  function applyVideo(p) {
+    const v = current && current.querySelector('video.bc-play');
+    if (!v || !p.video || !p.slide || p.slide.kind !== 'video') return;
+    const o = p.slide.video || {};
+    R.syncVideo(v, p.video, { sound: soundHere && o.sound, volume: o.volume ?? 1, loop: !!o.loop });
+    if (!v.dataset.bound) {
+      v.dataset.bound = '1';
+      v.addEventListener('loadedmetadata', () => { if (lastPayload) R.syncVideo(v, lastPayload.video, { sound: soundHere && o.sound, volume: o.volume ?? 1, loop: !!o.loop }); });
+      v.addEventListener('ended', () => {
+        const key = lastPayload && lastPayload.video && lastPayload.video.key;
+        if (!key || key === endedKey) return;
+        endedKey = key;
+        fetch('/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WorshipCue': '1' }, body: JSON.stringify({ cmd: 'videoEnded', args: { key, duration: v.duration } }) }).catch(() => {});
+      });
+    }
+  }
+
   function render(p) {
     lastPayload = p;
     document.body.classList.toggle('nocursor', p.cursorHidden !== false);
@@ -104,7 +148,7 @@
     bg.style.opacity = (!show && p.template.clearHidesBackground) ? '0' : '1';
 
     renderOverlays(p, stageChanged);
-    if (!stageChanged && key === lastKey) { ack(p); return; }
+    if (!stageChanged && key === lastKey) { applyVideo(p); ack(p); return; }
     lastKey = key;
 
     const token = ++renderSeq;
@@ -113,16 +157,21 @@
     current = null;
     if (!show) {
       // 숨김: 디졸브면 서서히 사라짐
+      if (p.template.clearHidesBackground || !p.hasLive) setVideoBg('');
       fadeOut(olds, fadeMs(), 0);
       ack(p);
       return;
     }
-    const area = R.buildContent(p.slide, tpl, p.versionName);
+    // 순서 배경이 영상이면 영상 층에서 재생 (가사 화면 등 글자 슬라이드)
+    const wantVid = p.slide.bg && R.isVideo(p.slide.bg) && !(R.lyricsOnly(tpl) && typeof p.slide.caption === 'string') ? p.slide.bg : '';
+    setVideoBg(wantVid);
+    const area = R.buildContent(p.slide, tpl, p.versionName, { videoBgLayer: true });
     area.style.transition = 'none';
     area.style.opacity = '0';
     stage.appendChild(area); // 이전 층 위에 쌓인다
     R.fit(area, tpl);
     current = area;
+    applyVideo(p);
     // 그림(악보·PPT·배경)을 다 불러온 뒤에 바꾼다 → 빈 화면이 잠깐 보이는 깜빡임 방지
     whenReady(area, p.slide).then(() => {
       if (token !== renderSeq) return; // 그 사이 다음 슬라이드가 왔으면 그쪽이 처리

@@ -107,12 +107,25 @@
   }
 
   /** 슬라이드 본문 DOM 생성 (아직 크기 맞춤 전) */
+  /** 주소를 한 번만 인코딩 (/lib/file?p=%3A… 처럼 이미 인코딩된 주소는 그대로) */
+  function safeUrl(u) { u = String(u || ''); return /%[0-9A-Fa-f]{2}/.test(u) ? u : encodeURI(u); }
+
+  /** 영상 파일 주소인가 (/lib/file?p=…mp4 등) */
+  function isVideo(url) {
+    if (!url) return false;
+    let u = String(url);
+    try { u = decodeURIComponent(u); } catch { /* 그대로 */ }
+    return /\.(mp4|m4v|webm|mov)$/i.test(u.split('#')[0]);
+  }
+  /** 소리 없이 반복 재생하는 배경 영상 */
+  const videoTag = (url, cls, style = '', fit = 'cover') => `<video class="${cls}" src="${safeUrl(url)}" autoplay muted loop playsinline preload="auto" style="object-fit:${fit};${style}"></video>`;
+
   /** 이 출력에서 PPT·찬송가 슬라이드를 가사 글자만으로 보이는가 */
   function lyricsOnly(t) {
     return t.pptMode ? t.pptMode === 'lyrics' : !!(t.background && t.background.type === 'transparent');
   }
 
-  function buildContent(slide, t, versionName) {
+  function buildContent(slide, t, versionName, opts = {}) {
     const rect = contentRect(t);
     const area = document.createElement('div');
     area.className = 'bc-area';
@@ -124,22 +137,30 @@
       slide = { kind: 'text', ref: '', label: slide.label, parts: [{ book: 0, chapter: 0, verse: 0, text: slide.caption.trim() }] };
       kind = 'text';
     }
+    // 영상 재생: 화면 전체 (소리·재생 위치는 출력 화면이 syncVideo 로 맞춘다)
+    if (kind === 'video') {
+      area.style.cssText = `left:0;top:0;width:${t.width}px;height:${t.height}px;`;
+      area.innerHTML = `<div class="bc-block bc-imgslide"><video class="bc-play" src="${safeUrl(slide.image || '')}" playsinline preload="auto" muted style="width:100%;height:100%;object-fit:contain;background:#000;display:block"></video></div>`;
+      return area;
+    }
     // 이미지·빈 화면: 화면 전체를 쓴다
     if (kind === 'image' || kind === 'blank' || kind === 'score') {
       area.style.cssText = `left:0;top:0;width:${t.width}px;height:${t.height}px;`;
       if (kind === 'score') {
         // 찬송가: (배경) + 투명 악보 그림을 화면에 맞춰 겹친다
-        const sbg = !slide.bg ? '' : slide.bg.startsWith('#') ? `<div class="bc-score-bg" style="background:${esc(slide.bg)}"></div>` : `<img class="bc-score-bg" alt="" src="${encodeURI(slide.bg)}">`;
-        area.innerHTML = `<div class="bc-block bc-score">${sbg}<img class="bc-score-img" alt="" src="${encodeURI(slide.image || '')}"></div>`;
+        const sbg = !slide.bg ? '' : slide.bg.startsWith('#') ? `<div class="bc-score-bg" style="background:${esc(slide.bg)}"></div>` : `<img class="bc-score-bg" alt="" src="${safeUrl(slide.bg)}">`;
+        area.innerHTML = `<div class="bc-block bc-score">${sbg}<img class="bc-score-img" alt="" src="${safeUrl(slide.image || '')}"></div>`;
       } else {
         area.innerHTML = kind === 'image'
-          ? `<div class="bc-block bc-imgslide"><img alt="" src="${encodeURI(slide.image || '')}"></div>`
+          ? (isVideo(slide.image) ? `<div class="bc-block bc-imgslide">${videoTag(slide.image, 'bc-vid', 'width:100%;height:100%;display:block', 'contain')}</div>` : `<div class="bc-block bc-imgslide"><img alt="" src="${safeUrl(slide.image || '')}"></div>`)
           : `<div class="bc-block bc-blank ${slide.mode === 'background' ? '' : 'bc-black'}"></div>`;
       }
       return area;
     }
     // 슬라이드 자체 배경 (예: 교독문의 원래 배경): 화면 전체에 깔고 그 위에 글자
-    const slideBg = slide.bg && !asLyrics ? `<div class="bc-slidebg" style="left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:${slide.bg.startsWith('#') ? esc(slide.bg) : `#000 url('${encodeURI(slide.bg)}') center/cover no-repeat`}"></div>` : '';
+    const bgVid = slide.bg && !asLyrics && isVideo(slide.bg);
+    const slideBg = bgVid ? (opts.videoBgLayer ? '' : videoTag(slide.bg, 'bc-slidebg', `left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:#000`))
+      : slide.bg && !asLyrics ? `<div class="bc-slidebg" style="left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:${slide.bg.startsWith('#') ? esc(slide.bg) : `#000 url('${safeUrl(slide.bg)}') center/cover no-repeat`}"></div>` : '';
     const justify = { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[t.valign] || 'center';
     area.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;justify-content:${justify};`;
     const b = t.box;
@@ -193,9 +214,10 @@
   function backgroundCss(t) {
     const bg = t.background;
     if (bg.type === 'transparent') return 'background:transparent;';
+    if (bg.type === 'video') return `background:${bg.color || '#000'};`;
     if (bg.type === 'gradient' && bg.gradient) return `background:${bg.gradient};`;
     if (bg.type === 'image' && bg.image) {
-      return `background:${bg.color || '#000'} url("${encodeURI(bg.image)}") center/${bg.imageFit || 'cover'} no-repeat;`;
+      return `background:${bg.color || '#000'} url("${safeUrl(bg.image)}") center/${bg.imageFit || 'cover'} no-repeat;`;
     }
     return `background:${bg.color || '#000'};`;
   }
@@ -209,8 +231,11 @@
     const bg = document.createElement('div');
     bg.className = 'bc-bg';
     bg.style.cssText = backgroundCss(t);
-    if (t.background.type === 'image' && t.background.dim > 0) {
-      bg.innerHTML = `<div class="bc-dim" style="background:rgba(0,0,0,${t.background.dim})"></div>`;
+    if (t.background.type === 'video' && t.background.video) {
+      bg.innerHTML = videoTag(t.background.video, 'bc-bgvid', 'position:absolute;inset:0;width:100%;height:100%', t.background.imageFit || 'cover');
+    }
+    if ((t.background.type === 'image' || t.background.type === 'video') && t.background.dim > 0) {
+      bg.insertAdjacentHTML('beforeend', `<div class="bc-dim" style="background:rgba(0,0,0,${t.background.dim})"></div>`);
     }
     // 로고: 배경층에 함께 둬서 본문이 바뀌어도 그대로 보인다
     const lg = t.logo;
@@ -220,7 +245,7 @@
         'top-left': `top:${m}px;left:${m}px`, 'top-center': `top:${m}px;left:50%;transform:translateX(-50%)`, 'top-right': `top:${m}px;right:${m}px`,
         'bottom-left': `bottom:${m}px;left:${m}px`, 'bottom-center': `bottom:${m}px;left:50%;transform:translateX(-50%)`, 'bottom-right': `bottom:${m}px;right:${m}px`,
       }[lg.position] || `top:${m}px;right:${m}px`;
-      bg.insertAdjacentHTML('beforeend', `<img class="bc-logo" alt="" src="${encodeURI(lg.image)}" style="position:absolute;${pos};height:${Number(lg.size) || 120}px;opacity:${lg.opacity ?? 1}">`);
+      bg.insertAdjacentHTML('beforeend', `<img class="bc-logo" alt="" src="${safeUrl(lg.image)}" style="position:absolute;${pos};height:${Number(lg.size) || 120}px;opacity:${lg.opacity ?? 1}">`);
     }
     stage.appendChild(bg);
     return stage;
@@ -305,7 +330,7 @@
       const font = `font-family:${t.font.family};font-size:${o.size}px;color:${esc(o.color)};font-weight:700;${o.bg ? '' : 'text-shadow:0 2px 8px rgba(0,0,0,.85);'}`;
       const base = `position:absolute;${ovPosCss(o)};opacity:${o.opacity ?? 1};`;
       let html;
-      if (o.type === 'logo') html = o.image ? `<img class="bc-ov" alt="" src="${encodeURI(o.image)}" style="${base}height:${o.size}px">` : '';
+      if (o.type === 'logo') html = o.image ? `<img class="bc-ov" alt="" src="${safeUrl(o.image)}" style="${base}height:${o.size}px">` : '';
       else if (o.type === 'clock') html = `<div class="bc-ov" data-ov="clock" data-o='${esc(JSON.stringify({ format: o.format, showSeconds: o.showSeconds }))}' style="${base}${font}${box}white-space:nowrap">${esc(clockText(o))}</div>`;
       else if (o.type === 'countdown') html = `<div class="bc-ov" data-ov="countdown" data-o='${esc(JSON.stringify({ target: o.target, startedAt: o.startedAt, doneText: o.doneText }))}' style="${base}${font}${box}white-space:nowrap">${esc(countdownText(o))}</div>`;
       else html = `<div class="bc-ov" style="${base}${font}${box}${o.full ? 'text-align:center;' : 'max-width:90%;'}white-space:pre-line;line-height:1.35">${esc(o.text)}</div>`;
@@ -325,6 +350,24 @@
         if (el.textContent !== txt) el.textContent = txt;
       }
     }, 250);
+  }
+
+  /**
+   * 영상 재생 상태 맞추기: st = { playing, offset, at, now } (코어 기준 시각)
+   * 소리는 sound=true 인 곳(예배당 전체화면 창)에서만
+   */
+  function syncVideo(v, st, { sound = false, volume = 1, loop = false } = {}) {
+    if (!v || !st) return;
+    v.loop = loop;
+    v.muted = !sound;
+    v.volume = Math.max(0, Math.min(1, volume));
+    const skew = Date.now() - (st.now || Date.now()); // 코어와 이 화면의 시계 차이
+    const target = st.offset + (st.playing ? (Date.now() - skew - st.at) / 1000 : 0);
+    const dur = v.duration || 0;
+    const want = dur && !loop ? Math.min(target, Math.max(0, dur - 0.05)) : dur && loop ? target % dur : target;
+    if (Math.abs((v.currentTime || 0) - want) > 0.5 && (v.readyState >= 1)) { try { v.currentTime = want; } catch { /* 아직 불러오는 중 */ } }
+    if (st.playing && v.paused && !(dur && !loop && target >= dur)) v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    if (!st.playing && !v.paused) v.pause();
   }
 
   /** 미리보기/모니터용: 컨테이너에 슬라이드를 즉시 그린다 */
@@ -354,5 +397,5 @@
     return { stage, ...result };
   }
 
-  global.BCRender = { esc, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { esc, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

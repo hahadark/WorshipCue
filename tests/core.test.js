@@ -477,6 +477,38 @@ test('라이브러리: 이미지·음악 폴더와 파일 제공(구간 요청),
   core.store.close();
 });
 
+test('영상 재생 순서: 재생 상태, 일시정지·처음부터, 끝나면 다음 순서', () => {
+  const core = newCore('video');
+  const vslide = { kind: 'video', image: '/lib/file?p=a.mp4', ref: '광고 영상', parts: [], video: { volume: 0.8, sound: true, loop: false, endAction: 'next' } };
+  core.command('sendLive', { passage: { title: '광고 영상', cueId: 'c1', cueIndex: 2 }, slides: [vslide], index: 0 });
+  const v1 = core.outputPayload('main').video;
+  assert.equal(v1.playing, true);
+  assert.equal(core.outputPayload('main').slide.video.endAction, 'next');
+  // 숨김·복원은 처음부터 다시 재생하지 않는다
+  core.command('toggleLive'); core.command('toggleLive');
+  assert.equal(core.outputPayload('main').video.key, v1.key);
+  assert.equal(core.command('videoControl', { action: 'pause' }).result.playing, false);
+  assert.equal(core.command('videoControl', { action: 'seek', time: 12 }).result.offset, 12);
+  const r = core.command('videoControl', { action: 'restart' }).result;
+  assert.deepEqual([r.playing, r.offset], [true, 0]);
+  assert.equal(core.command('videoControl', { action: 'nope' }).ok, false);
+  // 끝 알림: 키가 맞을 때 한 번만, 다음 순서 요청
+  let next = null;
+  core.on('cue-next', d => { next = d; });
+  assert.equal(core.command('videoEnded', { key: 'wrong' }).result.done, false);
+  assert.equal(core.command('videoEnded', { key: v1.key, duration: 30 }).result.done, true);
+  assert.equal(core.command('videoEnded', { key: v1.key }).result.done, false);
+  assert.deepEqual(next && [next.dir, next.cueId, next.index], [1, 'c1', 2]);
+  // 영상이 아닌 슬라이드면 재생 상태 없음
+  core.command('sendLive', { passage: { title: 'x' }, slides: [{ kind: 'title', ref: 'x', parts: [] }], index: 0 });
+  assert.equal(core.outputPayload('main').video, null);
+  assert.equal(core.command('videoControl', { action: 'play' }).ok, false);
+  // 큐시트 '영상' 항목
+  const c = core.command('saveCue', { cue: { name: 'v', items: [{ type: 'video', title: '광고', file: '/lib/file?p=a.mp4', endAction: 'black', loop: true }] } });
+  assert.deepEqual([c.result.items[0].type, c.result.items[0].endAction, c.result.items[0].loop, c.result.items[0].sound], ['video', 'black', true, true]);
+  core.store.close();
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

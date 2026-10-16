@@ -8,7 +8,7 @@ function base() {
     id: '', name: '', preset: false,
     width: 1920, height: 1080,
     safeArea: 0, // 화면 가장자리 안전영역(%)
-    background: { type: 'color', color: '#000000', image: '', imageFit: 'cover', dim: 0 },
+    background: { type: 'color', color: '#000000', image: '', imageFit: 'cover', dim: 0, video: '' }, // type: color|gradient|image|video|transparent
     clearHidesBackground: false, // 숨김(Clear) 시 배경까지 숨길지
     font: { family: FONT_SANS, size: 72, minSize: 44, autoFit: true, weight: 500, color: '#ffffff', lineHeight: 1.5, letterSpacing: 0 },
     align: 'center', valign: 'middle',

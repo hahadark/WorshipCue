@@ -12,8 +12,8 @@
   const $ = s => document.querySelector(s);
   const cmd = app.cmd;
 
-  const ICON = { audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
-  const TYPE = { audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
+  const ICON = { video: '🎬', audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
+  const TYPE = { video: '영상', audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
   const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map(), songs: new Map(), songTimer: null };
   /** 순서별 템플릿 { main, overlay } (없으면 null = 출력 기본) */
   const itemTpl = it => (it.tplMain || it.tplOverlay ? { main: it.tplMain || '', overlay: it.tplOverlay || '' } : null);
@@ -76,6 +76,7 @@
       case 'image': return it.image ? '이미지' : '(이미지를 고르세요)';
       case 'blank': return it.mode === 'background' ? '배경·로고만' : '검은 화면';
       case 'audio': return it.file ? fileName(it.file) : '(음악을 고르세요)';
+      case 'video': return it.file ? fileName(it.file) + (it.loop ? ' · 반복' : '') : '(영상을 고르세요)';
     }
     return '';
   }
@@ -179,6 +180,7 @@
     else if (it.type === 'song') slides = SL.buildText({ title: it.title, showTitle: it.showTitle, chunks: SL.lyricsChunks(it.lyrics) }, opts);
     else if (it.type === 'text') slides = SL.buildText({ title: it.title, showTitle: true, chunks: SL.textChunks(it.body) }, opts);
     else if (it.type === 'image' && it.image) slides = [{ kind: 'image', image: it.image, ref: it.title, label: '이미지', parts: [] }];
+    else if (it.type === 'video' && it.file) slides = [{ kind: 'video', image: it.file, ref: it.title, label: '영상', parts: [], caption: '', video: { volume: it.volume ?? 1, sound: it.sound !== false, loop: !!it.loop, endAction: it.endAction || 'hold' } }];
     else if (it.type === 'blank') slides = [{ kind: 'blank', mode: it.mode, ref: it.title, label: it.mode === 'background' ? '배경' : '검은 화면', parts: [] }];
     // 제목 카드, 또는 내용이 비어 있으면 제목만
     if (!slides.length) slides = [{ kind: 'title', ref: it.title, subtitle: it.subtitle || '', label: '제목', parts: [] }];
@@ -230,7 +232,7 @@
     $('#resultInfo').textContent = `${TYPE[it.type]} · 슬라이드 ${app.preview.slides.length}장`;
     $('#results').innerHTML = app.preview.slides.map((s, k) => {
       const body = s.kind === 'score' || (s.kind === 'image' && it.type === 'hymn') ? `<span class="sboth"><img class="sthumb" src="${esc(s.image)}" alt=""><span class="scap">${s.caption ? esc(s.caption) : '<span class="muted">(가사 없음 — 편집칸의 OBS 가사에 입력)</span>'}</span></span>`
-        : esc(s.kind === 'text' ? s.parts[0].text : s.kind === 'title' ? [s.ref, s.subtitle].filter(Boolean).join('\n') : s.kind === 'image' ? '🖼 이미지' : '⬛ ' + (s.mode === 'background' ? '배경·로고만' : '검은 화면'));
+        : esc(s.kind === 'text' ? s.parts[0].text : s.kind === 'title' ? [s.ref, s.subtitle].filter(Boolean).join('\n') : s.kind === 'image' ? '🖼 이미지' : s.kind === 'video' ? '🎬 영상' : '⬛ ' + (s.mode === 'background' ? '배경·로고만' : '검은 화면'));
       return `<div class="srow ${k === app.preview.index ? 'in-pv' : ''}" data-k="${k}"><span class="vn">${esc(s.label || String(k + 1))}</span><span class="stext">${body}</span></div>`;
     }).join('');
   }
@@ -294,6 +296,10 @@
           <div class="ce-row note">OBS 자막처럼 'PPT 슬라이드: 가사만'인 출력에 나옵니다. 슬라이드마다 빈 줄로 구분 · 비우면 자동 <button data-act="obsfill" title="자동 가사를 칸에 넣어 직접 고칠 수 있게">자동 가사 넣어 고치기</button></div></div>
         <label>배경</label><div class="ce-row">${(st.hymnMeta.get(it.file) || {}).mode === 'slides' ? '<span class="muted">PPT 화면 그대로 송출합니다 (배경 바꾸기 없음). 폴더 읽는 방식을 \'자동\'으로 바꾸면 악보·배경을 나눠 꺼낼 수 있습니다.</span>' : hymnBgSel()}</div>`,
       bible: `<label>장절</label><div class="ce-row"><input type="text" data-k="ref" value="${esc(it.ref || '')}" placeholder="예: 롬 8:18-25 · 시 23" style="flex:1"><select data-k="versionId"><option value="">현재 번역본</option>${vs.map(v => `<option value="${esc(v.id)}" ${it.versionId === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select></div><span></span><div id="ceRefMsg" class="note"></div>`,
+      video: `<label>영상</label><div class="ce-row">${it.file ? thumbTag(it.file) : ''}<span class="muted ce-file">${esc(it.file ? fileName(it.file) : '(고르지 않음)')}</span><button data-act="videopick">🎬 영상 고르기…</button></div>
+        <label>소리</label><div class="ce-row"><label class="tc-toggle"><input type="checkbox" data-k="sound" ${it.sound !== false ? 'checked' : ''}> 소리 켜기 (예배당 화면 창에서 재생)</label><input type="range" data-k="volume" min="0" max="1" step="0.05" value="${it.volume ?? 1}" style="flex:1"></div>
+        <label>재생</label><div class="ce-row"><label class="tc-toggle"><input type="checkbox" data-k="loop" ${it.loop ? 'checked' : ''}> 반복</label>
+          <select data-k="endAction" title="영상이 끝나면"><option value="hold" ${(it.endAction || 'hold') === 'hold' ? 'selected' : ''}>끝나면: 마지막 장면에서 멈춤</option><option value="black" ${it.endAction === 'black' ? 'selected' : ''}>끝나면: 화면 숨김</option><option value="next" ${it.endAction === 'next' ? 'selected' : ''}>끝나면: 다음 순서 송출</option></select></div>`,
       audio: `<label>음악</label><div class="ce-row"><span class="muted ce-file">${esc(it.file ? fileName(it.file) : '(고르지 않음)')}</span><button data-act="audiopick">🔊 음악 고르기…</button><button data-act="audioplay">▶</button><button data-act="audiostop">■</button></div>
         <label>소리 크기</label><div class="ce-row"><input type="range" data-k="volume" min="0" max="1" step="0.05" value="${it.volume ?? 1}" style="flex:1"><label class="tc-toggle"><input type="checkbox" data-k="loop" ${it.loop ? 'checked' : ''}> 반복</label><label class="tc-toggle"><input type="checkbox" data-k="fadeOnLeave" ${it.fadeOnLeave !== false ? 'checked' : ''}> 다른 화면을 송출하면 페이드아웃</label></div>`,
       song: `${it.songId ? `<label>라이브러리</label><div class="ce-row note">📚 라이브러리 찬양과 연결됨 — 가사를 고치면 이 찬양을 쓰는 모든 큐시트에 반영 <button data-act="unlink">연결 끊기</button></div>` : `<label>라이브러리</label><div class="ce-row note"><button data-act="tolib">📚 라이브러리에 저장</button> 저장하면 다음 주에도 검색해서 바로 넣을 수 있습니다</div>`}
@@ -301,7 +307,7 @@
         <span></span><div class="ce-row note"><label class="tc-toggle"><input type="checkbox" data-k="showTitle" ${it.showTitle ? 'checked' : ''}> 화면에 제목 표시</label> · 빈 줄 = 다음 슬라이드 · [1절] 줄은 슬라이드 이름</div>`,
       text: `<label>내용</label><textarea data-k="body" rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="note">'---' 줄 = 다음 슬라이드</div>`,
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">`,
-      image: `<label>이미지</label><div class="ce-row">${it.image ? `<img class="ce-thumb" src="${esc(it.image)}" alt="">` : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,
+      image: `<label>이미지</label><div class="ce-row">${it.image ? thumbTag(it.image) : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,
       blank: `<label>화면</label><select data-k="mode"><option value="black" ${it.mode !== 'background' ? 'selected' : ''}>검은 화면 (로고도 숨김)</option><option value="background" ${it.mode === 'background' ? 'selected' : ''}>배경·로고만 보이기</option></select>`,
     }[it.type];
     box.innerHTML = `<div class="ce-head"><span class="ce-ico">${ICON[it.type]}</span><b>${i + 1}번 ${TYPE[it.type]}</b>
@@ -312,13 +318,15 @@
       <div class="form ce-form">
         <label>제목</label><input type="text" data-k="title" value="${esc(it.title)}">
         ${fields}
-        ${['song', 'text', 'title', 'bible'].includes(it.type) ? `<label>배경</label><div class="ce-row">${it.bg ? `<img class="ce-thumb" src="${esc(it.bg)}" alt="">` : '<span class="muted">템플릿 배경</span>'}<button data-act="itembg">🖼 이미지 고르기…</button>${it.bg ? '<button data-act="itembgclear">지우기</button>' : ''}</div>` : ''}
+        ${['song', 'text', 'title', 'bible'].includes(it.type) ? `<label>배경</label><div class="ce-row">${it.bg ? thumbTag(it.bg) : '<span class="muted">템플릿 배경</span>'}<button data-act="itembg">🖼 이미지·영상 고르기…</button>${it.bg ? '<button data-act="itembgclear">지우기</button>' : ''}</div>` : ''}
         ${it.type !== 'audio' ? `<label>템플릿</label><div class="ce-row">${tplSelect('tplMain', '예배당', it.tplMain)}${tplSelect('tplOverlay', 'OBS', it.tplOverlay)}</div>` : ''}
         <label>메모</label><input type="text" data-k="note" value="${esc(it.note || '')}" placeholder="조작자만 보는 메모 (예: 설교 후 바로)">
       </div>`;
     if (it.type === 'bible') checkRef(it);
   }
 
+  /** 편집칸 썸네일 (영상이면 첫 장면) */
+  const thumbTag = url => (window.BCRender.isVideo(url) ? `<video class="ce-thumb" muted preload="metadata" src="${esc(url)}#t=1"></video>` : `<img class="ce-thumb" src="${esc(url)}" alt="">`);
   function tplSelect(k, label, val) {
     const ts = app.state.settings.templates;
     return `<select data-k="${k}" title="이 순서에만 쓸 ${label} 템플릿"><option value="">${label}: 기본 템플릿</option>${ts.map(t => `<option value="${esc(t.id)}" ${t.id === val ? 'selected' : ''}>${label}: ${esc(t.name)}</option>`).join('')}</select>`;
@@ -368,6 +376,7 @@
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;
       case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); forceEditor(); break; }
       case 'del': removeItem(i); break;
+      case 'videopick': if (window.BCLib) window.BCLib.pickVideo(url => { it.file = url; if (!it.title || it.title === TYPE.video) it.title = fileName(url).replace(/\.[^.]+$/, ''); save(); forceEditor(); render(); previewItem(i); }); break;
       case 'audiopick': if (window.BCLib) window.BCLib.pickAudio(f => { it.file = f.url; if (!it.title || it.title === TYPE.audio) it.title = f.name; save(); forceEditor(); render(); }); break;
       case 'audioplay': playAudio(it); break;
       case 'audiostop': if (window.BCLib) window.BCLib.audio.stop(); break;
@@ -500,6 +509,11 @@
     showSide('cue');
     forceEditor();
     if (type === 'image' && !it.image) { pickImage(url => { it.image = url; save(); forceEditor(); previewItem(at); }); return; }
+    if (type === 'video' && !it.file) {
+      if (it.endAction === undefined) { it.sound = true; it.volume = 1; it.endAction = 'hold'; }
+      if (window.BCLib) window.BCLib.pickVideo(url => { it.file = url; it.title = fileName(url).replace(/\.[^.]+$/, ''); save(); forceEditor(); render(); previewItem(at); });
+      return;
+    }
     if (type === 'audio') {
       if (!it.file && window.BCLib) window.BCLib.pickAudio(f => { it.file = f.url; it.title = f.name; save(); forceEditor(); render(); previewItem(at); });
       previewItem(at); return;

@@ -92,9 +92,11 @@
     const isGrad = t.background.type === 'gradient';
     const gradBtn = t.background.gradient
       ? `<button type="button" class="tc-sw tc-sw-grad ${isGrad ? 'on' : ''}" data-bgmode="gradient" title="테마 배경 (그라데이션)" style="background:${esc(t.background.gradient)}"></button>` : '';
-    const imgBtn = `<button type="button" class="tc-imgbtn ${isImg ? 'on' : ''}" data-pickimg="background" title="배경 이미지 올리기 (png · jpg · webp)">${isImg ? `<img src="${esc(t.background.image)}" alt="">` : '🖼'} ${isImg ? '이미지 바꾸기' : '이미지'}</button>`;
+    const isVid = t.background.type === 'video' && t.background.video;
+    const vidBtn = `<button type="button" class="tc-imgbtn ${isVid ? 'on' : ''}" data-pickvid title="라이브러리의 영상을 배경으로 (소리 없이 반복 재생)">🎞 ${isVid ? '영상 바꾸기' : '영상'}</button>`;
+    const imgBtn = vidBtn + `<button type="button" class="tc-imgbtn ${isImg ? 'on' : ''}" data-pickimg="background" title="배경 이미지 올리기 (png · jpg · webp)">${isImg ? `<img src="${esc(t.background.image)}" alt="">` : '🖼'} ${isImg ? '이미지 바꾸기' : '이미지'}</button>`;
     const bgBlock = `<div class="tc-row"><span class="tc-label">배경</span>${gradBtn}${swatches('background', BG_COLORS, bg, true)}${imgBtn}</div>`
-      + (isImg ? slider('background.dim', '이미지 어둡게', t.background.dim || 0, 0, 0.85, 0.05, '')
+      + (isImg || isVid ? slider('background.dim', isVid ? '영상 어둡게' : '이미지 어둡게', t.background.dim || 0, 0, 0.85, 0.05, '')
         + `<div class="tc-row"><span class="tc-label">이미지 맞춤</span><div class="tc-seg tc-seg-sm" data-seg="background.imageFit">${[['cover', '화면 채우기'], ['contain', '전체 보이기']].map(([v, l]) => `<button type="button" data-v="${v}" class="${(t.background.imageFit || 'cover') === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>` : '');
 
     // 로고: 없음 · 레드 쉴드 · 크레스트 · 내 로고 올리기 (+ 위치·크기)
@@ -287,6 +289,16 @@
       if (!b) return;
       if (b.dataset.c) { applyColor(b.closest('[data-sw]').dataset.sw, b.dataset.c, true); return; }
       if (b.dataset.pickimg) { pickImage(b.dataset.pickimg); return; }
+      if (b.dataset.pickvid !== undefined) {
+        if (!window.BCLib) return;
+        window.BCLib.pickVideo(url => {
+          t.background.type = 'video'; t.background.video = url;
+          if (t.background.dim == null) t.background.dim = 0;
+          emit(true);
+          render(container, t, onChange, opts);
+        });
+        return;
+      }
       if (b.dataset.bgmode === 'gradient') { t.background.type = 'gradient'; emit(true); render(container, t, onChange, opts); return; }
       if (b.dataset.logo !== undefined) {
         if (!b.dataset.logo) t.logo = { ...(t.logo || {}), show: false };

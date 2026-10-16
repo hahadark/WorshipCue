@@ -52,7 +52,7 @@ class WorshipCueCore extends EventEmitter {
       const first = all.find(v => v.id === 'nkrv') || all.find(v => v.id === 'krv') || all[0];
       this.settings.update(d => { d.versionId = first ? first.id : ''; });
     }
-    this.presentation.on('live', () => this.emit('live'));
+    this.presentation.on('live', () => { this.syncVideo(); this.emit('live'); });
     this.presentation.on('preview', () => this.emit('preview'));
     this.presentation.on('edge', ({ edge, live }) => {
       // 큐시트 항목을 송출 중이면 다음(이전) 순서로 넘어간다
@@ -69,6 +69,25 @@ class WorshipCueCore extends EventEmitter {
 
   versionId(args) {
     return (args && args.versionId) || this.settings.get().versionId;
+  }
+
+  // ---------------- 영상 재생 (큐시트 '영상' 순서) ----------------
+  /** 송출 중인 슬라이드가 영상이면 재생 상태를 둔다 (새 영상이면 처음부터 재생) */
+  syncVideo() {
+    const l = this.presentation.live;
+    const slide = l ? l.slides[l.index] : null;
+    if (!slide || slide.kind !== 'video') { this.video = null; return; }
+    const key = `${l.sentAt}|${l.index}`;
+    if (this.video && this.video.key === key) return;
+    this.video = { key, playing: true, offset: 0, at: Date.now(), ended: false };
+  }
+  videoPayload() {
+    const v = this.video;
+    return v ? { key: v.key, playing: v.playing, offset: v.offset, at: v.at, now: Date.now() } : null;
+  }
+  videoPosition() {
+    const v = this.video;
+    return v ? v.offset + (v.playing ? (Date.now() - v.at) / 1000 : 0) : 0;
   }
 
   templateFor(output) {
@@ -92,6 +111,7 @@ class WorshipCueCore extends EventEmitter {
       versionName: live.passage ? live.passage.versionName : '',
       template: this.templateFor(output),
       overlays: this.library.activeFor(output),
+      video: this.videoPayload(),
       cursorHidden: this.settings.get().output.cursorHidden,
     };
   }
@@ -108,7 +128,7 @@ class WorshipCueCore extends EventEmitter {
   getState() {
     const s = this.settings.get();
     return {
-      live: this.presentation.getLiveState(),
+      live: { ...this.presentation.getLiveState(), video: this.videoPayload() },
       preview: this.presentation.preview ? {
         passage: this.presentation.preview.passage,
         index: this.presentation.preview.index,
@@ -413,6 +433,38 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  /** 영상 재생 조작: play | pause | toggle | restart | seek(time) */
+  videoControl(a) {
+    const v = this.video;
+    if (!v) throw new Error('송출 중인 영상이 없습니다.');
+    const pos = this.videoPosition();
+    const act = String(a.action || '');
+    if (act === 'play' || (act === 'toggle' && !v.playing)) Object.assign(v, { playing: true, offset: pos, at: Date.now(), ended: false });
+    else if (act === 'pause' || act === 'toggle') Object.assign(v, { playing: false, offset: pos, at: Date.now() });
+    else if (act === 'restart') Object.assign(v, { playing: true, offset: 0, at: Date.now(), ended: false });
+    else if (act === 'seek') Object.assign(v, { offset: Math.max(0, Number(a.time) || 0), at: Date.now(), ended: false });
+    else throw new Error('알 수 없는 영상 조작입니다.');
+    this.emit('live');
+    return this.videoPayload();
+  },
+  /** 출력 화면이 '영상이 끝났다'고 알림 → 순서에 정한 대로 (한 번만) */
+  videoEnded(a) {
+    const v = this.video;
+    if (!v || v.key !== a.key || v.ended) return { done: false };
+    v.ended = true;
+    v.playing = false;
+    v.offset = Number(a.duration) || this.videoPosition();
+    v.at = Date.now();
+    const l = this.presentation.live;
+    const slide = l && l.slides[l.index];
+    const end = slide && slide.video ? slide.video.endAction : 'hold';
+    if (end === 'black') this.presentation.clear();
+    else if (end === 'next' && l.passage && l.passage.cueId && l.passage.cueIndex >= 0) {
+      this.emit('cue-next', { dir: 1, version: this.presentation.version, cueId: l.passage.cueId, index: l.passage.cueIndex });
+    }
+    this.emit('live');
+    return { done: true, end };
+  },
   // ---- 라이브러리: 찬양 ----
   listSongs(a) { return this.library.listSongs(a.query); },
   getSong(a) { const s = this.library.getSong(a.id); if (!s) throw new Error('찬양을 찾을 수 없습니다.'); return s; },

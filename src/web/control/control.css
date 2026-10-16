@@ -399,3 +399,12 @@ table.list th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .ov-switch span::after { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .15s; }
 .ov-switch input:checked + span { background: #2e9e57; }
 .ov-switch input:checked + span::after { left: 21px; }
+
+.lib-cell video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #000; display: block; }
+.lib-cell.is-video::after { content: '▶'; position: absolute; left: 6px; top: 6px; font-size: 11px; background: rgba(0,0,0,.6); padding: 1px 5px; border-radius: 3px; }
+video.ce-thumb { background: #000; }
+
+/* LIVE 영상 재생 조작 */
+.vbar { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 6px 8px; background: #2a1517; border: 1px solid #6a2a30; border-radius: 6px; }
+.vbar button { padding: 2px 10px; }
+.vbar input[type=range] { flex: 1; }

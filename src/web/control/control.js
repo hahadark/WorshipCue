@@ -377,6 +377,7 @@
   function slideSnippet(s) {
     if (s.kind === 'title') return [s.ref, s.subtitle].filter(Boolean).join(' · ');
     if (s.kind === 'image') return '이미지';
+    if (s.kind === 'video') return '🎬 영상';
     if (s.kind === 'blank') return s.mode === 'background' ? '배경만' : '검은 화면';
     const t = s.parts.map(p => p.text).join(' ');
     return t.length > 46 ? t.slice(0, 46) + '…' : t;
@@ -448,7 +449,40 @@
       : settings().navMode === 'continuous' ? '범위 끝 — F6을 누르면 다음 절로 이어갑니다' : '마지막 슬라이드';
     $('#lvSlides').innerHTML = live.slides.map((ref, i) => `<button data-i="${i}" class="${i === live.index ? 'on' : ''}">${i + 1}. ${esc(ref.startsWith('¶') ? ref.slice(1) : shortRef(ref))}</button>`).join('');
     $('#lvSlides button.on')?.scrollIntoView({ block: 'nearest' });
+    renderVideoBar();
   }
+  // ---------------- 영상 재생 조작 (LIVE 아래) ----------------
+  const fmtT = t => (isFinite(t) ? `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}` : '0:00');
+  function renderVideoBar() {
+    const live = app.state.live;
+    const on = !!(live.hasLive && live.slide && live.slide.kind === 'video' && live.video);
+    const bar = $('#lvVideo');
+    if (bar.hidden === on && window.BCDock) requestAnimationFrame(() => window.BCDock.fitScreens()); // 막대가 생기거나 사라지면 화면 크기 다시 맞춤
+    bar.hidden = !on;
+    if (!on) return;
+    bar.querySelector('[data-v=toggle]').textContent = live.video.playing ? '❚❚' : '▶';
+    // LIVE 모니터의 영상도 같은 위치로 (소리 없음)
+    const v = $('#lvScreen video.bc-play');
+    if (v) R.syncVideo(v, live.video, { sound: false, loop: !!(live.slide.video && live.slide.video.loop) });
+  }
+  setInterval(() => {
+    const bar = $('#lvVideo');
+    if (!bar || bar.hidden) return;
+    const v = $('#lvScreen video.bc-play');
+    const st = app.state.live.video;
+    if (!v || !st) return;
+    const pos = st.offset + (st.playing ? (Date.now() - (Date.now() - (st.now || Date.now())) - st.at) / 1000 : 0);
+    const dur = v.duration || 0;
+    const seek = bar.querySelector('[data-seek]');
+    if (!seek.matches(':active')) seek.value = dur ? Math.min(1, pos / dur) : 0;
+    bar.querySelector('[data-time]').textContent = `${fmtT(Math.min(pos, dur || pos))} / ${fmtT(dur)}`;
+  }, 250);
+  $('#lvVideo').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) cmd('videoControl', { action: b.dataset.v }); });
+  $('#lvVideo [data-seek]').addEventListener('change', e => {
+    const v = $('#lvScreen video.bc-play');
+    if (v && v.duration) cmd('videoControl', { action: 'seek', time: e.target.value * v.duration });
+  });
+
   $('#lvSlides').addEventListener('dblclick', e => {
     const b = e.target.closest('button[data-i]');
     if (b) cmd('gotoSlide', { index: +b.dataset.i });

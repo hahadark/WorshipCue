@@ -8,8 +8,8 @@
 //   blank  빈 화면    { mode: 'black' | 'background' }
 // 공통: id, type, title, note(조작자 메모)
 
-const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn', 'audio'];
-const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가', audio: '음악' };
+const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn', 'audio', 'video'];
+const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가', audio: '음악', video: '영상' };
 
 const str = (v, max = 20000) => String(v ?? '').slice(0, max);
 
@@ -23,6 +23,7 @@ function normalizeItem(x) {
   switch (x.type) {
     case 'bible': it.ref = str(x.ref, 200).trim(); it.versionId = str(x.versionId, 40); break;
     case 'song': it.lyrics = str(x.lyrics); it.showTitle = !!x.showTitle; it.credit = str(x.credit, 300); it.songId = str(x.songId, 60); break;
+    case 'video': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.sound = x.sound !== false; it.loop = !!x.loop; it.endAction = ['hold', 'black', 'next'].includes(x.endAction) ? x.endAction : 'hold'; break;
     case 'audio': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.loop = !!x.loop; it.fadeOnLeave = x.fadeOnLeave !== false; break;
     case 'text': it.body = str(x.body); break;
     case 'title': it.subtitle = str(x.subtitle, 300); break;

@@ -9,8 +9,10 @@ const path = require('path');
 const crypto = require('crypto');
 
 const IMAGE = /\.(png|jpe?g|webp|gif|bmp|svg)$/i;
+const VIDEO = /\.(mp4|m4v|webm|mov)$/i;
 const AUDIO = /\.(mp3|wav|m4a|aac|ogg|oga|flac|opus|wma)$/i;
-const KINDS = { image: IMAGE, audio: AUDIO };
+// 이미지 폴더(= 이미지·영상)는 영상 파일도 함께 읽는다
+const KINDS = { image: /\.(png|jpe?g|webp|gif|bmp|svg|mp4|m4v|webm|mov)$/i, audio: AUDIO };
 
 const OVERLAY_TYPES = ['logo', 'clock', 'countdown', 'banner', 'text'];
 const POSITIONS = ['top-left', 'top-center', 'top-right', 'middle-left', 'center', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'];
@@ -100,7 +102,7 @@ class Library {
     dir = path.resolve(String(dir || ''));
     if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error('폴더를 찾을 수 없습니다.');
     const n = this.listFiles(kind, dir).length;
-    if (!n) throw new Error(kind === 'audio' ? '이 폴더에 음악 파일(mp3·wav·m4a 등)이 없습니다.' : '이 폴더에 그림 파일(png·jpg 등)이 없습니다.');
+    if (!n) throw new Error(kind === 'audio' ? '이 폴더에 음악 파일(mp3·wav·m4a 등)이 없습니다.' : '이 폴더에 그림·영상 파일(png·jpg·mp4 등)이 없습니다.');
     const key = kind === 'audio' ? 'audioFolders' : 'imageFolders';
     const label = String(name || path.basename(dir)).trim();
     this.core.settings.update(d => {
@@ -142,7 +144,7 @@ class Library {
       for (const p of this.listFiles(kind, f.path)) {
         const name = path.basename(p).replace(/\.[^.]+$/, '');
         if (q && !name.replace(/\s+/g, '').toLowerCase().includes(q)) continue;
-        out.push({ path: p, name, folder: f.name, url: this.fileUrl(p) });
+        out.push({ path: p, name, folder: f.name, url: this.fileUrl(p), video: VIDEO.test(p) });
         if (out.length >= 1000) return out;
       }
     }
@@ -157,7 +159,7 @@ class Library {
     const s = this.core.settings.get();
     const roots = [...(s.imageFolders || []), ...(s.audioFolders || [])].map(x => path.resolve(x.path));
     if (!roots.some(r => f.startsWith(r + path.sep))) return null;
-    if (!IMAGE.test(f) && !AUDIO.test(f)) return null;
+    if (!IMAGE.test(f) && !AUDIO.test(f) && !VIDEO.test(f)) return null;
     return fs.existsSync(f) ? f : null;
   }
 
@@ -198,4 +200,4 @@ class Library {
   }
 }
 
-module.exports = { Library, normalizeOverlay, OVERLAY_TYPES, POSITIONS, IMAGE, AUDIO };
+module.exports = { Library, normalizeOverlay, OVERLAY_TYPES, POSITIONS, IMAGE, AUDIO, VIDEO };

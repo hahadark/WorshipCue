@@ -11,7 +11,7 @@
   const cmd = (...a) => app.cmd(...a);
   const R = window.BCRender;
 
-  const TABS = [['songs', '찬양'], ['hymns', '찬송가·PPT'], ['images', '이미지'], ['audio', '음악'], ['overlays', '오버레이'], ['templates', '템플릿']];
+  const TABS = [['songs', '찬양'], ['hymns', '찬송가·PPT'], ['images', '이미지·영상'], ['audio', '음악'], ['overlays', '오버레이'], ['templates', '템플릿']];
   const st = { tab: 'songs', q: {}, rows: [], sel: 0, folder: { image: '', audio: '' } };
   let searchTimer = null;
 
@@ -145,7 +145,7 @@
 
   // ---------------- 이미지 · 음악 (폴더) ----------------
   async function drawFiles(kind) {
-    const name = kind === 'audio' ? '음악' : '이미지';
+    const name = kind === 'audio' ? '음악' : '이미지·영상';
     const fr = await cmd('listLibFolders', { kind });
     const folders = fr.ok ? fr.result : [];
     bar(`<select data-folder><option value="">전체 폴더</option>${folders.map(f => `<option value="${esc(f.path)}" ${st.folder[kind] === f.path ? 'selected' : ''}>${esc(f.name)} (${f.count})</option>`).join('')}</select>
@@ -160,10 +160,13 @@
     st.rows = r.ok ? r.result : [];
     if (st.tab !== (kind === 'audio' ? 'audio' : 'images')) return;
     if (kind === 'image') {
-      const b = body(`<div class="lib-grid">${st.rows.map((f, k) => `<div class="lib-cell" data-k="${k}" title="${esc(f.name)}"><img loading="lazy" src="${esc(f.url)}" alt=""><span>${esc(f.name)}</span>
-        <div class="lib-cell-act"><button data-bg="${k}" title="고른 순서의 배경으로">배경</button><button data-lg="${k}" title="이 그림을 로고 오버레이로">로고</button></div></div>`).join('') || '<div class="empty">찾는 그림이 없습니다.</div>'}</div>`);
-      const item = k => ({ type: 'image', extra: { image: st.rows[k].url, title: st.rows[k].name } });
-      bindRows(b, k => addToCue('image', item(k).extra, st.rows[k].name), item);
+      const b = body(`<div class="lib-grid">${st.rows.map((f, k) => `<div class="lib-cell ${f.video ? 'is-video' : ''}" data-k="${k}" title="${esc(f.name)}">${thumb(f)}<span>${f.video ? '🎞 ' : ''}${esc(f.name)}</span>
+        <div class="lib-cell-act"><button data-bg="${k}" title="고른 순서의 배경으로">배경</button><button data-tb="${k}" title="빠른 설정에서 고른 출력(예배당/OBS)의 템플릿 배경으로">전체 배경</button>${f.video ? '' : `<button data-lg="${k}" title="이 그림을 로고 오버레이로">로고</button>`}</div></div>`).join('') || '<div class="empty">찾는 그림·영상이 없습니다.</div>'}</div>`);
+      const item = k => (st.rows[k].video
+        ? { type: 'video', extra: { file: st.rows[k].url, title: st.rows[k].name, sound: true, volume: 1, loop: false, endAction: 'hold' } }
+        : { type: 'image', extra: { image: st.rows[k].url, title: st.rows[k].name } });
+      b.querySelectorAll('[data-tb]').forEach(x => x.onclick = e => { e.stopPropagation(); setTemplateBg(st.rows[+x.dataset.tb]); });
+      bindRows(b, k => { const it = item(k); addToCue(it.type, it.extra, st.rows[k].name); }, item);
       b.querySelectorAll('[data-bg]').forEach(x => x.onclick = e => { e.stopPropagation(); setItemBg(st.rows[+x.dataset.bg].url); });
       b.querySelectorAll('[data-lg]').forEach(x => x.onclick = e => { e.stopPropagation(); editOverlay({ type: 'logo', image: st.rows[+x.dataset.lg].url, name: st.rows[+x.dataset.lg].name, size: 140 }); });
     } else {
@@ -172,6 +175,20 @@
       bindRows(b, k => addToCue('audio', item(k).extra, st.rows[k].name), item);
       b.querySelectorAll('[data-play]').forEach(x => x.onclick = e => { e.stopPropagation(); const k = +x.dataset.play; audio.play({ url: st.rows[k].url, title: st.rows[k].name, list: st.rows, index: k }); });
     }
+  }
+  /** 썸네일: 영상은 첫 장면 (소리 없음) */
+  function thumb(f) {
+    return f.video ? `<video muted preload="metadata" src="${esc(f.url)}#t=1"></video>` : `<img loading="lazy" src="${esc(f.url)}" alt="">`;
+  }
+  /** 빠른 설정에서 고른 출력의 템플릿 배경을 이 그림·영상으로 */
+  async function setTemplateBg(f) {
+    const out = (document.querySelector('#qTarget .on') || {}).dataset?.out || 'main';
+    const t = structuredClone(app.tplFor(out));
+    if (f.video) { t.background.type = 'video'; t.background.video = f.url; } else { t.background.type = 'image'; t.background.image = f.url; t.background.imageFit = t.background.imageFit || 'cover'; }
+    if (t.background.dim == null) t.background.dim = 0;
+    const r = await cmd('saveTemplate', { template: t });
+    if (!r.ok) return app.showMsg(r.error, 'error');
+    app.showMsg(`${out === 'main' ? '예배당 화면' : 'OBS 자막'} 템플릿 배경을 '${f.name}' (으)로 바꿨습니다.`, 'ok', 2500);
   }
   function setItemBg(url) {
     const ok = window.BCCue && window.BCCue.updateSelected(it => {
@@ -209,8 +226,8 @@
   }
 
   /** 고르기 창 (큐시트 편집칸의 '이미지 고르기…', '음악 고르기…') */
-  async function pickFile(kind, done) {
-    const name = kind === 'audio' ? '음악' : '이미지';
+  async function pickFile(kind, done, opts = {}) {
+    const name = kind === 'audio' ? '음악' : opts.video === 'only' ? '영상' : opts.video === false ? '이미지' : '이미지·영상';
     const fr = await cmd('listLibFolders', { kind });
     app.openModal(`${name} 고르기`, `<div class="lib-pick">
       <div class="row-flex"><input type="text" id="lpQ" placeholder="파일 이름으로 찾기" style="flex:1"><button id="lpFolders">폴더…</button>${kind === 'image' ? '<button id="lpUp">내 PC 에서 올리기…</button>' : ''}</div>
@@ -220,9 +237,10 @@
       const r = await cmd('searchLibFiles', { kind, query: $('#lpQ').value });
       const rows = r.ok ? r.result : [];
       $('#lpList').innerHTML = kind === 'image'
-        ? rows.map((f, k) => `<div class="lib-cell" data-k="${k}"><img loading="lazy" src="${esc(f.url)}" alt=""><span>${esc(f.name)}</span></div>`).join('')
+        ? rows.filter(f => (opts.video === 'only' ? f.video : opts.video === false ? !f.video : true)).map((f, k, arr) => { rows._shown = arr; return `<div class="lib-cell" data-k="${k}">${thumb(f)}<span>${f.video ? '🎞 ' : ''}${esc(f.name)}</span></div>`; }).join('')
         : rows.map((f, k) => `<div class="lib-row" data-k="${k}"><span class="lib-ico">🔊</span><span class="lib-t"><b>${esc(f.name)}</b></span><span class="muted">${esc(f.folder)}</span></div>`).join('');
-      $('#lpList').querySelectorAll('[data-k]').forEach(x => x.onclick = () => { app.closeModal(); done(rows[+x.dataset.k]); });
+      const shown = kind === 'image' ? (rows._shown || []) : rows;
+      $('#lpList').querySelectorAll('[data-k]').forEach(x => x.onclick = () => { app.closeModal(); done(shown[+x.dataset.k]); });
     };
     let t = null;
     $('#lpQ').oninput = () => { clearTimeout(t); t = setTimeout(draw, 150); };
@@ -350,7 +368,7 @@
     $('#ovPos').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; pos = b.dataset.v; $('#ovPos').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
     $('#ovSize').oninput = e => { $('#ovSizeV').textContent = e.target.value + 'px'; };
     $('#ovMargin').oninput = e => { $('#ovMarginV').textContent = e.target.value + 'px'; };
-    if ($('#ovImg')) $('#ovImg').onclick = () => pickFile('image', f => { image = f.url; editOverlay({ ...collect(), image }); });
+    if ($('#ovImg')) $('#ovImg').onclick = () => pickFile('image', f => { image = f.url; editOverlay({ ...collect(), image }); }, { video: false });
     const hexA = (h, a) => { const n = parseInt(h.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
     const collect = () => ({
       ...o, name: $('#ovName').value.trim(), image, position: pos,
@@ -410,6 +428,7 @@
   window.BCLib = {
     init, show, audio,
     pickImage: done => pickFile('image', f => done(f.url)),
+    pickVideo: done => pickFile('image', f => done(f.url), { video: 'only' }),
     pickAudio: done => pickFile('audio', done),
     onOverlays: () => { if (st.tab === 'overlays') drawOverlays(); },
     onSettings: what => { if (what === 'templates' && st.tab === 'templates') drawTemplates(); if (what === 'settings' && (st.tab === 'images' || st.tab === 'audio' || st.tab === 'hymns')) show(st.tab); },

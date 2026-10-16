@@ -55,3 +55,8 @@
 /* 오버레이 층: 슬라이드 위에 늘 겹쳐 보임 */
 .bc-ovl { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
 .bc-ov { box-sizing: border-box; }
+
+/* 배경 영상 */
+.bc-bgvid, .bc-vid { pointer-events: none; }
+.bc-vlayer { position: absolute; inset: 0; transition: opacity 600ms ease; }
+.bc-vlayer video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
