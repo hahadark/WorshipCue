@@ -142,6 +142,7 @@
     if (window.BCLib) window.BCLib.init();
     if (window.BCStage) window.BCStage.init();
     if (window.BCGrid) window.BCGrid.init();
+    if (window.BCMenu) window.BCMenu.init();
     if (!app.state.versions.length) showWelcome();
     // 개역한글만 있으면(또는 아무것도 없으면) 베들레헴 설치 안내를 한 번 보여 준다
     else if (app.state.versions.length <= 1 && !(settings().guide && settings().guide.bethlehemDone)) showBethlehemGuide();
@@ -1219,6 +1220,7 @@
       if (r.ok) showMsg('보조 화면 출력을 껐습니다. 다시 송출하면 자동으로 켜집니다.', 'info', 2500);
     },
   };
+  app.runAction = name => actions[name] && actions[name]();
   // 모달이 열려 있어도 동작해야 하는 송출 관련 기능
   const LIVE_ACTIONS = new Set(['prevSlide', 'nextSlide', 'sendPreview', 'toggleClear']);
 

@@ -466,3 +466,14 @@ video.ce-thumb { background: #000; }
 .ai-done { background: #13261b; border: 1px solid #2e6b45; border-radius: 6px; padding: 10px 14px; }
 .ai-done ol { margin: 6px 0; padding-left: 22px; max-height: 260px; overflow: auto; }
 .ai-done li { margin: 2px 0; }
+
+/* 상단 메뉴바 */
+.menubar { position: relative; display: flex; gap: 2px; padding: 2px 8px; background: #0b0d10; border-bottom: 1px solid var(--line); z-index: 950; }
+.mb-top { background: transparent; border: 0; padding: 3px 10px; font-size: 13px; color: #cfd6e4; border-radius: 4px; }
+.mb-top:hover, .mb-top.on { background: #253047; }
+.mb-drop { position: absolute; top: 100%; min-width: 260px; background: var(--panel2, #1d222b); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.6); padding: 4px; display: flex; flex-direction: column; }
+.mb-drop[hidden] { display: none; }
+.mb-item { display: flex; justify-content: space-between; gap: 18px; background: transparent; border: 0; text-align: left; padding: 6px 10px; border-radius: 4px; font-size: 13px; }
+.mb-item:hover { background: var(--sel, #2a3550); }
+.mb-item kbd { color: var(--muted); font-size: 11px; }
+.mb-sep { height: 1px; background: var(--line); margin: 4px 2px; }
