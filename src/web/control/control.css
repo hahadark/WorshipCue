@@ -740,3 +740,7 @@ button.on { border-color: var(--accent); }
 .cam-item { display: flex; flex-direction: column; gap: 6px; padding: 6px; text-align: left; }
 .cam-item video, .cam-err { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 4px; object-fit: cover; display: grid; place-items: center; color: var(--muted); }
 .modal-box:has(.cam-pick) { height: auto; max-height: 90vh; }
+
+/* 메뉴 작은 제목 · 긴 메뉴는 화면 안에서 스크롤 */
+.mb-head { padding: 4px 10px 2px; font-size: 11px; font-weight: 700; color: var(--hl); letter-spacing: .3px; }
+.mb-drop { max-height: calc(100vh - 40px); overflow-y: auto; }
