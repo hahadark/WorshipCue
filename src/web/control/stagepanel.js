@@ -13,7 +13,7 @@
     const url = `${location.origin}/outputs/stage`;
     el.innerHTML = `<div class="stg">
       <div class="stg-row"><b>무대 화면</b><span class="muted">설교자·찬양팀 모니터용: 지금·다음 슬라이드, 시계, 타이머, 메시지, 순서 메모</span></div>
-      <div class="stg-row"><button id="stOpen" class="primary">🖥 무대 화면 창 열기</button><input type="text" readonly value="${esc(url)}" id="stUrl" style="flex:1" title="다른 PC·태블릿 브라우저나 OBS 브라우저 소스로도 열 수 있습니다"><button id="stCopy">주소 복사</button></div>
+      <div class="stg-row"><button id="stOpen" class="primary">🖥 무대 화면 창 열기</button><input type="text" readonly value="${esc(url)}" id="stUrl" style="flex:1" title="이 PC 의 브라우저나 OBS 브라우저 소스로도 열 수 있습니다 (다른 기기에서는 휴대폰 리모컨을 쓰세요)"><button id="stCopy">주소 복사</button></div>
       <h4>설교 타이머</h4>
       <div class="stg-row"><span id="stTime" class="stg-time">--:--</span>
         ${PRESETS.map(m => `<button data-min="${m}">${m}분</button>`).join('')}
