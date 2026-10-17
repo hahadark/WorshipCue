@@ -1,7 +1,7 @@
 {
   "name": "worshipcue",
   "productName": "WorshipCue",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "교회 예배 순서(큐시트) 통합 송출 프로그램 — 성경·찬양 가사·공지·제목·이미지",
   "main": "src/main/main.js",
   "author": "WorshipCue",
@@ -39,7 +39,6 @@
     ],
     "win": {
       "target": [
-        "nsis",
         "portable"
       ]
     },
@@ -56,6 +55,11 @@
     },
     "portable": {
       "artifactName": "WorshipCue-${version}-Portable.${ext}"
-    }
+    },
+    "electronLanguages": [
+      "ko",
+      "en-US"
+    ],
+    "compression": "maximum"
   }
 }

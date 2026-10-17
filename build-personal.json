@@ -13,7 +13,6 @@
   ],
   "win": {
     "target": [
-      "nsis",
       "portable"
     ]
   },
@@ -29,5 +28,10 @@
   },
   "portable": {
     "artifactName": "WorshipCue-${version}-개인용-Portable.${ext}"
-  }
+  },
+  "electronLanguages": [
+    "ko",
+    "en-US"
+  ],
+  "compression": "maximum"
 }
