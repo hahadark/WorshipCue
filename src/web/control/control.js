@@ -166,6 +166,13 @@
     const vs = app.state.versions;
     sel.innerHTML = vs.length ? vs.map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join('') : '<option value="">(성경 데이터 없음)</option>';
     sel.value = settings().versionId;
+    // 병행 번역본 (두 번역 함께)
+    const s2 = $('#version2');
+    if (s2) {
+      s2.innerHTML = '<option value="">병행: 없음</option>' + vs.map(v => `<option value="${esc(v.id)}">+ ${esc(v.name)}</option>`).join('');
+      s2.value = settings().parallelVersionId || '';
+      s2.hidden = vs.length < 2;
+    }
   }
 
   function syncControls() {
@@ -174,6 +181,7 @@
     $('#splitMode').value = s.split.mode === 'auto' ? 'auto' : String(Math.min(4, s.split.count));
     $('#navMode').value = s.navMode;
     if ($('#version').value !== s.versionId) $('#version').value = s.versionId;
+    if ($('#version2') && $('#version2').value !== (s.parallelVersionId || '')) $('#version2').value = s.parallelVersionId || '';
   }
 
   async function loadStructure() {
@@ -301,7 +309,20 @@
   }
 
   /** 본문을 미리보기로 불러온다 (Live 영향 없음) */
+  /** 병행 번역본이 정해져 있으면 같은 범위의 다른 번역을 절마다 붙인다 */
+  async function withParallel(passage) {
+    const pv = settings().parallelVersionId;
+    if (!pv || pv === passage.versionId || passage.parallel === pv || !passage.book || !passage.verses.length) return passage;
+    const a = passage.verses[0], b = passage.verses[passage.verses.length - 1];
+    const r = await cmd('parallelVerses', { versionId: pv, bookId: passage.book.id, sc: a.chapter, sv: a.verse, ec: b.chapter, ev: b.verse });
+    if (!r.ok) return passage;
+    const map = new Map(r.result.verses.map(v => [v.chapter * 1000 + v.verse, v.text]));
+    return { ...passage, parallel: pv, versionName: `${passage.versionName} · ${r.result.versionName}`, verses: passage.verses.map(v => ({ ...v, text2: map.get(v.chapter * 1000 + v.verse) || '' })) };
+  }
+  app.withParallel = withParallel;
+
   async function loadPassage(passage, { query = '', focus = null, index = 0, keepList = false, tpl = null, bg = '' } = {}) {
+    passage = await withParallel(passage);
     const slides = withBg(SL.build(passage, splitOpts(tpl)), bg);
     if (focus) index = SL.indexOfVerse(slides, focus.chapter, focus.verse);
     app.preview = { passage, slides, index: Math.min(index, slides.length - 1), query, tpl, bg };
@@ -340,6 +361,8 @@
   }
   /** 슬라이드 단추 글: '3. 후렴' (이름이 번호와 같으면 번호만) */
   const chipLabel = (i, t) => (t && String(t) !== String(i + 1) ? `${i + 1}. ${t}` : String(i + 1));
+  /** 슬라이드 단추 그룹 색 (1절 파랑 · 후렴 빨강 …) */
+  const chipStyle = label => { const c = window.BCGroup && window.BCGroup.color(label); return c ? ` style="--gc:${c}"` : ''; };
   function renderStudio() {
     const b = $('#btnStudio');
     if (!b || !app.state) return;
@@ -396,7 +419,8 @@
     if (s.kind === 'image') return '이미지';
     if (s.kind === 'video') return '🎬 영상';
     if (s.kind === 'blank') return s.mode === 'background' ? '배경만' : '검은 화면';
-    const t = s.parts.map(p => p.text).join(' ');
+    let t = s.parts.map(p => p.text).join(' ');
+    if (window.BCGroup) t = window.BCGroup.stripChords(t).replace(/\s{2,}/g, ' ');
     return t.length > 46 ? t.slice(0, 46) + '…' : t;
   }
 
@@ -420,7 +444,7 @@
     $('#pvCount').textContent = `${p.index + 1} / ${p.slides.length}`;
     const nx = p.slides[p.index + 1];
     $('#pvNextHint').innerHTML = nx ? `다음: <b>${esc(nx.ref)}</b> ${esc(slideSnippet(nx))}` : '<span>마지막 슬라이드</span>';
-    $('#pvSlides').innerHTML = p.slides.map((s, i) => `<button data-i="${i}" class="${i === p.index ? 'on' : ''}" title="${esc(slideSnippet(s))}">${esc(chipLabel(i, s.label || shortRef(s.ref) || slideSnippet(s).slice(0, 12)))}</button>`).join('');
+    $('#pvSlides').innerHTML = p.slides.map((s, i) => `<button data-i="${i}" class="${i === p.index ? 'on' : ''}"${s.kind !== 'bible' ? chipStyle(s.label) : ''} title="${esc(slideSnippet(s))}">${esc(chipLabel(i, s.label || shortRef(s.ref) || slideSnippet(s).slice(0, 12)))}</button>`).join('');
     $('#pvSlides button.on')?.scrollIntoView({ block: 'nearest' });
     updateCommentary();
     if (window.BCGrid) window.BCGrid.update();
@@ -468,7 +492,7 @@
     $('#lvNextHint').title = hasJump ? '찬양 바로 가기: 1~9 = 절 · C = 후렴 · B = 브릿지 · E = 엔딩' : '';
     $('#lvNextHint').innerHTML = (hasJump ? '<span class="jump-hint">⌨ 1~9·C·B</span> ' : '') + (nx ? `다음: <b>${esc(nx.ref)}</b> ${esc(slideSnippet(nx))}`
       : settings().navMode === 'continuous' ? '범위 끝 — F6을 누르면 다음 절로 이어갑니다' : '마지막 슬라이드');
-    $('#lvSlides').innerHTML = live.slides.map((ref, i) => `<button data-i="${i}" class="${i === live.index ? 'on' : ''}">${esc(chipLabel(i, ref.startsWith('¶') ? ref.slice(1) : shortRef(ref)))}</button>`).join('');
+    $('#lvSlides').innerHTML = live.slides.map((ref, i) => `<button data-i="${i}" class="${i === live.index ? 'on' : ''}"${ref.startsWith('¶') ? chipStyle(ref.slice(1)) : ''}>${esc(chipLabel(i, ref.startsWith('¶') ? ref.slice(1) : shortRef(ref)))}</button>`).join('');
     $('#lvSlides button.on')?.scrollIntoView({ block: 'nearest' });
     renderVideoBar();
     renderLayerButtons();
@@ -1076,6 +1100,16 @@
   $('#splitMode').onchange = e => {
     const v = e.target.value;
     cmd('updateSettings', { patch: { split: v === 'auto' ? { mode: 'auto' } : { mode: 'count', count: +v } } });
+  };
+  $('#version2').onchange = async e => {
+    await cmd('updateSettings', { patch: { parallelVersionId: e.target.value } });
+    app.state.settings.parallelVersionId = e.target.value;
+    showMsg(e.target.value ? '병행 번역본: 성경 본문 아래에 두 번째 번역이 함께 나갑니다.' : '병행 번역을 껐습니다.', 'info', 2500);
+    // 미리보기 중인 성경 본문을 다시 (Live 는 그대로)
+    if (app.preview && app.preview.passage && app.preview.passage.book) {
+      const r = await cmd('searchReference', { query: app.preview.passage.title });
+      if (r.ok) loadPassage(r.result.passage, { query: app.preview.query, index: app.preview.index, tpl: app.preview.tpl, bg: app.preview.bg });
+    }
   };
   $('#version').onchange = async e => {
     await cmd('updateSettings', { patch: { versionId: e.target.value } });

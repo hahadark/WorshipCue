@@ -690,3 +690,11 @@ html { overflow: hidden; }
 .ctx-item kbd { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .ctx-sep { height: 1px; background: var(--line); margin: 4px 2px; }
 .ctx-head { padding: 5px 10px 3px; font-size: 11px; font-weight: 700; color: var(--hl); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 슬라이드 그룹 색 (1절 파랑 · 후렴 빨강 · 브릿지 보라 · 전주 청록 · 엔딩 주황) */
+.thumbs button[style*="--gc"] { box-shadow: inset 4px 0 0 var(--gc); padding-left: 10px; }
+.sg-cell[style*="--gc"] .sg-label { box-shadow: inset 4px 0 0 var(--gc); padding-left: 8px; }
+.sg-cell[style*="--gc"] .sg-label b { color: var(--gc); }
+.results .srow[style*="--gc"] .vn { color: var(--gc); }
+.results .srow[style*="--gc"] { box-shadow: inset 4px 0 0 var(--gc); }
+.se-slide[style*="--gc"] .se-cap { box-shadow: inset 3px 0 0 var(--gc); padding-left: 6px; }

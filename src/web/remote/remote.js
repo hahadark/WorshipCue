@@ -32,7 +32,8 @@
     // 이름표(1절·후렴…) 바로 가기
     const groups = [];
     L.labels.forEach((l, i) => { const k = l.replace(/-\d+$/, ''); if (k && !/^\d+$/.test(k) && (i === 0 || L.labels[i - 1].replace(/-\d+$/, '') !== k)) groups.push({ k, i }); });
-    $('labels').innerHTML = groups.map(g => `<button data-goto="${g.i}" class="${L.index >= g.i && (groups.find(x => x.i > g.i)?.i ?? 1e9) > L.index ? 'on' : ''}">${esc(g.k)}</button>`).join('');
+    const gc = k => (window.BCGroup ? window.BCGroup.color(k) : '');
+    $('labels').innerHTML = groups.map(g => `<button data-goto="${g.i}" class="${L.index >= g.i && (groups.find(x => x.i > g.i)?.i ?? 1e9) > L.index ? 'on' : ''}" style="${gc(g.k) ? `border-left:5px solid ${gc(g.k)}` : ''}">${esc(g.k)}</button>`).join('');
     // 큐시트
     const cueKey = JSON.stringify([r.cue, L.cueIndex]);
     if (cueKey !== lastCue) {

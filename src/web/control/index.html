@@ -25,6 +25,7 @@
     <option value="text">본문</option>
   </select>
   <select id="version" title="성경 번역본"></select>
+  <select id="version2" title="병행 번역본: 두 번역을 함께 송출 (예: 개역개정 + NIV)"></select>
   <button id="btnStudio" class="studio on" title="미리보기를 끄면 클릭한 본문·순서가 바로 송출됩니다 (OBS 스튜디오 모드 끄기와 같음)">미리보기 켜짐</button>
   <label class="ws-pick" title="작업공간: 상황별 패널 배치 (Ctrl+Alt+1~9)"><span>작업공간</span><select id="wsSel"></select></label>
   <button id="btnSettings" title="설정">⚙</button>
@@ -182,6 +183,7 @@
 
 <script src="/shared/vendor/dockview-core.min.js"></script>
 <script src="/shared/render.js"></script>
+<script src="/shared/groups.js"></script>
 <script src="/shared/slides.js"></script>
 <script src="/control/tplcontrols.js"></script>
 <script src="/control/control.js"></script>

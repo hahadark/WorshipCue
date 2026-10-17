@@ -70,3 +70,8 @@
 /* 슬라이드 편집: 덧붙인 글상자·그림·도형, 본문 숨기기 */
 .bc-eitem { pointer-events: none; }
 .bc-hidemain > .bc-block, .bc-hidemain > .bc-ref-fixed { visibility: hidden; }
+
+/* 두 언어: 병행 번역(성경) · 번역 줄(가사 '>') */
+.bc-par { display: block; font-size: .72em; opacity: .86; margin-top: .12em; font-weight: inherit; }
+.bc-line { display: block; }
+.bc-tr { display: block; font-size: .7em; opacity: .85; margin: .05em 0 .25em; }

@@ -98,7 +98,7 @@ class RemoteServer {
       if (sl.kind === 'video') return '🎬 영상';
       if (sl.kind === 'image' || sl.kind === 'score') return sl.caption || (sl.kind === 'score' ? '🎼 악보' : '🖼 이미지');
       if (sl.kind === 'blank') return '(빈 화면)';
-      return (sl.parts || []).map(p => p.text).join(' ').slice(0, 200);
+      return (sl.parts || []).map(p => p.text).join(' ').replace(/\[([A-G](?:#|b|♯|♭)?(?:maj|min|m|M|sus|dim|aug|add|°|ø)?\d{0,2}(?:(?:sus|add|maj|b|#|\+|-)\d{1,2})*(?:\/[A-G](?:#|b|♯|♭)?)?)\]/g, '').replace(/\s{2,}/g, ' ').slice(0, 200);
     };
     return {
       live: {
@@ -119,6 +119,7 @@ class RemoteServer {
     const p = url.pathname;
     if (req.method === 'GET' && (p === '/' || p === '/index.html')) return this.file(res, 'index.html', 'text/html; charset=utf-8');
     if (req.method === 'GET' && p === '/remote.js') return this.file(res, 'remote.js', 'text/javascript; charset=utf-8');
+    if (req.method === 'GET' && p === '/groups.js') return this.file(res, '../shared/groups.js', 'text/javascript; charset=utf-8');
     if (req.method === 'GET' && p === '/r/state') {
       const c = this.checkPin(req, url.searchParams.get('pin'));
       if (!c.ok) return this.json(res, c.status, { ok: false, error: c.error });

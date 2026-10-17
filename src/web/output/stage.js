@@ -5,6 +5,9 @@
   'use strict';
   const $ = id => document.getElementById(id);
   let last = null;
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // 코드 보이기 (주소에 ?chords=0 이면 숨김)
+  const showChords = new URLSearchParams(location.search).get('chords') !== '0';
   const pad = n => String(n).padStart(2, '0');
 
   /** 슬라이드를 글로 */
@@ -14,7 +17,7 @@
     if (s.kind === 'blank') return s.mode === 'background' ? '(배경 화면)' : '(검은 화면)';
     if (s.kind === 'video') return '🎬 영상';
     if (s.kind === 'image' || s.kind === 'score') return (s.caption || '').trim() || (s.kind === 'score' ? '🎼 악보' : '🖼 이미지');
-    return (s.parts || []).map(p => (p.verse ? p.verse + ' ' : '') + p.text).join(s.kind === 'bible' ? '\n' : ' ').trim();
+    return (s.parts || []).map(p => (p.verse ? p.verse + ' ' : '') + p.text + (p.text2 ? '\n> ' + p.text2 : '')).join(s.kind === 'bible' ? '\n' : ' ').trim();
   }
 
   function fit() {
@@ -32,11 +35,19 @@
     last = p;
     $('title').textContent = p.title || '';
     $('count').textContent = p.hasLive ? `${p.index + 1} / ${p.count}` : '';
-    $('ref').textContent = p.slide && p.slide.kind === 'bible' ? (p.slide.ref || '') : (p.slide && p.slide.label ? p.slide.label : '');
-    $('text').textContent = p.hasLive ? slideText(p.slide) : '송출 중인 화면 없음';
+    $('ref').textContent = p.slide && p.slide.kind === 'bible' ? (p.slide.ref || '') : (p.slide && p.slide.label && !/^\d+$/.test(p.slide.label) ? p.slide.label : '');
+    // 그룹 색 (1절 파랑 · 후렴 빨강 · 브릿지 보라 …)
+    const gcol = p.slide && p.slide.kind !== 'bible' && window.BCGroup ? window.BCGroup.color(p.slide.label) : '';
+    $('ref').style.cssText = gcol ? `background:${gcol};color:#fff;padding:2px 12px;border-radius:6px` : '';
+    const txt = p.hasLive ? slideText(p.slide) : '송출 중인 화면 없음';
+    const G = window.BCGroup;
+    const noCh = t => (G ? G.stripChords(t) : t);
+    // 줄마다: '>' 번역 줄(병행 번역 포함)은 작게, 코드는 글자 위에
+    $('text').innerHTML = txt.split('\n').map(l => /^\s*>/.test(l) ? `<div class="trl">${esc(noCh(l.replace(/^\s*>\s?/, '')))}</div>`
+      : G && showChords && G.hasChords(l) ? G.chordHtml(l, esc) : `<div class="cl">${esc(noCh(l)) || '&nbsp;'}</div>`).join('');
     $('cur').classList.toggle('hidden', p.hasLive && !p.visible);
     $('badge').textContent = p.hasLive && !p.visible ? '숨김 중' : 'LIVE';
-    $('next').textContent = p.nextSlide ? slideText(p.nextSlide) : (p.hasLive ? '(이 순서의 마지막 슬라이드)' : '');
+    $('next').textContent = p.nextSlide ? noCh(slideText(p.nextSlide)).replace(/^\s*>\s?/gm, '') : (p.hasLive ? '(이 순서의 마지막 슬라이드)' : '');
     $('note').textContent = p.note ? '📝 ' + p.note : '';
     $('msg').textContent = p.message || '';
     $('msg').classList.toggle('on', !!p.message);

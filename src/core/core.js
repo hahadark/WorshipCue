@@ -242,6 +242,13 @@ class WorshipCueCore extends EventEmitter {
 
 WorshipCueCore.prototype.commands = {
   // ---- 검색 (Live 에 영향 없음) ----
+  /** 병행 번역본: 같은 범위의 다른 번역 본문 */
+  parallelVerses(a) {
+    const v = this.store.getVersion(String(a.versionId || ''));
+    if (!v) throw new Error('병행 번역본이 없습니다.');
+    const n = x => Number(x) || 0;
+    return { versionId: v.id, versionName: v.name, verses: this.store.getVerses(v.id, n(a.bookId), n(a.sc), n(a.sv), n(a.ec), n(a.ev)).map(x => ({ chapter: x.chapter, verse: x.verse, text: x.text })) };
+  },
   searchReference(a) { return this.store.resolveReference(this.versionId(a), String(a.query || '')); },
   searchText(a) { return this.store.searchText(this.versionId(a), String(a.query || ''), { limit: a.limit || 300, bookIds: a.bookIds }); },
   getStructure(a) { return { versionId: this.versionId(a), books: this.store.getStructure(this.versionId(a)) }; },
@@ -382,6 +389,7 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.previewMode === 'boolean') d.previewMode = p.previewMode;
       if (typeof p.logoScreenImage === 'string') d.logoScreenImage = p.logoScreenImage.slice(0, 1500);
       if (typeof p.dockLocked === 'boolean') d.dockLocked = p.dockLocked;
+      if (typeof p.parallelVersionId === 'string' && (!p.parallelVersionId || this.store.getVersion(p.parallelVersionId))) d.parallelVersionId = p.parallelVersionId;
       if (p.ui && typeof p.ui === 'object') {
         d.ui = { theme: 'dark', scale: 100, ...(d.ui || {}) };
         if (['dark', 'contrast', 'light', 'warm', 'navy'].includes(p.ui.theme)) d.ui.theme = p.ui.theme;

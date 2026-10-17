@@ -20,6 +20,11 @@
   .cur .t { font-size: var(--fs, 7vh); line-height: 1.35; font-weight: 600; white-space: pre-line; word-break: keep-all; }
   .cur .ref { position: absolute; top: 1vh; left: 1.5vw; font-size: 2.6vh; color: #ffd479; }
   .cur .badge { position: absolute; top: 1vh; right: 1.5vw; font-size: 2.2vh; background: #c0392b; padding: .2vh .8vw; border-radius: .6vh; }
+  .cur .t .cl { white-space: pre-wrap; }
+  .cur .t .cl.chords { line-height: 1.1; margin-top: .9em; }
+  .cur .t .cs { position: relative; display: inline-block; white-space: pre; }
+  .cur .t .ch { position: absolute; left: 0; bottom: 100%; font-size: .62em; font-weight: 800; color: #ffd479; white-space: nowrap; }
+  .cur .t .trl { font-size: .62em; opacity: .8; font-weight: 500; }
   .next { border: 2px solid #2d3340; border-radius: 1.2vh; padding: 1.2vh 2vw; min-height: 9vh; max-height: 20vh; overflow: hidden; color: #9aa3b5; font-size: 3.6vh; line-height: 1.35; white-space: pre-line; position: relative; }
   .next::before { content: '다음'; position: absolute; top: -1.6vh; left: 1vw; background: #000; padding: 0 .6vw; font-size: 2vh; color: #6d7588; }
   .bottom { display: flex; gap: 2vw; align-items: center; }
@@ -41,6 +46,7 @@
   <div class="bottom"><span class="note" id="note"></span><span class="timer off" id="timer">00:00</span></div>
 </div>
 <div class="conn" id="conn">연결 끊김 — 다시 연결하는 중…</div>
+<script src="/shared/groups.js"></script>
 <script src="/outputs/stage.js"></script>
 </body>
 </html>

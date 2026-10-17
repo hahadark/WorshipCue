@@ -71,7 +71,8 @@ class Library {
     for (const r of rows) {
       const hay = (r.title + r.lyrics + r.tags).replace(/\s+/g, '').toLowerCase();
       if (q && !hay.includes(q)) continue;
-      const first = r.lyrics.split('\n').map(l => l.trim()).find(l => l && !/^\[.*\]$/.test(l)) || '';
+      const noChord = l => l.replace(/\[[A-G](?:#|b|♯|♭)?(?:maj|min|m|M|sus|dim|aug|add|°|ø)?\d{0,2}(?:(?:sus|add|maj|b|#|\+|-)\d{1,2})*(?:\/[A-G](?:#|b|♯|♭)?)?\]/g, '').replace(/\s{2,}/g, ' ').trim(); // 코드 [G] 빼고
+      const first = r.lyrics.split('\n').map(noChord).find(l => l && !/^\[.*\]$/.test(l)) || '';
       out.push({ id: r.id, title: r.title, first, credit: r.credit, tags: r.tags, updatedAt: r.updated_at, titleHit: !q || r.title.replace(/\s+/g, '').toLowerCase().includes(q) });
     }
     // 제목에 맞는 곡을 앞으로

@@ -108,7 +108,7 @@
     const list = sources();
     const own = k => !!(it.edits && it.edits[k]);
     $('#seList').innerHTML = `<div class="se-slide ${S.key === '*' ? 'on' : ''}" data-key="*"><div class="screen se-thumb"></div><div class="se-cap"><b>공통</b> 모든 슬라이드${own('*') ? ' <span class="se-dot" title="꾸민 것 있음">●</span>' : ''}</div></div>`
-      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}" data-key="${x.key}"><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div></div>`).join('');
+      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div></div>`).join('');
     const t = tpl();
     $('#seList').querySelectorAll('.se-slide').forEach(c => {
       const k = c.dataset.key;

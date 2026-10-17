@@ -81,7 +81,7 @@
       const post = p.partIndex && p.partIndex < p.partCount ? ' …' : '';
       h += `<div class="bc-hang" style="grid-template-columns:${numW} 1fr;column-gap:${vn.show ? '0.35em' : '0'}">`
         + `<span class="bc-hn" style="color:${vn.color};font-size:${vn.scale}em">${showNum ? p.verse : ''}</span>`
-        + `<span class="bc-ht">${esc(pre + p.text + post)}</span></div>`;
+        + `<span class="bc-ht">${esc(pre + p.text + post)}${p.text2 ? `<span class="bc-par">${esc(p.text2)}</span>` : ''}</span></div>`;
       return h;
     }).join('');
   }
@@ -89,7 +89,13 @@
   function partsHtml(slide, t) {
     if (isHanging(t)) return hangingHtml(slide, t);
     if (slide.kind === 'text') {
-      return slide.parts.map(p => `<span class="bc-verse bc-pre">${esc(p.text)}</span>`).join('');
+      const strip = global.BCGroup ? global.BCGroup.stripChords : (t => t);
+      return slide.parts.map(p => {
+        const t = strip(p.text);
+        if (!/^\s*>/m.test(t)) return `<span class="bc-verse bc-pre">${esc(t)}</span>`;
+        // 번역 줄 ('> Amazing grace') 은 원래 줄 밑에 작게
+        return `<span class="bc-verse">${t.split('\n').map(l => /^\s*>/.test(l) ? `<span class="bc-tr">${esc(l.replace(/^\s*>\s?/, ''))}</span>` : `<span class="bc-line">${esc(l) || '&nbsp;'}</span>`).join('')}</span>`;
+      }).join('');
     }
     const vn = t.verseNumbers;
     return slide.parts.map(p => {
@@ -102,7 +108,7 @@
       const post = p.partIndex && p.partIndex < p.partCount ? ' …' : '';
       h += `<span class="bc-verse${t.verseBreak ? ' bc-break' : ''}">`
         + (showNum ? `<span class="bc-vn" style="color:${vn.color};font-size:${vn.scale}em">${p.verse}</span>` : '')
-        + esc(pre + p.text + post) + '</span>';
+        + esc(pre + p.text + post) + (p.text2 ? `<span class="bc-par">${esc(p.text2)}</span>` : '') + '</span>';
       return h;
     }).join(t.verseBreak ? '' : ' ');
   }

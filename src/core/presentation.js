@@ -37,6 +37,7 @@ function validateSlides(slides) {
           book: Number(p.book), chapter: Number(p.chapter), verse: Number(p.verse), text,
           partIndex: p.partIndex ? Number(p.partIndex) : 0, partCount: p.partCount ? Number(p.partCount) : 0,
           heading: p.heading ? String(p.heading) : '',
+          ...(p.text2 ? { text2: String(p.text2).slice(0, MAX_TEXT) } : {}), // 병행 번역
         };
       }),
     };

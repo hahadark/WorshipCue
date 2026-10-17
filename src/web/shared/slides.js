@@ -39,6 +39,7 @@
     const parts = passage.verses.map(v => ({
       book: v.book, chapter: v.chapter, verse: v.verse, text: v.text,
       heading: headingMap.get(v.chapter * 1000 + v.verse) || '',
+      ...(v.text2 ? { text2: v.text2 } : {}), // 병행 번역
     }));
 
     // fits(parts, 'pref'|'min'): 모든 출력 템플릿에서 넘치지 않는가
@@ -83,7 +84,7 @@
         pieces.push(words.slice(start, start + k).join(' '));
         start += k;
       }
-      return pieces.map((text, i) => ({ ...p, text, partIndex: i + 1, partCount: pieces.length, heading: i === 0 ? p.heading : '' }));
+      return pieces.map((text, i) => ({ ...p, text, partIndex: i + 1, partCount: pieces.length, heading: i === 0 ? p.heading : '', text2: i === pieces.length - 1 ? p.text2 : '' }));
     };
 
     if (opts.mode === 'count') {
@@ -140,7 +141,7 @@
     return String(lyrics || '').replace(/\r/g, '').split(/\n\s*\n/).map(block => {
       const lines = block.split('\n');
       let label = '';
-      const kept = lines.filter(l => { const m = l.trim().match(/^\[(.{1,20})\]$/); if (m) { label = m[1]; return false; } return true; });
+      const kept = lines.filter(l => { const m = l.trim().match(/^\[(.{1,20})\]$/); if (m && !(global.BCGroup && global.BCGroup.isChordOnly(l))) { label = m[1]; return false; } return true; });
       return { label, text: kept.join('\n').trim() };
     }).filter(c => c.text).map((c, k) => ({ ...c, src: k }));
   }
@@ -151,7 +152,7 @@
     let n = -1;
     const out = blocks.map(block => {
       const lines = block.split('\n');
-      const isLabel = l => /^\[(.{1,20})\]$/.test(l.trim());
+      const isLabel = l => /^\[(.{1,20})\]$/.test(l.trim()) && !(global.BCGroup && global.BCGroup.isChordOnly(l));
       if (!lines.filter(l => !isLabel(l)).join('\n').trim()) return block;
       if (++n !== k) return block;
       return [...lines.filter(isLabel), ...String(text).replace(/\r/g, '').split('\n')].join('\n');
