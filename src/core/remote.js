@@ -98,7 +98,7 @@ class RemoteServer {
       if (sl.kind === 'video') return '🎬 영상';
       if (sl.kind === 'image' || sl.kind === 'score') return sl.caption || (sl.kind === 'score' ? '🎼 악보' : '🖼 이미지');
       if (sl.kind === 'blank') return '(빈 화면)';
-      return (sl.parts || []).map(p => p.text).join(' ').replace(/\[([A-G](?:#|b|♯|♭)?(?:maj|min|m|M|sus|dim|aug|add|°|ø)?\d{0,2}(?:(?:sus|add|maj|b|#|\+|-)\d{1,2})*(?:\/[A-G](?:#|b|♯|♭)?)?)\]/g, '').replace(/\s{2,}/g, ' ').slice(0, 200);
+      return (sl.parts || []).map(p => p.text).join(' ').replace(/\*\*|\{색:#[0-9a-fA-F]{3,8}\}|\{\/색\}|\{크기:\d{2,3}\}|\{\/크기\}/g, '').replace(/\[([A-G](?:#|b|♯|♭)?(?:maj|min|m|M|sus|dim|aug|add|°|ø)?\d{0,2}(?:(?:sus|add|maj|b|#|\+|-)\d{1,2})*(?:\/[A-G](?:#|b|♯|♭)?)?)\]/g, '').replace(/\s{2,}/g, ' ').slice(0, 200);
     };
     return {
       live: {

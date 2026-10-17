@@ -110,6 +110,10 @@
       { label: '▶ 바로 송출', key: '더블클릭', run: async () => { app.setPreviewIndex(k); await app.sendPreview(); } },
       '-',
       { label: '✎ 이 슬라이드 편집', key: 'Ctrl+E', run: () => window.BCSlideEdit.openPreviewSlide(k), disabled: !(it && EDITABLE.includes(it.type)) },
+      ...(it && EDITABLE.includes(it.type) ? [
+        { label: '＋ 이 다음에 새 슬라이드', run: () => window.BCSlideEdit.quickOp(k, 'add') },
+        { label: '⧉ 이 슬라이드 복제', run: () => window.BCSlideEdit.quickOp(k, 'dup'), disabled: !['song', 'text', 'title'].includes(it.type) && !(s && s.xid) },
+        { label: ['song', 'text', 'title'].includes(it.type) || (s && s.xid) ? '✕ 이 슬라이드 지우기' : '⊘ 이 슬라이드 건너뛰기', run: () => window.BCSlideEdit.quickOp(k, 'del'), danger: true }] : []),
       ...(it ? [{ label: '✎ 이 순서 편집칸', key: 'F2', run: () => Cue().itemAction(p.cue.index, 'edit') }] : []),
       { label: window.BCGrid && window.BCGrid.isOn() ? '목록으로 보기' : '격자로 보기', run: click(`#slideView [data-sv="${window.BCGrid && window.BCGrid.isOn() ? 'list' : 'grid'}"]`) },
     ];

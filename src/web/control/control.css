@@ -802,3 +802,15 @@ button.on { border-color: var(--accent); }
 /* 아래 송출 줄: 지우기 ▾ · 순서 넣기: 더보기 ▾ (자주 안 쓰는 단추는 숨겨 두고 메뉴로) */
 .ft-hidden { display: none !important; }
 #bMore.active, .cue-add .cue-more.active { border-color: var(--accent); color: var(--accent); }
+
+/* 썸네일 ＋ ✕ (마우스를 올리면) */
+.sg-ops { position: absolute; top: 6px; left: 6px; z-index: 3; display: flex; gap: 4px; opacity: 0; }
+.sg-cell:hover .sg-ops { opacity: 1; }
+.sg-ops button { padding: 1px 8px; font-size: 13px; background: rgba(15,18,24,.85); color: #fff; }
+.sg-ops .sg-del:hover { background: var(--danger, #c0392b); }
+/* 글 서식 도구 */
+.fmt-bar { display: inline-flex; align-items: center; gap: 3px; flex-wrap: wrap; margin-right: 8px; }
+.fmt-bar button { padding: 1px 7px; font-size: 12px; }
+.fmt-bar select { font-size: 12px; padding: 1px 4px; }
+.fmt-bar .fmt-sw { width: 16px; height: 16px; padding: 0; border-radius: 50%; border: 1px solid var(--line); }
+.fmt-bar input[type=color] { width: 22px; height: 18px; padding: 0; border: 0; background: none; }

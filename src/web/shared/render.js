@@ -92,9 +92,10 @@
       const strip = global.BCGroup ? global.BCGroup.stripChords : (t => t);
       return slide.parts.map(p => {
         const t = strip(p.text);
-        if (!/^\s*>/m.test(t)) return `<span class="bc-verse bc-pre">${esc(t)}</span>`;
+        const fmt = s => (global.BCGroup && global.BCGroup.fmtHtml ? global.BCGroup.fmtHtml(s, esc) : esc(s)); // **굵게** · {크기:…} · {색:…}
+        if (!/^\s*>/m.test(t)) return `<span class="bc-verse bc-pre">${fmt(t)}</span>`;
         // 번역 줄 ('> Amazing grace') 은 원래 줄 밑에 작게
-        return `<span class="bc-verse">${t.split('\n').map(l => /^\s*>/.test(l) ? `<span class="bc-tr">${esc(l.replace(/^\s*>\s?/, ''))}</span>` : `<span class="bc-line">${esc(l) || '&nbsp;'}</span>`).join('')}</span>`;
+        return `<span class="bc-verse">${t.split('\n').map(l => /^\s*>/.test(l) ? `<span class="bc-tr">${fmt(l.replace(/^\s*>\s?/, ''))}</span>` : `<span class="bc-line">${fmt(l) || '&nbsp;'}</span>`).join('')}</span>`;
       }).join('');
     }
     const vn = t.verseNumbers;

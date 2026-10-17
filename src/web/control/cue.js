@@ -72,8 +72,8 @@
     switch (it.type) {
       case 'hymn': return it.number != null ? `${it.number}장` : '찬송가';
       case 'bible': return it.ref || '(장절을 입력하세요)';
-      case 'song': { const strip = window.BCGroup ? window.BCGroup.stripChords : (t => t); return strip((it.lyrics || '').split('\n').find(l => l.trim() && !/^\[.*\]$/.test(l.trim()) && strip(l).trim()) || '').trim() || '(가사 없음)'; }
-      case 'text': return (it.body || '').split('\n').find(l => l.trim()) || '(내용 없음)';
+      case 'song': { const strip = t => (window.BCGroup ? window.BCGroup.stripFmt(window.BCGroup.stripChords(t)) : t); return strip((it.lyrics || '').split('\n').find(l => l.trim() && !/^\[.*\]$/.test(l.trim()) && strip(l).trim()) || '').trim() || '(가사 없음)'; }
+      case 'text': return window.BCGroup.stripFmt((it.body || '').split('\n').find(l => l.trim()) || '') || '(내용 없음)';
       case 'title': return it.subtitle || '';
       case 'image': return it.image ? '이미지' : '(이미지를 고르세요)';
       case 'blank': return it.mode === 'background' ? '배경·로고만' : '검은 화면';
@@ -211,7 +211,7 @@
       const passage = r.result.passage;
       const count = decorate(it, SL.build(passage, app.splitOpts(tpl))).length;
       await app.loadPassage(passage, { query: it.ref, index: fromEnd ? count - 1 : Math.min(prevIdx, count - 1), tpl, bg: it.bg || '', post: slides => decorate(it, slides) });
-      app.preview.cue = cue;
+      app.preview.cue = cue; if (window.BCGrid) window.BCGrid.update(); // 큐시트 순서로 다시 (썸네일 ＋ ✕ 단추)
       $('#resultTitle').textContent = `${i + 1}. ${it.title} — ${passage.title}`;
     } else {
       let meta = null;
@@ -441,7 +441,7 @@
     $('#resultInfo').textContent = `${TYPE[it.type]} · 슬라이드 ${app.preview.slides.length}장`;
     $('#results').innerHTML = app.preview.slides.map((s, k) => {
       const body = s.kind === 'score' || (s.kind === 'image' && it.type === 'hymn') ? `<span class="sboth"><img class="sthumb" src="${esc(s.image)}" alt=""><span class="scap">${s.caption ? esc(s.caption) : '<span class="muted">(가사 없음 — 편집칸의 OBS 가사에 입력)</span>'}</span></span>`
-        : esc(s.kind === 'text' ? s.parts[0].text : s.kind === 'title' ? [s.ref, s.subtitle].filter(Boolean).join('\n') : s.kind === 'image' ? '🖼 이미지' : s.kind === 'video' ? '🎬 영상' : '⬛ ' + (s.mode === 'background' ? '배경·로고만' : '검은 화면'));
+        : esc(s.kind === 'text' ? window.BCGroup.stripFmt(s.parts[0].text) : s.kind === 'title' ? [s.ref, s.subtitle].filter(Boolean).join('\n') : s.kind === 'image' ? '🖼 이미지' : s.kind === 'video' ? '🎬 영상' : '⬛ ' + (s.mode === 'background' ? '배경·로고만' : '검은 화면'));
       const gc = s.kind !== 'bible' && window.BCGroup ? window.BCGroup.color(s.label) : '';
       return `<div class="srow ${k === app.preview.index ? 'in-pv' : ''}" data-k="${k}"${gc ? ` style="--gc:${gc}"` : ''}><span class="vn">${esc(s.label || String(k + 1))}</span><span class="stext">${body}</span></div>`;
     }).join('');
@@ -520,12 +520,13 @@
       audio: `<label>음악</label><div class="ce-row"><span class="muted ce-file">${esc(it.file ? fileName(it.file) : '(고르지 않음)')}</span><button data-act="audiopick">🔊 음악 고르기…</button><button data-act="audioplay">▶</button><button data-act="audiostop">■</button></div>
         <label>소리 크기</label><div class="ce-row"><input type="range" data-k="volume" min="0" max="1" step="0.05" value="${it.volume ?? 1}" style="flex:1"><label class="tc-toggle"><input type="checkbox" data-k="loop" ${it.loop ? 'checked' : ''}> 반복</label><label class="tc-toggle"><input type="checkbox" data-k="fadeOnLeave" ${it.fadeOnLeave !== false ? 'checked' : ''}> 다른 화면을 송출하면 페이드아웃</label></div>`,
       song: `${it.songId ? `<label>라이브러리</label><div class="ce-row note">📚 라이브러리 찬양과 연결됨 — 가사를 고치면 이 찬양을 쓰는 모든 큐시트에 반영 <button data-act="unlink">연결 끊기</button></div>` : `<label>라이브러리</label><div class="ce-row note"><button data-act="tolib">📚 라이브러리에 저장</button> 저장하면 다음 주에도 검색해서 바로 넣을 수 있습니다</div>`}
-        <label>가사</label><textarea data-k="lyrics" rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
+        <label>가사</label><textarea data-k="lyrics" data-fmt rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
         <span></span><div class="ce-row note"><label class="tc-toggle"><input type="checkbox" data-k="showTitle" ${it.showTitle ? 'checked' : ''}> 화면에 제목 표시</label> · 빈 줄 = 다음 슬라이드 · [1절] 줄은 슬라이드 이름</div>
+        <span></span><div class="ce-row note">${window.BCFmt ? window.BCFmt.bar() : ''}</div>
         <label>곡 정보</label><div class="ce-row"><input type="text" data-k="credit" value="${esc(it.credit || '')}" placeholder="${esc((it.songId && st.songs.get(it.songId) && st.songs.get(it.songId).credit) || '작사·작곡 · 저작권 (예: 작사 홍길동 · 작곡 김철수 · CCLI 1234567)')}" style="flex:1"><select data-k="creditShow" title="곡 정보를 화면 아래에 작게 보이기"><option value="" ${!it.creditShow ? 'selected' : ''}>보이지 않기</option><option value="first" ${it.creditShow === 'first' ? 'selected' : ''}>첫 슬라이드에</option><option value="last" ${it.creditShow === 'last' ? 'selected' : ''}>마지막 슬라이드에</option><option value="both" ${it.creditShow === 'both' ? 'selected' : ''}>처음과 끝에</option></select></div>
         <label>부를 순서</label><div class="ce-col"><input type="text" data-k="order" value="${esc(it.order || '')}" placeholder="${esc(songOrder({ ...it, order: '' }) || '비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴 후렴 (또는 1 C 2 C C)')}">
           <div class="ce-row ce-chips">${SL.lyricGroups(SL.lyricsChunks(it.lyrics)).filter(g => g.label).map(g => `<button type="button" data-chip="${esc(g.label)}" title="부를 순서 끝에 넣기">${esc(g.label)}</button>`).join('')}<button type="button" data-chip="" title="부를 순서 지우기 (가사 순서대로)">지우기</button><span id="ceOrderMsg" class="note"></span></div></div>`,
-      text: `<label>내용</label><textarea data-k="body" rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="note">'---' 줄 = 다음 슬라이드</div>`,
+      text: `<label>내용</label><textarea data-k="body" data-fmt rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="ce-row note">${window.BCFmt ? window.BCFmt.bar() : ''}<span>'---' 줄 = 다음 슬라이드</span></div>`,
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">
         <label>추가 슬라이드</label><textarea data-k="more" rows="${it.more ? 3 : 1}" placeholder="다음 슬라이드 (첫 줄 = 제목, 둘째 줄 = 부제) · '---' 줄로 또 다음 · 비우면 한 장">${esc(it.more || '')}</textarea>`,
       image: `<label>이미지</label><div class="ce-row">${it.image ? thumbTag(it.image) : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,
@@ -1043,7 +1044,8 @@
       fn(it); save();
       if (lyrics && it.type === 'song' && it.songId) saveLinkedSong(it);
       if (i === st.sel) forceEditor();
-      previewItem(i, { keepIndex: true });
+      app.holdDirect = (app.holdDirect || 0) + 1;
+      previewItem(i, { keepIndex: true }).finally(() => { app.holdDirect--; });
       return true;
     },
     /** 고른 순서를 바꾸고 저장·미리보기 갱신 */

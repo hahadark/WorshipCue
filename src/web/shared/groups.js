@@ -29,6 +29,41 @@
     if (!hasChords(t)) return String(t ?? '');
     return String(t).split('\n').map(l => { const had = hasChords(l); const s = l.replace(CHORD, '').replace(/[ \t]{2,}/g, ' ').trimEnd(); return had && !s.trim() ? null : s; }).filter(l => l !== null).join('\n');
   }
+  // ---------- 글 서식 (편집칸·슬라이드 편집에서 넣는 간단한 표시) ----------
+  //  **굵게**   {크기:150}크게{/크기} (150 = 1.5배)   {색:#e63946}빨강{/색}
+  const FMT = /\*\*|\{색:(#[0-9a-fA-F]{3,8})\}|\{\/색\}|\{크기:(\d{2,3})\}|\{\/크기\}/g;
+  /** 서식 표시를 뺀 글 (무대 화면·리모컨·목록) */
+  function stripFmt(t) { return String(t ?? '').replace(FMT, ''); }
+  const hasFmt = t => FMT.test(String(t ?? '')) && !(FMT.lastIndex = 0);
+  /** 서식 표시 → HTML (esc 로 글을 안전하게). 닫지 않은 것은 끝에서 닫고, 짝 없는 닫기는 무시 */
+  function fmtHtml(t, esc) {
+    t = String(t ?? '');
+    let out = '', last = 0, m;
+    const open = []; // [{kind, html}]
+    const tag = o => o.kind === 'b' ? '<b>' : o.kind === 'c' ? `<span style="color:${o.v}">` : `<span style="font-size:${o.v / 100}em">`;
+    const closeTag = o => (o.kind === 'b' ? '</b>' : '</span>');
+    const toggle = (kind, v) => {
+      const at = open.map(o => o.kind).lastIndexOf(kind);
+      if (v != null || at < 0) { if (v == null && kind !== 'b') return; const o = { kind, v }; open.push(o); out += tag(o); return; }
+      const rest = open.splice(at); // 닫을 것 위에 열린 것은 닫았다가 다시 연다
+      out += rest.slice().reverse().map(closeTag).join('');
+      rest.slice(1).forEach(o => { open.push(o); out += tag(o); });
+    };
+    FMT.lastIndex = 0;
+    while ((m = FMT.exec(t))) {
+      out += esc(t.slice(last, m.index));
+      last = FMT.lastIndex;
+      const s = m[0];
+      if (s === '**') { if (open.some(o => o.kind === 'b')) toggle('b'); else toggle('b', 1); }
+      else if (m[1]) toggle('c', m[1]);
+      else if (s === '{/색}') toggle('c');
+      else if (m[2]) toggle('s', Math.max(30, Math.min(400, +m[2])));
+      else toggle('s');
+    }
+    out += esc(t.slice(last));
+    return out + open.slice().reverse().map(closeTag).join('');
+  }
+
   /** 코드가 있는 가사 → 코드를 글자 위에 얹은 HTML (무대 화면) */
   function chordHtml(t, esc) {
     return String(t).split('\n').map(line => {
@@ -49,5 +84,5 @@
   /** '[G]' 처럼 코드 하나만 있는 줄인가 (이름표 [1절] 과 구별) */
   const isChordOnly = line => { const s = String(line).trim(); return !!s && !stripChords(s).trim() && hasChords(s); };
 
-  global.BCGroup = { color, group, key, stripChords, chordHtml, hasChords, isChordOnly };
+  global.BCGroup = { color, group, key, stripChords, chordHtml, hasChords, isChordOnly, stripFmt, fmtHtml, hasFmt };
 })(window);

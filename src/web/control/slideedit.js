@@ -187,7 +187,7 @@
     S.key = pick || '*';
     S.sel = '';
     commit({ lyrics: true });
-    if (op === 'add') setTimeout(() => inlineEdit('main'), 80);
+    if (op === 'add' && !S.quick) setTimeout(() => inlineEdit('main'), 80);
   }
   function slideOp(op, key) {
     const it = item();
@@ -214,7 +214,7 @@
     S.key = String(Math.max(0, Math.min(after.length - 1, pick)));
     S.sel = '';
     commit({ lyrics: true });
-    if (op === 'add') setTimeout(() => inlineEdit('main'), 80); // 새 슬라이드는 바로 글 쓰기
+    if (op === 'add' && !S.quick) setTimeout(() => inlineEdit('main'), 80); // 새 슬라이드는 바로 글 쓰기
   }
 
   /** 본문 글상자 위치 (화면 %) */
@@ -295,7 +295,7 @@
         h += it.type === 'title' && src.slide.src === 0
           ? field('제목', `<input type="text" data-content="title" value="${esc(it.title)}">`) + field('부제', `<input type="text" data-content="subtitle" value="${esc(it.subtitle || '')}">`)
           : it.type === 'title' ? field('글', `<textarea data-content="text" rows="3" placeholder="첫 줄 = 제목, 둘째 줄 = 부제">${esc(SL.titlePages(it)[src.slide.src] || '')}</textarea>`)
-          : field('글', `<textarea data-content="text" rows="5">${esc(src.slide.parts[0].text)}</textarea>`);
+          : field('글', `<textarea data-content="text" data-fmt rows="5">${esc(src.slide.parts[0].text)}</textarea>`) + field('', window.BCFmt ? window.BCFmt.bar() : '');
       } else h += field('글', '<span class="muted">글은 각 슬라이드에서 고칩니다</span>');
       h += field('글자 크기', `${numIn('style.size', size, 8, 400, 1)} px <label class="tc-toggle" title="상자에 안 들어가면 글자를 줄입니다"><input type="checkbox" data-chk="style.autoFit" ${st.autoFit === false ? '' : 'checked'}> 넘치면 줄이기</label>`)
         + field('글자', `${colIn('style.color', st.color || t.font.color)}${tog('style.bold', st.bold ?? Number(t.font.weight) >= 600, '<b>굵게</b>')}${tog('style.italic', !!st.italic, '<i>기울임</i>')}${tog('style.shadow', st.shadow ?? !!(t.shadow && t.shadow.enabled), '그림자')}`)
@@ -394,6 +394,7 @@
     }
     const ta = document.createElement('textarea');
     ta.className = 'se-inline';
+    if (id === 'main' && chunky()) ta.setAttribute('data-fmt', ''); // Ctrl+B 굵게 등
     ta.value = text;
     ta.style.cssText = `left:${r.x}%;top:${r.y}%;width:${r.w}%;height:${r.h}%;font-size:${Math.max(11, size * S.scale)}px;text-align:${align};font-family:${t.font.family}`;
     $('#seHandles').appendChild(ta);
@@ -749,5 +750,29 @@
     if (t.closest('#seCenter')) return [{ head: '덧붙이기' }, ...add, '-', ...history, '-', { label: '완료 (닫기)', key: 'Esc', run: close }];
     return [];
   }
-  window.BCSlideEdit = { init, open, openPreviewSlide, close, dropImage, menuFor, isOpen: () => !$('#se').hidden };
+  /**
+   * 미리보기 k 번째 슬라이드에 바로: 'add' (다음에 새 슬라이드 → 편집기에서 바로 글 쓰기) · 'del' (지우기 / 원래 슬라이드는 건너뛰기) · 'dup'
+   * 썸네일(격자)·목록의 ＋ ✕ 단추와 오른쪽 클릭 메뉴가 부른다
+   */
+  async function quickOp(k, op) {
+    const p = app.preview;
+    if (!p || !p.cue) return app.showMsg('큐시트 순서의 슬라이드에서만 넣고 지울 수 있습니다.', 'info', 2500);
+    const s = p.slides[k];
+    const i = p.cue.index;
+    const it = Cue().item(i);
+    if (!s || !it || !EDITABLE.includes(it.type)) return;
+    if (!$('#se').hidden) close();
+    S.i = i; S.undo = []; S.redo = []; S.sel = ''; S.base = null;
+    if (!CHUNK.includes(it.type)) { S.base = await Cue().editorBase(i); if (!S.base.length) return; }
+    const key = s.ekey ?? String(s.src ?? 0);
+    S.key = key;
+    S.quick = true;
+    try { slideOp(op, key); } finally { S.quick = false; }
+    flush();
+    if (op === 'add') { // 새 슬라이드: 편집기에서 바로 글 쓰기
+      await open(i, S.key);
+      setTimeout(() => inlineEdit('main'), 120);
+    }
+  }
+  window.BCSlideEdit = { init, open, openPreviewSlide, close, dropImage, menuFor, quickOp, isOpen: () => !$('#se').hidden };
 })();

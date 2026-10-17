@@ -423,7 +423,7 @@
     if (s.kind === 'image') return '이미지';
     if (s.kind === 'video') return '🎬 영상';
     if (s.kind === 'blank') return s.mode === 'background' ? '배경만' : '검은 화면';
-    let t = s.parts.map(p => p.text).join(' ');
+    let t = s.parts.map(p => (window.BCGroup ? window.BCGroup.stripFmt(p.text) : p.text)).join(' ');
     if (window.BCGroup) t = window.BCGroup.stripChords(t).replace(/\s{2,}/g, ' ');
     return t.length > 46 ? t.slice(0, 46) + '…' : t;
   }

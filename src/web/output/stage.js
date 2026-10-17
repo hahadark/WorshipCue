@@ -17,7 +17,8 @@
     if (s.kind === 'blank') return s.mode === 'background' ? '(배경 화면)' : '(검은 화면)';
     if (s.kind === 'video') return '🎬 영상';
     if (s.kind === 'image' || s.kind === 'score') return (s.caption || '').trim() || (s.kind === 'score' ? '🎼 악보' : '🖼 이미지');
-    return (s.parts || []).map(p => (p.verse ? p.verse + ' ' : '') + p.text + (p.text2 ? '\n> ' + p.text2 : '')).join(s.kind === 'bible' ? '\n' : ' ').trim();
+    const plain = x => (window.BCGroup && window.BCGroup.stripFmt ? window.BCGroup.stripFmt(x) : x);
+    return (s.parts || []).map(p => (p.verse ? p.verse + ' ' : '') + plain(p.text) + (p.text2 ? '\n> ' + p.text2 : '')).join(s.kind === 'bible' ? '\n' : ' ').trim();
   }
 
   function fit() {
