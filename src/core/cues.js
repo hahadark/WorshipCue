@@ -8,6 +8,8 @@
 //   blank  빈 화면    { mode: 'black' | 'background' }
 // 공통: id, type, title, note(조작자 메모)
 
+const { normalizeEdits } = require('./slideedit');
+
 const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn', 'audio', 'video'];
 const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가', audio: '음악', video: '영상' };
 
@@ -37,6 +39,8 @@ function normalizeItem(x) {
   }
   // 순서별 배경 이미지·템플릿 (글자 순서)
   if (['song', 'text', 'title', 'bible'].includes(x.type)) it.bg = str(x.bg, 1500);
+  // 슬라이드 편집 (글상자 위치·꾸미기·덧붙인 글·그림·도형)
+  if (['song', 'text', 'title'].includes(x.type)) { const e = normalizeEdits(x.edits); if (e) it.edits = e; }
   it.duration = Math.max(0, Math.min(600, Number(x.duration) || 0)); // 예정 시간(분), 0 = 정하지 않음
   it.tplMain = str(x.tplMain, 80);
   it.tplOverlay = str(x.tplOverlay, 80);

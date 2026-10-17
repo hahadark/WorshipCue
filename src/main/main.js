@@ -254,7 +254,7 @@ if (!app.requestSingleInstanceLock()) {
     controlWin = new BrowserWindow({
       width: 1500, height: 920, minWidth: 1100, minHeight: 700, backgroundColor: '#14171c', title: 'WorshipCue',
       show: false,
-      webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false },
+      webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false, preload: path.join(__dirname, 'preload.js') },
     });
     try {
       const vs = core.store.listVersions();

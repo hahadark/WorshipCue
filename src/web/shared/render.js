@@ -30,6 +30,7 @@
       `font-family:${f.family}`, `font-weight:${f.weight}`, `color:${f.color}`,
       `line-height:${f.lineHeight}`, `letter-spacing:${f.letterSpacing || 0}px`,
     ];
+    if (f.style) css.push(`font-style:${f.style}`);
     const shadows = [];
     if (t.shadow && t.shadow.enabled) shadows.push(`${t.shadow.x}px ${t.shadow.y}px ${t.shadow.blur}px ${t.shadow.color}`);
     if (shadows.length) css.push(`text-shadow:${shadows.join(',')}`);
@@ -125,8 +126,46 @@
     return t.pptMode ? t.pptMode === 'lyrics' : !!(t.background && t.background.type === 'transparent');
   }
 
+  /**
+   * 슬라이드 편집(slide.edit) 을 이 출력에 적용: 글상자 위치·꾸미기를 반영한 템플릿과 영역
+   * 투명 배경(OBS 자막) 출력에는 '모든 출력에 적용' 일 때만 (글 내용은 늘 반영)
+   */
+  function editFor(slide, t) {
+    const e = slide.edit;
+    if (!e || (!e.allOutputs && lyricsOnly(t))) return null;
+    const k = t.height / 1080;
+    const s = e.style || {};
+    const t2 = { ...t, font: { ...t.font }, box: { ...t.box } };
+    if (s.size) { t2.font.size = Math.round(s.size * k); t2.font.minSize = Math.min(t.font.minSize, t2.font.size); }
+    if (typeof s.autoFit === 'boolean') t2.font.autoFit = s.autoFit;
+    if (s.color) t2.font.color = s.color;
+    if (typeof s.bold === 'boolean') t2.font.weight = s.bold ? 700 : 400;
+    if (s.italic) t2.font.style = 'italic';
+    if (s.lineHeight) t2.font.lineHeight = s.lineHeight;
+    if (s.align) t2.align = s.align;
+    if (s.valign) t2.valign = s.valign;
+    if (s.boxColor) t2.box = { ...t.box, enabled: true, gradient: '', color: s.boxColor, opacity: s.boxOpacity ?? 0.6, radius: s.radius ?? t.box.radius ?? 12, padding: s.padding ?? t.box.padding ?? 24 };
+    if (s.shadow === false) t2.shadow = { ...(t.shadow || {}), enabled: false };
+    const b = e.box;
+    const rect = b ? { left: b.x * t.width / 100, top: b.y * t.height / 100, width: b.w * t.width / 100, height: b.h * t.height / 100 } : contentRect(t);
+    return { t: t2, rect, e };
+  }
+
+  /** 덧붙인 글상자·그림·도형 (본문 영역 기준 좌표로) */
+  function editItemsHtml(items, t, rect, below) {
+    const k = t.height / 1080;
+    return (items || []).filter(x => !!x.below === below).map(x => {
+      const pos = `position:absolute;left:${x.x * t.width / 100 - rect.left}px;top:${x.y * t.height / 100 - rect.top}px;width:${x.w * t.width / 100}px;height:${x.h * t.height / 100}px;opacity:${x.opacity ?? 1};border-radius:${x.type === 'shape' && x.ellipse ? '50%' : (x.radius || 0) + 'px'};overflow:hidden;box-sizing:border-box;`;
+      if (x.type === 'image') return x.src ? (isVideo(x.src) ? videoTag(x.src, 'bc-eitem', pos, x.fit || 'cover') : `<img class="bc-eitem" alt="" src="${safeUrl(x.src)}" style="${pos}object-fit:${x.fit || 'cover'}">`) : '';
+      if (x.type === 'shape') return `<div class="bc-eitem" style="${pos}background:${esc(x.fill || '#1d3557')}"></div>`;
+      const just = { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[x.valign] || 'center';
+      const shadow = t.shadow && t.shadow.enabled && !x.fill ? `text-shadow:${t.shadow.x}px ${t.shadow.y}px ${t.shadow.blur}px ${t.shadow.color};` : '';
+      return `<div class="bc-eitem bc-etext" style="${pos}display:flex;flex-direction:column;justify-content:${just};padding:${(x.padding ?? 12) * k}px;${x.fill ? `background:${esc(x.fill)};` : ''}font-family:${t.font.family};font-size:${(x.size || 60) * k}px;color:${esc(x.color || '#fff')};font-weight:${x.bold ? 700 : 400};${x.italic ? 'font-style:italic;' : ''}line-height:1.3;text-align:${x.align || 'center'};white-space:pre-wrap;${shadow}">${esc(x.text || '')}</div>`;
+    }).join('');
+  }
+
   function buildContent(slide, t, versionName, opts = {}) {
-    const rect = contentRect(t);
+    let rect = contentRect(t);
     const area = document.createElement('div');
     area.className = 'bc-area';
     let kind = slide.kind || 'bible';
@@ -157,6 +196,16 @@
       }
       return area;
     }
+    // 슬라이드 편집: 글상자 위치·꾸미기, 덧붙인 글·그림·도형
+    const ed = editFor(slide, t);
+    let below = '', above = '';
+    if (ed) {
+      t = ed.t; rect = ed.rect;
+      area.bcT = t; // 크기 맞춤(fit)도 이 꾸미기로
+      below = editItemsHtml(ed.e.items, t, rect, true);
+      above = editItemsHtml(ed.e.items, t, rect, false);
+      if (ed.e.hideMain) area.classList.add('bc-hidemain');
+    }
     // 슬라이드 자체 배경 (예: 교독문의 원래 배경): 화면 전체에 깔고 그 위에 글자
     const bgVid = slide.bg && !asLyrics && isVideo(slide.bg);
     const slideBg = bgVid ? (opts.videoBgLayer ? '' : videoTag(slide.bg, 'bc-slidebg', `left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:#000`))
@@ -169,16 +218,16 @@
       ? `<div class="bc-version" style="font-size:${t.versionLabel.size}px;color:${t.versionLabel.color};text-align:${textAlign(t.align)}">${esc(versionName)}</div>` : '';
     if (kind === 'title') {
       // 제목 카드: 큰 제목 + 부제 (장절 표시 없음)
-      area.innerHTML = slideBg + `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
+      area.innerHTML = slideBg + below + `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
         + `<div class="bc-text bc-titlecard" style="font-size:${t.font.size}px"><div class="bc-t1">${esc(slide.ref)}</div>`
-        + (slide.subtitle ? `<div class="bc-t2" style="color:${t.reference.color}">${esc(slide.subtitle)}</div>` : '') + '</div></div>';
+        + (slide.subtitle ? `<div class="bc-t2" style="color:${t.reference.color}">${esc(slide.subtitle)}</div>` : '') + '</div></div>' + above;
       return area;
     }
-    area.innerHTML = slideBg + `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
+    area.innerHTML = slideBg + below + `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
       + refHtml(slide, t, 'top')
       + `<div class="bc-text" style="font-size:${t.font.size}px">${partsHtml(slide, t)}</div>`
       + refHtml(slide, t, 'bottom') + ver + '</div>'
-      + fixedRefHtml(slide, t, rect);
+      + fixedRefHtml(slide, t, rect) + above;
     return area;
   }
 
@@ -192,6 +241,7 @@
    * autoFit 이면 설정 크기에서 최소 크기까지 줄여 가며 들어가는 가장 큰 크기를 찾는다.
    */
   function fit(area, t, fixedSize) {
+    if (area.bcT) { t = area.bcT; fixedSize = 0; } // 슬라이드 편집 꾸미기
     const text = area.querySelector('.bc-text');
     if (!text) return { size: 0, fits: true }; // 이미지·빈 화면
     const set = s => { text.style.fontSize = s + 'px'; };
@@ -407,5 +457,5 @@
     return { stage, ...result };
   }
 
-  global.BCRender = { esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

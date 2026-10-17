@@ -161,7 +161,8 @@ class Library {
     const f = path.resolve(String(p || ''));
     const s = this.core.settings.get();
     const roots = [...(s.imageFolders || []), ...(s.audioFolders || [])].map(x => path.resolve(x.path));
-    if (!roots.some(r => f.startsWith(r + path.sep))) return null;
+    const dropped = (s.droppedFiles || []).some(x => path.resolve(x) === f); // 끌어다 놓은 파일
+    if (!dropped && !roots.some(r => f.startsWith(r + path.sep))) return null;
     if (!IMAGE.test(f) && !AUDIO.test(f) && !VIDEO.test(f)) return null;
     return fs.existsSync(f) ? f : null;
   }

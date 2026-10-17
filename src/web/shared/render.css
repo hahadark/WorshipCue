@@ -66,3 +66,7 @@
 .bc-logoscreen img { max-width: 45%; max-height: 55%; object-fit: contain; }
 .bc-stage.hide-bg .bc-bg, .bc-stage.hide-bg .bc-vlayer, .bc-stage.hide-bg .bc-slidebg { opacity: 0 !important; }
 .bc-bg, .bc-vlayer, .bc-slidebg { transition: opacity 400ms ease; }
+
+/* 슬라이드 편집: 덧붙인 글상자·그림·도형, 본문 숨기기 */
+.bc-eitem { pointer-events: none; }
+.bc-hidemain > .bc-block, .bc-hidemain > .bc-ref-fixed { visibility: hidden; }

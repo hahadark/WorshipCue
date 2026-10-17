@@ -112,11 +112,13 @@
   function buildText({ title = '', showTitle = false, chunks = [] }, opts) {
     const templates = opts.templates.filter(Boolean);
     const ref = showTitle ? title : '';
-    const mk = (text, label) => ({ kind: 'text', ref, title: ref, label, parts: [{ book: 0, chapter: 0, verse: 0, text }] });
+    let src;
+    const mk = (text, label) => ({ kind: 'text', ref, title: ref, label, ...(src != null ? { src } : {}), parts: [{ book: 0, chapter: 0, verse: 0, text }] });
     const fits = s => templates.every(t => R.fitsAt(s, t, t.font.autoFit ? t.font.minSize : t.font.size, ''));
     const slides = [];
     chunks.forEach((c, ci) => {
       const label = c.label || String(ci + 1);
+      src = c.src;
       const text = c.text.trim();
       if (!text) return;
       if (fits(mk(text, label))) { slides.push(mk(text, label)); return; }
@@ -140,7 +142,40 @@
       let label = '';
       const kept = lines.filter(l => { const m = l.trim().match(/^\[(.{1,20})\]$/); if (m) { label = m[1]; return false; } return true; });
       return { label, text: kept.join('\n').trim() };
-    }).filter(c => c.text);
+    }).filter(c => c.text).map((c, k) => ({ ...c, src: k }));
+  }
+
+  /** 가사의 k 번째 덩어리 글을 바꾼다 ([1절] 같은 이름표 줄은 그대로) */
+  function setLyricsChunk(lyrics, k, text) {
+    const blocks = String(lyrics || '').replace(/\r/g, '').split(/\n\s*\n/);
+    let n = -1;
+    const out = blocks.map(block => {
+      const lines = block.split('\n');
+      const isLabel = l => /^\[(.{1,20})\]$/.test(l.trim());
+      if (!lines.filter(l => !isLabel(l)).join('\n').trim()) return block;
+      if (++n !== k) return block;
+      return [...lines.filter(isLabel), ...String(text).replace(/\r/g, '').split('\n')].join('\n');
+    });
+    return out.join('\n\n');
+  }
+
+  /** 공지 글의 k 번째 장 글을 바꾼다 */
+  function setTextChunk(body, k, text) {
+    const parts = String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/);
+    let n = -1;
+    return parts.map(p => (p.trim() && ++n === k ? String(text).replace(/\r/g, '') : p)).join('\n---\n');
+  }
+
+  /** 공통('*') + 슬라이드별 편집 합치기 (코어 slideedit.js 의 mergeEdit 과 같음) */
+  function mergeEdit(edits, key) {
+    if (!edits) return null;
+    const a = edits['*'], b = key == null ? null : edits[String(key)];
+    if (!a && !b) return null;
+    if (!a || !b) return JSON.parse(JSON.stringify(a || b));
+    const o = { ...JSON.parse(JSON.stringify(a)), ...JSON.parse(JSON.stringify(b)) };
+    o.style = { ...(a.style || {}), ...(b.style || {}) };
+    o.items = [...(a.items || []), ...(b.items || [])];
+    return o;
   }
 
   /**
@@ -188,8 +223,8 @@
 
   /** 공지 글: '---' 만 있는 줄로 슬라이드 구분 */
   function textChunks(body) {
-    return String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/).map(t => ({ label: '', text: t.trim() })).filter(c => c.text);
+    return String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/).map(t => ({ label: '', text: t.trim() })).filter(c => c.text).map((c, k) => ({ ...c, src: k }));
   }
 
-  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, lyricGroups, arrange };
+  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, lyricGroups, arrange, setLyricsChunk, setTextChunk, mergeEdit };
 })(window);

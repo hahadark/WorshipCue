@@ -702,6 +702,38 @@ test('작업공간: 저장·이름 정리·지금 작업공간', () => {
   assert.equal(core.settings.get().workspaces.length, 2);
 });
 
+test('슬라이드 편집: 정리·합치기·큐시트 저장·송출 슬라이드에 유지', () => {
+  const { normalizeEdits, mergeEdit, normalizeEdit } = require('../src/core/slideedit');
+  const e = normalizeEdits({
+    '*': { style: { size: 90, color: '#ffcc00', align: 'left', bogus: 1 }, box: { x: 5, y: 60, w: 90, h: 30 } },
+    '2': { style: { color: 'red' }, items: [{ type: 'text', text: '후렴', x: 5, y: 5, w: 20, h: 10 }, { type: 'evil' }], hideMain: true, bg: '#112233' },
+    'x': { box: { x: 1 } }, '3': {},
+  });
+  assert.deepEqual(Object.keys(e).sort(), ['*', '2']); // 이상한 키·빈 편집은 버림
+  assert.equal(e['*'].style.bogus, undefined);
+  assert.equal(e['2'].style, undefined); // 'red' 는 색이 아님
+  assert.equal(e['2'].items.length, 1);
+  assert.equal(e['2'].items[0].align, 'center');
+  const m = mergeEdit(e, 2);
+  assert.equal(m.style.size, 90);
+  assert.equal(m.box.y, 60);
+  assert.equal(m.hideMain, true);
+  assert.equal(mergeEdit(e, 7).style.color, '#ffcc00');
+  assert.equal(normalizeEdit({}), null);
+  // 큐시트 항목에 저장
+  const core = newCore('slideedit');
+  const cue = core.command('saveCue', { cue: { name: '편집', items: [{ type: 'song', title: '곡', lyrics: '가\n\n나', edits: e }, { type: 'image', title: '그림', edits: e }] } }).result;
+  const got = core.command('getCue', { id: cue.id }).result;
+  assert.equal(got.items[0].edits['2'].items[0].text, '후렴');
+  assert.equal(got.items[1].edits, undefined); // 그림 순서는 편집 없음
+  // 송출 슬라이드에 편집·덩어리 번호 유지
+  const r = core.command('sendLive', { passage: { title: '곡' }, slides: [{ kind: 'text', ref: '', src: 1, edit: mergeEdit(e, 1), parts: [{ text: '나' }] }] });
+  assert.equal(r.ok, true);
+  const live = core.presentation.live.slides[0];
+  assert.equal(live.src, 1);
+  assert.equal(live.edit.style.size, 90);
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

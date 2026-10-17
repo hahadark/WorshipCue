@@ -427,7 +427,7 @@
   }
 
   window.BCLib = {
-    init, show, audio,
+    init, show, audio, tab: () => st.tab,
     pickImage: done => pickFile('image', f => done(f.url)),
     pickVideo: done => pickFile('image', f => done(f.url), { video: 'only' }),
     pickAudio: done => pickFile('audio', done),

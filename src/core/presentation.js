@@ -3,6 +3,7 @@
 // Live 는 sendLive / 슬라이드 이동 / clear / restore / extend 명령으로만 바뀐다.
 
 const { EventEmitter } = require('events');
+const { normalizeEdit } = require('./slideedit');
 
 const MAX_SLIDES = 2000;
 const MAX_TEXT = 5000;
@@ -27,6 +28,8 @@ function validateSlides(slides) {
       ...(kind === 'video' ? { video: { volume: Math.max(0, Math.min(1, Number(s.video && s.video.volume) || 0)), sound: !!(s.video && s.video.sound), loop: !!(s.video && s.video.loop), endAction: ['hold', 'black', 'next'].includes(s.video && s.video.endAction) ? s.video.endAction : 'hold' } } : {}),
       ref: String(s.ref || ''),
       title: String(s.title || ''), // 전체 범위 (장절 '전체 범위 고정' 표시용)
+      ...(Number.isInteger(s.src) && s.src >= 0 ? { src: s.src } : {}), // 원래 가사·글 덩어리 번호 (슬라이드 편집 키)
+      ...(s.edit ? (e => (e ? { edit: e } : {}))(normalizeEdit(s.edit)) : {}), // 슬라이드 편집
       parts: s.parts.map(p => {
         const text = String(p.text ?? '');
         if (text.length > MAX_TEXT) throw new Error('본문이 너무 깁니다.');

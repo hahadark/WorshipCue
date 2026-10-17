@@ -247,6 +247,18 @@
     if (!slides.length) slides = [{ kind: 'title', ref: it.title, subtitle: it.subtitle || '', label: '제목', parts: [] }];
     // 순서별 배경 이미지 (글자 슬라이드)
     if (it.bg) slides.forEach(s => { if (s.kind === 'text' || s.kind === 'title') s.bg = it.bg; });
+    // 슬라이드 편집 (글상자 위치·꾸미기·덧붙인 것·슬라이드 배경)
+    if (it.edits && ['song', 'text', 'title'].includes(it.type)) {
+      slides.forEach(s => {
+        if (s.kind !== 'text' && s.kind !== 'title') return;
+        const e = SL.mergeEdit(it.edits, s.kind === 'title' ? 0 : s.src);
+        if (!e) return;
+        if (e.bg) s.bg = e.bg;
+        delete e.bg;
+        s.edit = e;
+        if (s.kind === 'title') s.src = 0;
+      });
+    }
     return slides;
   }
 
@@ -260,7 +272,9 @@
   // ---------------- 찬양 라이브러리 연결 ----------------
   /** 라이브러리 찬양의 최신 가사를 이 순서에 반영 */
   async function syncSong(it) {
+    if (st.songPending === it.songId) return; // 고친 가사를 라이브러리에 저장하는 중 (덮어쓰지 않음)
     const r = await cmd('getSong', { id: it.songId });
+    if (st.songPending === it.songId) return;
     if (!r.ok) return;
     st.songs.set(it.songId, r.result);
     if (it.lyrics !== r.result.lyrics) { it.lyrics = r.result.lyrics; save(); }
@@ -268,10 +282,12 @@
   /** 연결된 찬양의 가사를 고치면 라이브러리에도 저장 (모든 큐시트에 반영) */
   function saveLinkedSong(it) {
     clearTimeout(st.songTimer);
+    st.songPending = it.songId;
     st.songTimer = setTimeout(async () => {
       const s = st.songs.get(it.songId) || {};
       const r = await cmd('saveSong', { song: { ...s, id: it.songId, title: s.title || it.title, lyrics: it.lyrics } });
       if (r.ok) st.songs.set(it.songId, r.result);
+      if (st.songPending === it.songId) st.songPending = null;
     }, 600);
   }
 
@@ -309,6 +325,13 @@
     if (!r || !app.preview) return;
     app.setPreviewIndex(+r.dataset.k);
     document.querySelectorAll('#results .srow').forEach(x => x.classList.toggle('in-pv', x === r));
+  });
+  // 오른쪽 클릭: 그 슬라이드 편집
+  $('#results').addEventListener('contextmenu', e => {
+    const r = e.target.closest('.srow');
+    if (!r || !app.preview || !app.preview.cue || !window.BCSlideEdit) return;
+    e.preventDefault();
+    window.BCSlideEdit.openPreviewSlide(+r.dataset.k);
   });
   $('#results').addEventListener('dblclick', e => {
     const r = e.target.closest('.srow');
@@ -383,6 +406,7 @@
     box.innerHTML = `<div class="ce-head"><span class="ce-ico">${ICON[it.type]}</span><b>${i + 1}번 ${TYPE[it.type]}</b>
         <span class="grow"></span><span id="cueSaved" class="muted"></span>
         <button data-act="up" title="위로 (Alt+↑)">▲</button><button data-act="down" title="아래로 (Alt+↓)">▼</button>
+        ${['song', 'text', 'title'].includes(it.type) ? '<button data-act="slideedit" class="primary" title="슬라이드마다 글상자 위치·꾸미기, 글·그림·도형 덧붙이기 (Ctrl+E)">✏ 슬라이드 편집</button>' : ''}
         <button data-act="dup" title="이 순서 복제">복제</button><button data-act="del" title="이 순서 지우기 (Delete)">지우기</button>
         <button data-act="close" title="편집칸 닫기">✕</button></div>
       <div class="form ce-form">
@@ -464,6 +488,7 @@
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;
       case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); forceEditor(); break; }
       case 'del': removeItem(i); break;
+      case 'slideedit': if (window.BCSlideEdit) window.BCSlideEdit.open(i); break;
       case 'chip': break;
       case 'videopick': if (window.BCLib) window.BCLib.pickVideo(url => { it.file = url; if (!it.title || it.title === TYPE.video) it.title = fileName(url).replace(/\.[^.]+$/, ''); save(); forceEditor(); render(); previewItem(i); }); break;
       case 'audiopick': if (window.BCLib) window.BCLib.pickAudio(f => { it.file = f.url; if (!it.title || it.title === TYPE.audio) it.title = f.name; save(); forceEditor(); render(); }); break;
@@ -826,6 +851,21 @@
     sendItem: i => { showSide('cue'); return sendItem(i); },
     openCue: async id => { await refreshList(); showSide('cue'); return openCue(id); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
     selected: () => (st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null),
+    selIndex: () => st.sel,
+    /** 고른 순서만 바꾼다 (미리보기 없이) — 끌어다 놓은 파일을 그 다음 자리에 넣을 때 */
+    selectQuiet: i => { if (st.cue && i >= 0 && i < st.cue.items.length) { st.sel = i; render(); } },
+    item: i => (st.cue ? st.cue.items[i] : null),
+    tplOf: i => (st.cue && st.cue.items[i] ? itemTpl(st.cue.items[i]) : null),
+    /** 슬라이드 편집기: 항목을 고치고 저장·미리보기 갱신 (가사를 고쳤으면 라이브러리 찬양에도) */
+    updateItem: (i, fn, { lyrics = false } = {}) => {
+      const it = st.cue && st.cue.items[i];
+      if (!it) return false;
+      fn(it); save();
+      if (lyrics && it.type === 'song' && it.songId) saveLinkedSong(it);
+      if (i === st.sel) forceEditor();
+      previewItem(i, { keepIndex: true });
+      return true;
+    },
     /** 고른 순서를 바꾸고 저장·미리보기 갱신 */
     updateSelected: fn => { const it = st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null; if (!it) return false; fn(it); save(); forceEditor(); previewItem(st.sel, { keepIndex: true }); return true; },
     onSongs: d => { if (d && d.id) st.songs.delete(d.id); },

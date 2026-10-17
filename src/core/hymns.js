@@ -88,7 +88,9 @@ class Hymns {
 
   isAllowed(file) {
     const f = path.resolve(file);
-    return (this.core.settings.get().hymnFolders || []).some(x => f.startsWith(path.resolve(x.path) + path.sep));
+    const s = this.core.settings.get();
+    if ((s.droppedFiles || []).some(x => path.resolve(x) === f) && EXT.test(f)) return true; // 끌어다 놓은 PPT
+    return (s.hymnFolders || []).some(x => f.startsWith(path.resolve(x.path) + path.sep));
   }
 
   /** 파일에서 그림·글자를 꺼내 캐시에 두고 주소를 돌려준다 */

@@ -148,6 +148,8 @@
     if (window.BCGrid) window.BCGrid.init();
     if (window.BCMenu) window.BCMenu.init();
     if (window.BCRemote) window.BCRemote.init();
+    if (window.BCSlideEdit) window.BCSlideEdit.init();
+    if (window.BCDrop) window.BCDrop.init();
     // 로딩 화면 닫기: 배치가 자리 잡은 뒤 (숨긴 창에서는 화면 그리기 신호가 없으므로 시간으로)
     setTimeout(() => cmd('uiReady'), 150);
     if (!app.state.versions.length) showWelcome();
@@ -1278,14 +1280,16 @@
     if (!combo) return;
     if (app.capturing) { e.preventDefault(); e.stopPropagation(); app.capturing(combo); return; }
     // Esc 는 열린 창·후보 목록을 먼저 닫고, 닫을 것이 없을 때만 단축키(보조 화면 끄기)로 쓴다
+    const editing = window.BCSlideEdit && window.BCSlideEdit.isOpen(); // 슬라이드 편집기: 창처럼 다룬다
     if (combo === 'Escape') {
       if (!$('#modal').hidden) { closeModal(); e.preventDefault(); return; }
+      if (editing) return; // 편집기가 닫음
       if (!$('#suggest').hidden) return; // 검색창 처리기가 후보 목록을 닫음
     }
     const sc = settings().shortcuts;
     const action = Object.keys(sc).find(a => sc[a] === combo);
     if (action) {
-      const modalOpen = !$('#modal').hidden;
+      const modalOpen = !$('#modal').hidden || editing;
       if (modalOpen && !LIVE_ACTIONS.has(action)) return;
       e.preventDefault();
       e.stopPropagation();
@@ -1294,7 +1298,7 @@
       return;
     }
     if (e.key === 'Escape' && !$('#modal').hidden) { closeModal(); e.preventDefault(); return; }
-    if (jumpKey(e)) return;
+    if (!editing && jumpKey(e)) return;
     // 브라우저 기본 동작 중 송출 화면에 위험한 키 차단 (새로 고침 등)
     if (combo === 'F5' || combo === 'Ctrl+R' || combo === 'Ctrl+Shift+R') e.preventDefault();
   }, true);

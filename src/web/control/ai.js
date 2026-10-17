@@ -76,5 +76,11 @@
     if (window.BCCue) window.BCCue.onCues({ id: cue.id });
   }
 
-  window.BCAI = { open };
+  /** 끌어다 놓은 주보 파일 */
+  function setFile(f) {
+    if (!f || !document.querySelector('#aiFile')) return;
+    file = f;
+    document.querySelector('#aiFile').textContent = `${f.name} (${Math.round(f.size / 1024)}KB)`;
+  }
+  window.BCAI = { open, setFile };
 })();

@@ -489,6 +489,45 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  /**
+   * 바깥(탐색기)에서 끌어다 놓은 파일·폴더: 종류를 알려 주고, 등록 폴더 밖이어도 열 수 있게 기억한다
+   * → [{ path, name, kind: ppt|image|video|audio|text|folder, url?, text?, number?, title? }]
+   */
+  addDroppedFiles(a) {
+    const path = require('path');
+    const fs = require('fs');
+    const { IMAGE, AUDIO, VIDEO } = require('./library');
+    const { parseName } = require('./hymns');
+    const out = [];
+    const keep = [];
+    for (const raw of (Array.isArray(a.paths) ? a.paths : []).slice(0, 100)) {
+      const p = path.resolve(String(raw || ''));
+      if (!raw || !path.isAbsolute(String(raw))) continue;
+      let st;
+      try { st = fs.statSync(p); } catch { out.push({ path: p, name: path.basename(p), kind: 'missing' }); continue; }
+      const name = path.basename(p);
+      const base = name.replace(/\.[^.]+$/, '');
+      if (st.isDirectory()) { out.push({ path: p, name, kind: 'folder' }); continue; }
+      if (/\.(pps|ppt|ppsx|pptx)$/i.test(p)) { const n = parseName(name); out.push({ path: p, name, kind: 'ppt', number: n.number, title: n.title || base }); keep.push(p); }
+      else if (IMAGE.test(p)) { out.push({ path: p, name, kind: 'image', title: base, url: this.library.fileUrl(p) }); keep.push(p); }
+      else if (VIDEO.test(p)) { out.push({ path: p, name, kind: 'video', title: base, url: this.library.fileUrl(p) }); keep.push(p); }
+      else if (AUDIO.test(p)) { out.push({ path: p, name, kind: 'audio', title: base, url: this.library.fileUrl(p) }); keep.push(p); }
+      else if (/\.txt$/i.test(p) && st.size <= 200000) {
+        let text = fs.readFileSync(p);
+        // UTF-8 이 아니면 (예: 메모장 ANSI) 한글 코드(cp949)로
+        let s = text.toString('utf8');
+        if (s.includes('\ufffd')) { try { s = new TextDecoder('euc-kr').decode(text); } catch { /* 그대로 */ } }
+        out.push({ path: p, name, kind: 'text', title: base, text: s.replace(/^\ufeff/, '') });
+      } else out.push({ path: p, name, kind: 'other' });
+    }
+    if (keep.length) {
+      this.settings.update(d => {
+        const list = (d.droppedFiles || []).filter(x => !keep.includes(x));
+        d.droppedFiles = [...list, ...keep].slice(-500);
+      });
+    }
+    return out;
+  },
   /** 조작 화면 준비 끝 (로딩 화면을 닫는 신호) */
   uiReady() { this.emit('ui-ready'); return {}; },
   logClientError(a) { this.logger.error('조작 화면: ' + String(a.message || '').slice(0, 2000)); return {}; },

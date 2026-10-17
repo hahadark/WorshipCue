@@ -70,6 +70,7 @@ function defaults() {
     songSearchUrl: 'https://cwy0675.tistory.com/search/{q}', // 온라인에서 찾기: {q} = 검색어
     songDownloadDir: '', // 지켜볼 다운로드 폴더 (비우면 Windows 다운로드 폴더)
     imageFolders: [],    // [{ name, path }] 라이브러리 이미지 폴더
+    droppedFiles: [],    // 바깥에서 끌어다 놓은 파일 (등록 폴더 밖이어도 열 수 있게, 최근 500개)
     audioFolders: [],    // [{ name, path }] 라이브러리 음악 폴더
     overlays: [],
     ai: { model: '', keyEnc: '', key: '' }, // AI 주보 → 큐시트 (오픈라우터). 키는 Windows 보호 기능으로 암호화해 keyEnc 에

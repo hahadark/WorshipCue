@@ -524,3 +524,66 @@ html { overflow: hidden; }
 #resultInfo { white-space: nowrap; flex: none; }
 /* 내용이 짧은 창은 내용 높이만큼 */
 .modal-box:has(.ai-form), .modal-box:has(.ws-manage) { height: auto; max-height: 90vh; width: min(980px, 94vw); }
+
+/* ---------------- 슬라이드 편집기 (FreeShow 방식) ---------------- */
+.sg-cell { position: relative; }
+.sg-edit { position: absolute; top: 6px; right: 6px; z-index: 3; padding: 2px 7px; font-size: 13px; opacity: 0; background: rgba(15,18,24,.85); }
+.sg-cell:hover .sg-edit { opacity: 1; }
+.se { position: fixed; left: 0; right: 0; bottom: 0; top: 0; z-index: 40; background: var(--bg); display: flex; flex-direction: column; outline: none; }
+.se-top { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.se-top #seTitle { font-size: 15px; margin-right: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 32vw; }
+.se-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.se-tools .sep { height: 22px; }
+.se-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 210px 1fr 330px; }
+.se-list { overflow: auto; padding: 8px; border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; gap: 8px; }
+.se-slide { border: 2px solid transparent; border-radius: 6px; padding: 3px; cursor: pointer; background: #0d0f13; }
+.se-slide:hover { border-color: #3a4252; }
+.se-slide.on { border-color: var(--accent); }
+.se-thumb { width: 100%; aspect-ratio: 16 / 9; height: auto; }
+.se-cap { font-size: 12px; color: var(--muted); padding: 3px 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.se-cap b { color: var(--text); margin-right: 3px; }
+.se-dot { color: #ffd479; font-size: 10px; }
+.se-center { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-width: 0; overflow: hidden; background: #08090c; }
+.se-wrap { position: relative; box-shadow: 0 0 0 1px #2a303b, 0 10px 40px rgba(0,0,0,.6); user-select: none; touch-action: none; }
+.se-render { position: absolute; inset: 0; overflow: hidden; }
+.se-render .bc-stage { transform-origin: 0 0; }
+.se-handles { position: absolute; inset: 0; }
+.se-box { position: absolute; border: 1px dashed rgba(158,197,255,.55); box-sizing: border-box; cursor: move; }
+.se-box:hover { border-color: #9ec5ff; background: rgba(158,197,255,.05); }
+.se-box.sel { border: 2px solid #4f9dff; background: rgba(79,157,255,.07); }
+.se-box.main { border-color: rgba(255,212,121,.6); }
+.se-box.main.sel { border-color: #ffd479; background: rgba(255,212,121,.06); }
+.se-box.hid { opacity: .5; }
+.se-box.locked { border-style: dotted; cursor: not-allowed; }
+.se-tag { position: absolute; left: -1px; top: -19px; font-size: 11px; line-height: 17px; padding: 0 5px; border-radius: 3px 3px 0 0; background: rgba(30,36,46,.9); color: #cfd6e2; white-space: nowrap; pointer-events: none; }
+.se-box.sel .se-tag { background: #2b5fa8; color: #fff; }
+.se-box.main.sel .se-tag { background: #8a6a1c; }
+.se-h { position: absolute; width: 10px; height: 10px; background: #fff; border: 1px solid #2b5fa8; border-radius: 2px; transform: translate(-50%, -50%); }
+.se-h[data-h=nw] { left: 0; top: 0; cursor: nwse-resize; } .se-h[data-h=n] { left: 50%; top: 0; cursor: ns-resize; } .se-h[data-h=ne] { left: 100%; top: 0; cursor: nesw-resize; }
+.se-h[data-h=e] { left: 100%; top: 50%; cursor: ew-resize; } .se-h[data-h=se] { left: 100%; top: 100%; cursor: nwse-resize; } .se-h[data-h=s] { left: 50%; top: 100%; cursor: ns-resize; }
+.se-h[data-h=sw] { left: 0; top: 100%; cursor: nesw-resize; } .se-h[data-h=w] { left: 0; top: 50%; cursor: ew-resize; }
+.se-guide { position: absolute; pointer-events: none; background: #ff4fa3; }
+.se-guide.v { top: 0; bottom: 0; width: 1px; }
+.se-guide.h { left: 0; right: 0; height: 1px; }
+.se-inline { position: absolute; z-index: 5; box-sizing: border-box; resize: none; padding: 6px; border: 2px solid #ffd479; border-radius: 4px; background: rgba(10,12,16,.82); color: #fff; line-height: 1.35; }
+.se-hint { color: var(--muted); font-size: 12px; text-align: center; padding: 0 12px; }
+.se-props { overflow: auto; padding: 10px 12px 16px; border-left: 1px solid var(--line); background: var(--panel); }
+.se-props h4 { margin: 6px 0 8px; font-size: 13px; color: #9ec5ff; }
+.se-form { grid-template-columns: 68px 1fr; gap: 7px 8px; align-items: center; margin-bottom: 12px; }
+.se-form > label { font-size: 12px; color: var(--muted); }
+.se-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 12px; min-width: 0; }
+.se-row textarea, .se-row input[type=text] { width: 100%; box-sizing: border-box; }
+.se-row input[type=color] { width: 34px; height: 26px; padding: 1px; }
+.se-row input[type=range] { flex: 1; min-width: 60px; }
+.se-tog { padding: 3px 8px; }
+.se-tog.on { background: #2b5fa8; border-color: #4f9dff; color: #fff; }
+.se-locked { opacity: .55; pointer-events: none; }
+.se-sw { display: inline-block; width: 16px; height: 16px; border-radius: 3px; border: 1px solid var(--line); vertical-align: middle; }
+.se-bgname { font-size: 14px; }
+.se-foot { display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 10px; }
+@media (max-width: 1300px) { .se-body { grid-template-columns: 160px 1fr 290px; } }
+
+/* 바깥에서 파일 끌어다 놓기 */
+.drop-hint { position: fixed; inset: 0; z-index: 960; pointer-events: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 90px; background: rgba(79,157,255,.08); box-shadow: inset 0 0 0 3px rgba(79,157,255,.7); }
+.drop-box { padding: 12px 22px; border-radius: 10px; background: #1e3a66; color: #fff; font-size: 16px; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+.cue-item.drop-after { box-shadow: 0 3px 0 0 #4f9dff; }
