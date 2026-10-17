@@ -512,22 +512,22 @@
     const vs = app.state.versions;
     const r = importState;
     $('#setBody').innerHTML = `
-      <h4 style="margin-top:0;color:#9ec5ff">베들레헴 성경에서 가져오기</h4>
+      <h4 style="margin-top:0;color:var(--hl)">베들레헴 성경에서 가져오기</h4>
       <div class="note">개역개정·쉬운성경·우리말·현대인·ESV·NIV 등은 <b>베들레헴 성경</b>을 설치한 뒤 그 데이터를 가져와 쓸 수 있습니다.
         설치 방법: <button id="bhSetup">베들레헴 설치 안내 페이지 열기</button> → 받은 압축을 풀어 <b>BethlehemWin</b> 폴더를 C 드라이브 등의 맨 위(예: C:\\BethlehemWin)에 복사</div>
       <div class="row-flex" style="margin:8px 0"><button id="bhFind">자동으로 찾기</button>
         <input type="text" id="bhDir" placeholder="또는 폴더 경로 직접 입력 (예: D:\\BethlehemWin)" style="width:340px"><button id="bhFindDir">이 폴더에서 찾기</button><span id="bhMsg" class="note"></span></div>
       <div id="bhList"></div>
-      <h4 style="color:#9ec5ff">설치된 번역본</h4>
+      <h4 style="color:var(--hl)">설치된 번역본</h4>
       ${vs.length ? `<table class="list"><tr><th>ID</th><th>이름</th><th>구절 수</th><th>저작권</th><th>사용 허가</th><th>출처</th><th></th></tr>
         ${vs.map(v => `<tr><td>${esc(v.id)}</td><td><b>${esc(v.name)}</b></td><td>${v.verse_count.toLocaleString()}</td><td>${esc(v.copyright)}</td><td>${esc(v.license)}</td><td>${esc(v.source)}</td>
           <td><button data-del="${esc(v.id)}">삭제</button></td></tr>`).join('')}</table>` : '<div class="note">설치된 번역본이 없습니다.</div>'}
-      <h4 style="color:#9ec5ff">성경 데이터 가져오기</h4>
+      <h4 style="color:var(--hl)">성경 데이터 가져오기</h4>
       <div class="note">지원 형식: JSON · CSV(책,장,절,본문) · Zefania XML · 베들레헴 성경(.bdb). 같은 ID로 가져오면 기존 데이터를 교체합니다.<br>
         <b class="warn-text">사용 허가를 확인한 번역본만 가져오세요.</b> 개역개정·새번역 등 보호 대상 번역본은 권리자(대한성서공회 등)의 허가가 필요합니다.</div>
       <div class="row-flex" style="margin:10px 0"><input type="file" id="dFile" accept=".json,.csv,.tsv,.txt,.xml,.bdb"><span id="dBusy" class="note"></span></div>
       <div id="dReport"></div>
-      <h4 style="color:#9ec5ff;margin-top:22px">주석서 (조작 화면 참고용 · 송출되지 않음)</h4>
+      <h4 style="color:var(--hl);margin-top:22px">주석서 (조작 화면 참고용 · 송출되지 않음)</h4>
       ${(app.state.commentaries || []).length ? `<table class="list"><tr><th>ID</th><th>이름</th><th>항목 수</th><th>출처</th><th></th></tr>
         ${app.state.commentaries.map(c => `<tr><td>${esc(c.id)}</td><td><b>${esc(c.name)}</b></td><td>${c.entry_count.toLocaleString()}</td><td>${esc(c.source)}</td><td><button data-cdel="${esc(c.id)}">삭제</button></td></tr>`).join('')}</table>` : '<div class="note">설치된 주석서가 없습니다.</div>'}
       <div class="note" style="margin-top:6px">EPUB 주석서를 가져오면 본문 속 "1:1 태초에." 같은 절 표시를 찾아 절 단위로 나눕니다. 스캔본을 글자로 바꾼 책은 오타·단 섞임이 남을 수 있습니다.</div>
@@ -654,12 +654,12 @@
   function drawAbout() {
     const vs = app.state.versions;
     $('#setBody').innerHTML = `
-      <h4 style="margin-top:0;color:#9ec5ff">WorshipCue</h4>
+      <h4 style="margin-top:0;color:var(--hl)">WorshipCue</h4>
       <div class="note">교회 방송실용 성경구절 실시간 송출 프로그램 · 버전 1.0.0<br>데이터 폴더: <span class="url">${esc(app.state.dataDir)}</span> (설정·성경 DB·로그)</div>
-      <h4 style="color:#9ec5ff">성경 데이터 출처 및 라이선스</h4>
+      <h4 style="color:var(--hl)">성경 데이터 출처 및 라이선스</h4>
       ${vs.length ? vs.map(v => `<div style="margin-bottom:10px"><b>${esc(v.name)}</b> (${esc(v.id)})<br>
         <span class="note">저작권: ${esc(v.copyright || '-')} · 사용 허가: ${esc(v.license || '-')} · 출처: ${esc(v.source || '-')} · 가져온 날짜: ${esc((v.imported_at || '').slice(0, 10))}</span></div>`).join('') : '<div class="note">설치된 번역본이 없습니다.</div>'}
-      <h4 style="color:#9ec5ff">저작권 안내</h4>
+      <h4 style="color:var(--hl)">저작권 안내</h4>
       <div class="note">프로그램은 성경 본문을 포함하지 않으며, 사용자가 사용 권한을 확인한 데이터를 가져와 사용합니다.<br>
         · 개역한글판은 대한성서공회 안내상 저작재산권 보호기간이 만료된 번역본입니다.<br>
         · 개역개정·새번역 등 보호 대상 번역본은 권리자의 사용 허가를 받은 뒤 사용하세요.<br>

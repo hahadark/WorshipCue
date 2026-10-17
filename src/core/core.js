@@ -376,6 +376,11 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.previewMode === 'boolean') d.previewMode = p.previewMode;
       if (typeof p.logoScreenImage === 'string') d.logoScreenImage = p.logoScreenImage.slice(0, 1500);
       if (typeof p.dockLocked === 'boolean') d.dockLocked = p.dockLocked;
+      if (p.ui && typeof p.ui === 'object') {
+        d.ui = { theme: 'dark', scale: 100, ...(d.ui || {}) };
+        if (['dark', 'contrast', 'light', 'warm', 'navy'].includes(p.ui.theme)) d.ui.theme = p.ui.theme;
+        if ([90, 100, 110, 120].includes(Number(p.ui.scale))) d.ui.scale = Number(p.ui.scale);
+      }
       if (typeof p.dockLayout === 'string' && p.dockLayout.length <= 300000) d.dockLayout = p.dockLayout;
       if (typeof p.reservedKeys === 'string') d.reservedKeys = p.reservedKeys.slice(0, 1000);
       if (p.output && typeof p.output.cursorHidden === 'boolean') d.output.cursorHidden = p.output.cursorHidden;

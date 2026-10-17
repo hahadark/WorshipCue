@@ -53,6 +53,10 @@
       '-',
       { label: '슬라이드 목록 / 격자 바꾸기', run: () => { const on = window.BCGrid && window.BCGrid.isOn(); const b = $(`#slideView [data-sv="${on ? 'list' : 'grid'}"]`); if (b) b.click(); } },
       { label: '🖥 무대 화면 창 열기', run: () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720') },
+      '-',
+      { label: '🎨 화면 테마 · 글자 크기…', run: () => window.BCUiTheme && window.BCUiTheme.open() },
+      { label: '글자 크게', key: 'Ctrl+Shift+=', run: () => window.BCUiTheme && window.BCUiTheme.stepScale(1) },
+      { label: '글자 작게', key: 'Ctrl+Shift+-', run: () => window.BCUiTheme && window.BCUiTheme.stepScale(-1) },
     ]],
     ['작업공간', () => {
       const D = window.BCDock;
@@ -85,6 +89,7 @@
     ]],
     ['설정', [
       { label: '설정 열기…', run: settings() },
+      { label: '🎨 화면 테마 · 글자 크기 (조작 화면)…', run: () => window.BCUiTheme && window.BCUiTheme.open() },
       '-',
       { label: '테마', run: settings('themes') }, { label: '출력 (모니터·OBS)', run: settings('output') },
       { label: '템플릿 편집', run: settings('templates') }, { label: '검색·분할', run: settings('behavior') },
