@@ -5,6 +5,8 @@
 예배 순서를 미리 만들어 두고 — 성경 · 찬양 가사 · 광고 · 제목 카드 · 이미지 — 예배 중에는 **F6 하나로 차례대로** 예배당 화면(보조 모니터)과 OBS 방송에 띄웁니다.
 성경 송출 프로그램 [BibleCast](https://github.com/hahadark/BibleCast)를 바탕으로 만들었습니다.
 
+**⬇ 받기**: [최신 포터블 (설치 없이 실행)](https://github.com/hahadark/WorshipCue/releases/latest) — 개역한글 포함, 다른 번역본은 베들레헴 성경에서 가져오기
+
 ![WorshipCue 조작 화면](docs/images/main.png)
 
 <sub>왼쪽: 큐시트(예배 순서) · 가운데: 선택한 순서의 슬라이드와 빠른 설정 · 오른쪽: 미리보기(초록)와 LIVE(빨강). 빨간 줄 = 송출 중인 순서, 초록 줄 = 미리보기 중인 순서</sub>
