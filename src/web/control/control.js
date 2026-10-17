@@ -323,11 +323,12 @@
   }
   app.withParallel = withParallel;
 
-  async function loadPassage(passage, { query = '', focus = null, index = 0, keepList = false, tpl = null, bg = '' } = {}) {
+  async function loadPassage(passage, { query = '', focus = null, index = 0, keepList = false, tpl = null, bg = '', post = null } = {}) {
     passage = await withParallel(passage);
-    const slides = withBg(SL.build(passage, splitOpts(tpl)), bg);
+    let slides = withBg(SL.build(passage, splitOpts(tpl)), bg);
+    if (post) slides = post(slides); // 큐시트 순서: 덧붙인 슬라이드·건너뛰기·꾸미기
     if (focus) index = SL.indexOfVerse(slides, focus.chapter, focus.verse);
-    app.preview = { passage, slides, index: Math.min(index, slides.length - 1), query, tpl, bg };
+    app.preview = { passage, slides, index: Math.min(index, slides.length - 1), query, tpl, bg, post };
     renderPreview();
     if (!keepList && (app.results.type !== 'text' || !focus)) showPassageList(passage);
     else markResults();
@@ -396,7 +397,8 @@
       cmd('setPreview', { passage: passageMeta(app.preview.passage, app.preview.query), slides: app.preview.slides, index: app.preview.index });
       return;
     }
-    const slides = withBg(SL.build(app.preview.passage, splitOpts()), app.preview.bg);
+    let slides = withBg(SL.build(app.preview.passage, splitOpts()), app.preview.bg);
+    if (app.preview.post) slides = app.preview.post(slides);
     app.preview.slides = slides;
     app.preview.index = cur ? SL.indexOfVerse(slides, cur.chapter, cur.verse) : 0;
     renderPreview();
@@ -1343,6 +1345,12 @@
     }
     if (e.key === 'Escape' && !$('#modal').hidden) { closeModal(); e.preventDefault(); return; }
     if (!editing && jumpKey(e)) return;
+    // ← → : 미리보기 슬라이드 이동 (글 쓰는 칸·슬라이드 격자·장 고르기처럼 방향키를 따로 쓰는 곳 밖에서)
+    if (!editing && $('#modal').hidden && (combo === 'ArrowLeft' || combo === 'ArrowRight') && app.preview && app.preview.slides) {
+      const t = e.target;
+      const own = t && t.closest && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable || t.closest('#slideGrid, #chapterGrid, .ctx-menu, .dv-tabs-container'));
+      if (!own) { e.preventDefault(); actions[combo === 'ArrowLeft' ? 'previewPrevSlide' : 'previewNextSlide'](); return; }
+    }
     // 브라우저 기본 동작 중 송출 화면에 위험한 키 차단 (새로 고침 등)
     if (combo === 'F5' || combo === 'Ctrl+R' || combo === 'Ctrl+Shift+R') e.preventDefault();
   }, true);

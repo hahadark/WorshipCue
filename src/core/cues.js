@@ -28,7 +28,7 @@ function normalizeItem(x) {
     case 'video': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.sound = x.sound !== false; it.loop = !!x.loop; it.endAction = ['hold', 'black', 'next'].includes(x.endAction) ? x.endAction : 'hold'; break;
     case 'audio': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.loop = !!x.loop; it.fadeOnLeave = x.fadeOnLeave !== false; break;
     case 'text': it.body = str(x.body); break;
-    case 'title': it.subtitle = str(x.subtitle, 300); break;
+    case 'title': it.subtitle = str(x.subtitle, 300); it.more = str(x.more, 20000); break; // more = 추가 슬라이드
     case 'image': it.image = str(x.image, 300); break;
     case 'blank': it.mode = x.mode === 'background' ? 'background' : 'black'; break;
     case 'camera': // 카메라 화면 (웹캠·캡처보드) 가득
@@ -49,7 +49,14 @@ function normalizeItem(x) {
   // 순서별 배경 이미지·템플릿 (글자 순서)
   if (['song', 'text', 'title', 'bible'].includes(x.type)) it.bg = str(x.bg, 1500);
   // 슬라이드 편집 (글상자 위치·꾸미기·덧붙인 글·그림·도형)
-  if (['song', 'text', 'title'].includes(x.type)) { const e = normalizeEdits(x.edits); if (e) it.edits = e; }
+  if (x.type !== 'audio') { const e = normalizeEdits(x.edits); if (e) it.edits = e; }
+  // 성경·찬송가·그림·영상·슬라이드쇼·카메라·빈 화면: 사이에 덧붙인 제목 카드(extra) · 건너뛸 슬라이드(skip)
+  if (!['song', 'text', 'title', 'audio'].includes(x.type)) {
+    const extra = (Array.isArray(x.extra) ? x.extra : []).slice(0, 200).map(e => ({ id: /^[a-z0-9]{1,16}$/i.test(e && e.id || '') ? e.id : newId('').slice(0, 12), at: Math.max(-1, Math.min(999, Math.round(Number(e && e.at)) || 0)), text: str(e && e.text, 2000) })).filter(e => e.text.trim());
+    if (extra.length) it.extra = extra;
+    const skip = [...new Set((Array.isArray(x.skip) ? x.skip : []).map(n => Math.round(Number(n))).filter(n => n >= 0 && n < 1000))].sort((a, b) => a - b);
+    if (skip.length) it.skip = skip;
+  }
   it.duration = Math.max(0, Math.min(600, Number(x.duration) || 0)); // 예정 시간(분), 0 = 정하지 않음
   // 송출할 때 자동으로 (배경 음악 · 타이머 · 무대 메시지 · 로고 화면 · 배경 · 오버레이 · 음악 멈춤)
   if (x.type !== 'audio') {

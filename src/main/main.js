@@ -9,6 +9,11 @@ const { startServer } = require('../core/server');
 const WEB_DIR = path.join(__dirname, '..', 'web');
 const GLOBAL_ACTIONS = { prevSlide: 'previousSlide', nextSlide: 'nextSlide', sendPreview: null, toggleClear: 'toggleLive' };
 
+// 다른 데이터 폴더(--data)로 띄우면 따로 실행 (시험·두 번째 교회용): '한 번만 실행' 잠금을 그 폴더 기준으로
+{
+  const di = process.argv.indexOf('--data');
+  if (di > 0 && process.argv[di + 1]) app.setPath('userData', path.join(path.resolve(process.argv[di + 1]), 'electron'));
+}
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {

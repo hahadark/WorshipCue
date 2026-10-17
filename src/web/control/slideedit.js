@@ -13,10 +13,12 @@
   const R = window.BCRender;
   const SL = window.BCSlides;
   const Cue = () => window.BCCue;
-  const EDITABLE = ['song', 'text', 'title'];
+  const EDITABLE = ['song', 'text', 'title', 'bible', 'hymn', 'image', 'video', 'slideshow', 'camera', 'blank'];
+  const CHUNK = ['song', 'text', 'title']; // 글 덩어리로 슬라이드가 나뉘는 순서 (글을 바로 고친다)
+  const NOTEXT = ['image', 'score', 'video', 'camera', 'blank']; // 본문 글상자가 없는 슬라이드
   const r1 = n => Math.round(n * 10) / 10;
 
-  const S = { i: -1, key: '*', out: 'main', sel: 'main', undo: [], redo: [], dirty: false, timer: 0, drag: null, editing: null };
+  const S = { i: -1, key: '*', out: 'main', sel: '', base: null, undo: [], redo: [], dirty: false, timer: 0, drag: null, editing: null };
   const item = () => Cue() && Cue().item(S.i);
   const tpl = () => app.tplFor(S.out, Cue().tplOf(S.i));
 
@@ -24,7 +26,14 @@
   function sources() {
     const it = item();
     if (!it) return [];
-    if (it.type === 'title') return [{ key: '0', label: '제목', slide: { kind: 'title', ref: it.title, subtitle: it.subtitle || '', label: '제목', parts: [], src: 0 } }];
+    if (it.type === 'title') return SL.titlePages(it).map((p, k) => { const s = SL.titleSlide(p, k); return { key: String(k), label: s.label, slide: s }; });
+    if (!CHUNK.includes(it.type)) {
+      if (!S.base) return [];
+      return Cue().decorate(it, S.base.map(s => ({ ...s })), { withSkipped: true, noEdits: true }).map(s => ({
+        key: s.ekey, slide: s, xid: s.xid || '', base: s.base, skipped: !!s.skipped,
+        label: s.xid ? '＋ ' + (s.ref || '덧붙임') : (s.label && !/^\d+$/.test(s.label) ? s.label : '') || s.ref || String(s.base + 1),
+      }));
+    }
     const ref = it.type === 'text' || it.showTitle ? it.title : '';
     const chunks = it.type === 'song' ? SL.lyricsChunks(it.lyrics) : SL.textChunks(it.body);
     let group = '';
@@ -38,7 +47,7 @@
   function effSlide(src, key) {
     const it = item();
     const e = SL.mergeEdit(it.edits, key === '*' ? null : key);
-    const s = { ...src.slide, bg: it.bg || '' };
+    const s = { ...src.slide, bg: src.slide.bg || it.bg || '' };
     if (e) { if (e.bg) s.bg = e.bg; delete e.bg; s.edit = e; }
     return s;
   }
@@ -69,13 +78,14 @@
   }
 
   // ---------------- 실행 취소 · 저장 ----------------
-  function snapshot() { const it = item(); return JSON.stringify({ edits: it.edits || null, lyrics: it.lyrics, body: it.body, title: it.title, subtitle: it.subtitle }); }
+  function snapshot() { const it = item(); return JSON.stringify({ edits: it.edits || null, lyrics: it.lyrics, body: it.body, title: it.title, subtitle: it.subtitle, more: it.more, extra: it.extra || null, skip: it.skip || null }); }
   function begin() { S.undo.push(snapshot()); if (S.undo.length > 100) S.undo.shift(); S.redo = []; }
   function restore(snap) {
     const it = item();
     const o = JSON.parse(snap);
     if (o.edits) it.edits = o.edits; else delete it.edits;
-    for (const k of ['lyrics', 'body', 'title', 'subtitle']) if (o[k] !== undefined) it[k] = o[k];
+    for (const k of ['lyrics', 'body', 'title', 'subtitle', 'more']) if (o[k] !== undefined) it[k] = o[k];
+    for (const k of ['extra', 'skip']) { if (o[k]) it[k] = o[k]; else delete it[k]; }
     commit({ lyrics: true, list: true });
   }
   function undo() { if (!S.undo.length) return; S.redo.push(snapshot()); restore(S.undo.pop()); }
@@ -108,8 +118,8 @@
     const list = sources();
     const own = k => !!(it.edits && it.edits[k]);
     $('#seList').innerHTML = `<div class="se-slide ${S.key === '*' ? 'on' : ''}" data-key="*"><div class="screen se-thumb"></div><div class="se-cap"><b>공통</b> 모든 슬라이드${own('*') ? ' <span class="se-dot" title="꾸민 것 있음">●</span>' : ''}</div></div>`
-      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div>`
-        + (canOps() ? `<span class="se-ops"><button data-op="up" title="위로">▲</button><button data-op="down" title="아래로">▼</button><button data-op="dup" title="복제 (꾸민 것도)">⧉</button><button data-op="del" title="지우기">✕</button></span>` : '') + '</div>').join('')
+      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}${x.skipped ? ' skipped' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${x.skipped ? ' <span class="muted">(건너뜀)</span>' : ''}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div>`
+        + (canOps() ? opsHtml(x) : '') + '</div>').join('')
       + (canOps() ? '<button type="button" class="se-addslide" data-op="add" title="고른 슬라이드 다음에 새 슬라이드 (Ctrl+Shift+N)">＋ 슬라이드</button>' : '');
     const t = tpl();
     $('#seList').querySelectorAll('.se-slide').forEach(c => {
@@ -120,24 +130,89 @@
   }
 
   // ---------------- 슬라이드 넣기·복제·지우기·옮기기 (FreeShow 방식) ----------------
-  const canOps = () => { const it = item(); return it && (it.type === 'song' || it.type === 'text'); };
+  const canOps = () => !!item();
+  const chunky = () => CHUNK.includes(item().type);
+  /** 목록 단추: 글 순서 = 모두, 그 밖 = 원래 슬라이드는 건너뛰기만, 덧붙인 슬라이드는 모두 */
+  function opsHtml(x) {
+    if (chunky() || x.xid) return `<span class="se-ops"><button data-op="up" title="위로">▲</button><button data-op="down" title="아래로">▼</button><button data-op="dup" title="복제 (꾸민 것도)">⧉</button><button data-op="del" title="지우기">✕</button></span>`;
+    return `<span class="se-ops"><button data-op="del" title="${x.skipped ? '되살리기 (다시 보이기)' : '건너뛰기 (송출에서 빼기, 원래 내용은 그대로)'}">${x.skipped ? '↺' : '⊘'}</button></span>`;
+  }
+  /** 성경·찬송가·그림 등: 사이에 덧붙인 제목 카드(extra) 넣기·복제·지우기·옮기기, 원래 슬라이드 건너뛰기 */
+  function extraOp(op, key) {
+    const it = item();
+    const list = sources();
+    const cur = list.find(x => x.key === (key == null ? S.key : String(key))) || (op === 'add' ? list[list.length - 1] : null);
+    if (!cur && op !== 'add') return;
+    const ex = (it.extra || []).map(e => ({ ...e }));
+    const moveEdits = (from, to) => { if (it.edits && it.edits[from]) { it.edits[to] = structuredClone(it.edits[from]); } };
+    if (op === 'del' && !cur.xid) { // 원래 슬라이드: 건너뛰기 ↔ 되살리기
+      if (!cur.skipped && list.filter(x => !x.skipped && !x.xid).length <= 1 && !ex.length) return app.showMsg('모든 슬라이드를 건너뛸 수는 없습니다.', 'info', 2500);
+      begin();
+      const sk = new Set(it.skip || []);
+      if (sk.has(cur.base)) sk.delete(cur.base); else sk.add(cur.base);
+      if (sk.size) it.skip = [...sk].sort((a, b) => a - b); else delete it.skip;
+      return commit({ lyrics: true });
+    }
+    if ((op === 'up' || op === 'down') && !cur.xid) return app.showMsg('원래 슬라이드(성경·찬송가·그림…)의 순서는 바꿀 수 없습니다. 덧붙인 슬라이드만 옮길 수 있습니다.', 'info', 3000);
+    if (op === 'dup' && !cur.xid) return app.showMsg('원래 슬라이드는 복제할 수 없습니다. ＋ 슬라이드로 사이에 새 슬라이드를 넣으세요.', 'info', 3000);
+    begin();
+    const mkId = () => Date.now().toString(36).slice(-6) + Math.random().toString(36).slice(2, 6);
+    // 지금 순서(덧붙인 것 포함)를 바꾼 뒤 각 덧붙임의 at(앞 원래 슬라이드 번호) 를 다시 매긴다
+    let seq = list.map(x => x.xid ? { xid: x.xid } : { base: x.base });
+    let pick = null;
+    const pos = cur ? seq.findIndex(z => (cur.xid ? z.xid === cur.xid : z.base === cur.base)) : seq.length - 1;
+    if (op === 'add' || op === 'dup') {
+      const id = mkId();
+      const src = op === 'dup' ? ex.find(e => e.id === cur.xid) : null;
+      ex.push({ id, at: 0, text: src ? src.text : '새 슬라이드' });
+      if (src) moveEdits('x' + src.id, 'x' + id);
+      seq.splice(pos + 1, 0, { xid: id });
+      pick = 'x' + id;
+    } else if (op === 'del') {
+      seq = seq.filter(z => z.xid !== cur.xid);
+      ex.splice(ex.findIndex(e => e.id === cur.xid), 1);
+      if (it.edits) delete it.edits['x' + cur.xid];
+      const nb = list[Math.max(0, list.indexOf(cur) - 1)];
+      pick = nb && nb !== cur ? nb.key : null;
+    } else {
+      const to = pos + (op === 'up' ? -1 : 1);
+      if (to < 0 || to >= seq.length) { S.undo.pop(); return; }
+      [seq[pos], seq[to]] = [seq[to], seq[pos]];
+      pick = cur.key;
+    }
+    let at = -1;
+    const order = [];
+    for (const z of seq) { if (z.xid) { const e = ex.find(y => y.id === z.xid); if (e) { e.at = at; order.push(e); } } else at = z.base; }
+    if (order.length) it.extra = order; else delete it.extra;
+    S.key = pick || '*';
+    S.sel = '';
+    commit({ lyrics: true });
+    if (op === 'add') setTimeout(() => inlineEdit('main'), 80);
+  }
   function slideOp(op, key) {
     const it = item();
     if (!canOps()) return;
+    if (!chunky()) return extraOp(op, key);
     const list = sources();
     const k = key == null || key === '*' ? (S.key === '*' ? list.length - 1 : Number(S.key)) : Number(key);
     if (op !== 'add' && !(k >= 0)) return;
     if (op === 'del' && list.length <= 1) return app.showMsg('마지막 슬라이드는 지울 수 없습니다. 순서 자체를 지우세요.', 'info', 2500);
     if (op === 'del' && !confirm(`${k + 1}번 슬라이드를 지울까요? (가사·내용에서도 지워집니다)`)) return;
     begin();
-    const field = it.type === 'song' ? 'lyrics' : 'body';
-    it[field] = SL.slideOp(it.type, it[field], op, k);
+    if (it.type === 'title') {
+      // 제목 순서: 장들을 '---' 글로 이어 같은 방법으로 고친 뒤 제목·부제·추가 슬라이드 칸으로 되돌린다
+      const text = SL.slideOp('text', SL.titlePages(it).join('\n---\n'), op, k, '새 슬라이드');
+      Object.assign(it, SL.fromTitlePages(SL.textChunks(text).map(c => c.text)));
+    } else {
+      const field = it.type === 'song' ? 'lyrics' : 'body';
+      it[field] = SL.slideOp(it.type, it[field], op, k);
+    }
     const e = SL.slideOpEdits(it.edits, op, k);
     if (e) it.edits = e; else delete it.edits;
     const after = sources();
     const pick = op === 'add' || op === 'dup' ? k + 1 : op === 'up' ? k - 1 : op === 'down' ? k + 1 : Math.min(k, after.length - 1);
     S.key = String(Math.max(0, Math.min(after.length - 1, pick)));
-    S.sel = 'main';
+    S.sel = '';
     commit({ lyrics: true });
     if (op === 'add') setTimeout(() => inlineEdit('main'), 80); // 새 슬라이드는 바로 글 쓰기
   }
@@ -167,13 +242,25 @@
       + (S.sel === id && !cls.includes('locked') ? ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(h => `<i class="se-h" data-h="${h}"></i>`).join('') : '') + '</div>';
     const items = e.items || [];
     $('#seHandles').innerHTML = items.filter(x => x.below).map(x => box(x.id, x, NAMES[x.type], common.has(x.id) ? 'locked' : '')).join('')
-      + box('main', mainRect(t, e), e.hideMain ? '본문 (숨김)' : '본문', 'main' + (e.hideMain ? ' hid' : ''))
+      + (hasMain() ? box('main', mainRect(t, e), e.hideMain ? '본문 (숨김)' : '본문', 'main' + (e.hideMain ? ' hid' : '')) : '')
       + items.filter(x => !x.below).map(x => box(x.id, x, NAMES[x.type], common.has(x.id) ? 'locked' : '')).join('')
       + '<div class="se-guide v" hidden></div><div class="se-guide h" hidden></div>';
     const obsNote = S.out === 'overlay' && R.lyricsOnly(t) && !e.allOutputs;
     $('#seHint').innerHTML = obsNote ? '⚠ OBS 자막(투명) 출력에는 글 내용만 반영됩니다. 위치·꾸미기도 쓰려면 오른쪽 \'OBS 자막에도 적용\' 을 켜세요.'
       : S.key === '*' ? '공통: 여기서 바꾼 위치·꾸미기는 모든 슬라이드에 적용됩니다 (슬라이드에서 따로 바꾼 것이 우선)'
-        : '끌어서 옮기기 · 모서리로 크기 · 더블클릭: 글 고치기 · Delete: 지우기 · 방향키: 미세 이동 · Ctrl+Z: 되돌리기';
+        : curSource() && curSource().skipped ? '⊘ 이 슬라이드는 건너뜁니다 (송출 목록에 안 나옴). 왼쪽 ↺ 로 되살립니다.'
+          : '끌어서 옮기기 · 모서리로 크기 · 더블클릭: 글 고치기 · ←→↑↓: 슬라이드 이동 (상자를 고르면 미세 이동) · Ctrl+Z: 되돌리기';
+  }
+  /** 이 슬라이드에 본문 글상자가 있나 (그림·영상·카메라·빈 화면은 없음) */
+  function hasMain() {
+    if (S.key === '*') return sources().some(x => !NOTEXT.includes(x.slide.kind));
+    const s = curSource();
+    return !!s && !NOTEXT.includes(s.slide.kind);
+  }
+  /** 본문 글을 여기서 고칠 수 있나 (성경·찬송가 본문은 원래 그대로) */
+  function textEditable() {
+    const s = curSource();
+    return !!s && S.key !== '*' && (chunky() || !!s.xid);
   }
   const NAMES = { text: '글상자', image: '그림', shape: '도형', camera: '카메라' };
 
@@ -197,14 +284,17 @@
       + field('', `<label class="tc-toggle"><input type="checkbox" data-chk="hideMain" ${own.hideMain ? 'checked' : ''}> 본문 글 숨기기</label>`)
       + field('', `<label class="tc-toggle"><input type="checkbox" data-chk="allOutputs" ${own.allOutputs ? 'checked' : ''}> OBS 자막(투명)에도 위치·꾸미기 적용</label>`)
       + '</div>';
-    if (S.sel === 'main') {
+    if ((S.sel === 'main' || !S.sel) && hasMain()) {
       const st = e.style || {};
       const size = st.size || Math.round(t.font.size / k);
       const boxOn = !!st.boxColor;
       h += `<h4>본문 글상자</h4><div class="form se-form">`;
-      if (S.key !== '*' && src) {
-        h += it.type === 'title'
+      if (S.key !== '*' && src && !textEditable()) h += field('글', `<span class="muted">${it.type === 'bible' ? '성경 본문' : '원래 내용'} 그대로 (위치·꾸미기만 바꿉니다)</span>`);
+      else if (S.key !== '*' && src && src.xid) h += field('글', `<textarea data-content="text" rows="3" placeholder="첫 줄 = 제목, 둘째 줄 = 부제">${esc((item().extra || []).find(x => x.id === src.xid)?.text || '')}</textarea>`);
+      else if (S.key !== '*' && src) {
+        h += it.type === 'title' && src.slide.src === 0
           ? field('제목', `<input type="text" data-content="title" value="${esc(it.title)}">`) + field('부제', `<input type="text" data-content="subtitle" value="${esc(it.subtitle || '')}">`)
+          : it.type === 'title' ? field('글', `<textarea data-content="text" rows="3" placeholder="첫 줄 = 제목, 둘째 줄 = 부제">${esc(SL.titlePages(it)[src.slide.src] || '')}</textarea>`)
           : field('글', `<textarea data-content="text" rows="5">${esc(src.slide.parts[0].text)}</textarea>`);
       } else h += field('글', '<span class="muted">글은 각 슬라이드에서 고칩니다</span>');
       h += field('글자 크기', `${numIn('style.size', size, 8, 400, 1)} px <label class="tc-toggle" title="상자에 안 들어가면 글자를 줄입니다"><input type="checkbox" data-chk="style.autoFit" ${st.autoFit === false ? '' : 'checked'}> 넘치면 줄이기</label>`)
@@ -216,7 +306,7 @@
         + posFields(mainRect(t, e))
         + field('', `<button type="button" data-a="mainreset" title="위치를 템플릿 본문 영역으로">템플릿 위치로</button><button type="button" data-a="stylereset" title="글자·정렬·상자 꾸미기를 템플릿대로">꾸미기 초기화</button>`)
         + '</div>';
-    } else {
+    } else if (S.sel && S.sel !== 'main') {
       const x = (e.items || []).find(z => z.id === S.sel);
       if (x) {
         const mine = (own.items || []).some(z => z.id === x.id);
@@ -250,7 +340,7 @@
 
   // ---------------- 값 바꾸기 ----------------
   function target() {
-    if (S.sel === 'main') return null;
+    if (S.sel === 'main' || !S.sel) return null;
     return (raw(false).items || []).find(z => z.id === S.sel) || null;
   }
   /** 속성 경로(p) 에 값 넣기: style.* / item.* / pos.* */
@@ -259,7 +349,7 @@
     if (grp === 'style') { const e = raw(); e.style = e.style || {}; if (v === null) delete e.style[key]; else e.style[key] = v; return; }
     if (grp === 'item') { const x = target(); if (x) { if (v === null) delete x[key]; else x[key] = v; } return; }
     if (grp === 'pos') {
-      if (S.sel === 'main') { const e = raw(); e.box = e.box || mainRect(tpl(), effEdit()); e.box[key] = v; } else { const x = target(); if (x) x[key] = v; }
+      if (S.sel === 'main' || !S.sel) { const e = raw(); e.box = e.box || mainRect(tpl(), effEdit()); e.box[key] = v; } else { const x = target(); if (x) x[key] = v; }
     }
   }
   function readVal(el) {
@@ -273,10 +363,12 @@
     const src = curSource();
     if (!src || S.key === '*') return;
     if (!String(text).trim()) { app.showMsg('빈 슬라이드는 만들 수 없습니다. 슬라이드를 없애려면 가사·내용에서 지우세요.', 'info', 3000); return; }
+    if (!textEditable()) return;
     begin();
+    if (src.xid) { const x = (it.extra || []).find(z => z.id === src.xid); if (x) x.text = text; return commit({ lyrics: true }); }
     if (it.type === 'song') it.lyrics = SL.setLyricsChunk(it.lyrics, src.slide.src, text);
     else if (it.type === 'text') it.body = SL.setTextChunk(it.body, src.slide.src, text);
-    else { const [a, ...b] = String(text).split('\n'); it.title = a.trim() || it.title; it.subtitle = b.join(' ').trim(); }
+    else { const pages = SL.titlePages(it); pages[src.slide.src] = text; Object.assign(it, SL.fromTitlePages(pages)); }
     commit({ lyrics: true });
   }
   /** 캔버스 위에서 바로 고치기 */
@@ -288,9 +380,11 @@
     let r, text, size, align;
     if (id === 'main') {
       if (S.key === '*') return app.showMsg('글은 각 슬라이드에서 고칩니다 (왼쪽 목록에서 슬라이드를 고르세요).', 'info', 2500);
+      if (!hasMain()) return;
+      if (!textEditable()) return app.showMsg('성경·찬송가 본문은 여기서 고치지 않습니다. 위치·꾸미기만 바꿀 수 있습니다.', 'info', 2500);
       const src = curSource();
       r = mainRect(t, e);
-      text = it.type === 'title' ? [it.title, it.subtitle || ''].filter(Boolean).join('\n') : src.slide.parts[0].text;
+      text = src.xid ? ((it.extra || []).find(z => z.id === src.xid) || {}).text || '' : it.type === 'title' ? SL.titlePages(it)[src.slide.src] || '' : src.slide.parts[0].text;
       size = ((e.style && e.style.size) || t.font.size / k) * k;
       align = (e.style && e.style.align) || (t.align === 'hanging' ? 'left' : t.align);
     } else {
@@ -341,10 +435,10 @@
   }
   function delSelected() {
     const e = raw(false);
-    if (S.sel === 'main' || !e.items || !e.items.some(z => z.id === S.sel)) return;
+    if (S.sel === 'main' || !S.sel || !e.items || !e.items.some(z => z.id === S.sel)) return;
     begin();
     e.items = e.items.filter(z => z.id !== S.sel);
-    S.sel = 'main';
+    S.sel = '';
     commit();
   }
   function dupSelected() {
@@ -363,7 +457,7 @@
   function onPointerDown(ev) {
     if (S.editing) return;
     const boxEl = ev.target.closest('.se-box');
-    if (!boxEl) { if (ev.target.closest('#seWrap')) { S.sel = 'main'; draw({ list: false }); } return; }
+    if (!boxEl) { if (ev.target.closest('#seWrap')) { S.sel = ''; draw({ list: false }); } return; }
     const id = boxEl.dataset.id;
     if (boxEl.classList.contains('locked')) { S.sel = id; draw({ list: false }); return; }
     if (S.sel !== id) { S.sel = id; draw({ list: false }); }
@@ -415,11 +509,16 @@
   }
 
   // ---------------- 열기·닫기 ----------------
-  function open(i, key) {
+  async function open(i, key) {
     const it = Cue() && Cue().item(i);
     if (!it) return app.showMsg('큐시트에서 순서를 먼저 고르세요.', 'info', 2000);
-    if (!EDITABLE.includes(it.type)) return app.showMsg('슬라이드 편집은 찬양·공지·제목 순서에서 쓸 수 있습니다.', 'info', 3000);
-    S.i = i; S.undo = []; S.redo = []; S.sel = 'main';
+    if (!EDITABLE.includes(it.type)) return app.showMsg('음악 순서는 슬라이드가 없어 편집할 수 없습니다.', 'info', 3000);
+    S.base = null;
+    if (!CHUNK.includes(it.type)) {
+      S.base = await Cue().editorBase(i);
+      if (!S.base.length) return app.showMsg(it.type === 'bible' ? '성경 구절을 찾을 수 없습니다. 편집칸에서 구절을 확인하세요.' : '이 순서에는 아직 슬라이드가 없습니다. 편집칸에서 내용을 먼저 고르세요.', 'info', 3000);
+    }
+    S.i = i; S.undo = []; S.redo = []; S.sel = '';
     const list = sources();
     S.key = key != null && (key === '*' || list.some(x => x.key === String(key))) ? String(key) : (list[0] ? list[0].key : '*');
     const el = $('#se');
@@ -434,7 +533,7 @@
     const p = app.preview;
     if (!p || !p.cue) return app.showMsg('큐시트 순서의 슬라이드만 편집할 수 있습니다.', 'info', 2500);
     const s = p.slides[k];
-    open(p.cue.index, s && s.src != null ? s.src : undefined);
+    open(p.cue.index, s ? (s.ekey ?? (s.src != null ? s.src : undefined)) : undefined);
   }
   function close() {
     if (S.editing) S.editing.blur();
@@ -494,7 +593,7 @@
           app.showMsg('이 꾸미기를 모든 슬라이드에 적용했습니다.', 'ok', 1800);
           break;
         }
-        case 'reset': begin(); if (item().edits) delete item().edits[S.key]; S.sel = 'main'; commit(); break;
+        case 'reset': begin(); if (item().edits) delete item().edits[S.key]; S.sel = ''; commit(); break;
       }
     });
     // 속성 입력: 바꾸는 동안 캔버스만, 다 바꾸면 저장
@@ -532,7 +631,7 @@
       if (opb) { ev.stopPropagation(); const c0 = opb.closest('.se-slide'); slideOp(opb.dataset.op, c0 ? c0.dataset.key : null); return; }
       const c = ev.target.closest('.se-slide');
       if (!c) return;
-      S.key = c.dataset.key; S.sel = 'main';
+      S.key = c.dataset.key; S.sel = '';
       draw();
     });
     $('#seWrap').addEventListener('pointerdown', onPointerDown);
@@ -540,22 +639,30 @@
     el.addEventListener('keydown', ev => {
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName);
       const ctrl = ev.ctrlKey || ev.metaKey;
-      if (ev.key === 'Escape' && !typing) { ev.preventDefault(); close(); return; }
+      if (ev.key === 'Escape' && !typing) { ev.preventDefault(); if (S.sel) { S.sel = ''; draw({ list: false }); } else close(); return; }
       if (ctrl && ev.key.toLowerCase() === 'z' && !typing) { ev.preventDefault(); if (ev.shiftKey) redo(); else undo(); return; }
       if (ctrl && ev.key.toLowerCase() === 'y' && !typing) { ev.preventDefault(); redo(); return; }
       if (typing) return;
       if (ctrl && ev.shiftKey && ev.key.toLowerCase() === 'n') { ev.preventDefault(); slideOp('add'); return; }
       if (ctrl && ev.key.toLowerCase() === 'd') { ev.preventDefault(); dupSelected(); return; }
       if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); delSelected(); return; }
-      if (ev.key === 'Enter' || ev.key === 'F2') { ev.preventDefault(); inlineEdit(S.sel); return; }
-      if (ev.key === 'PageDown' || ev.key === 'PageUp') {
+      if (ev.key === 'Enter' || ev.key === 'F2') { ev.preventDefault(); inlineEdit(S.sel || 'main'); return; }
+      const arrow = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[ev.key];
+      const fromList = ev.target.closest && ev.target.closest('#seList');
+      if (ev.key === 'PageDown' || ev.key === 'PageUp' || ev.key === 'Home' || ev.key === 'End' || (arrow && (!S.sel || fromList || ev.altKey))) {
+        // 슬라이드 이동: ←↑ 이전 · →↓ 다음 (글상자를 고르지 않았을 때), PageUp/PageDown · Home/End 는 언제나
         ev.preventDefault();
         const keys = ['*', ...sources().map(x => x.key)];
-        const n = keys.indexOf(S.key) + (ev.key === 'PageDown' ? 1 : -1);
-        if (n >= 0 && n < keys.length) { S.key = keys[n]; S.sel = 'main'; draw(); }
+        const cur = keys.indexOf(S.key);
+        const n = ev.key === 'Home' ? 1 : ev.key === 'End' ? keys.length - 1 : cur + (['PageDown', 'ArrowRight', 'ArrowDown'].includes(ev.key) ? 1 : -1);
+        if (n >= 0 && n < keys.length && n !== cur) {
+          S.key = keys[n]; S.sel = '';
+          draw();
+          const on = $('#seList .se-slide.on');
+          if (on) on.scrollIntoView({ block: 'nearest' });
+        }
         return;
       }
-      const arrow = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[ev.key];
       if (arrow) {
         ev.preventDefault();
         const step = ev.shiftKey ? 5 : 0.5;
@@ -599,8 +706,17 @@
     const history = [{ label: '되돌리기', key: 'Ctrl+Z', run: undo, disabled: !S.undo.length }, { label: '다시 하기', key: 'Ctrl+Y', run: redo, disabled: !S.redo.length }];
     const slide = t.closest('#seList .se-slide');
     if (slide) {
-      S.key = slide.dataset.key; S.sel = 'main'; draw();
-      const ops = canOps() && S.key !== '*' ? [
+      S.key = slide.dataset.key; S.sel = ''; draw();
+      const cur = curSource();
+      const ops = canOps() && S.key !== '*' && !chunky() ? [
+        { label: '＋ 다음에 새 슬라이드 (제목 카드)', key: 'Ctrl+Shift+N', run: () => slideOp('add') },
+        ...(cur && cur.xid ? [
+          { label: '⧉ 이 슬라이드 복제', run: () => slideOp('dup') },
+          { label: '▲ 위로', run: () => slideOp('up') },
+          { label: '▼ 아래로', run: () => slideOp('down') },
+          { label: '✕ 이 슬라이드 지우기', run: () => slideOp('del'), danger: true }]
+          : [{ label: cur && cur.skipped ? '↺ 되살리기 (다시 보이기)' : '⊘ 건너뛰기 (송출에서 빼기)', run: () => slideOp('del') }]), '-']
+        : canOps() && S.key !== '*' ? [
         { label: '＋ 다음에 새 슬라이드', key: 'Ctrl+Shift+N', run: () => slideOp('add') },
         { label: '⧉ 이 슬라이드 복제', run: () => slideOp('dup') },
         { label: '▲ 위로', run: () => slideOp('up'), disabled: S.key === '0' },

@@ -12,7 +12,7 @@
   const act = name => () => app.runAction && app.runAction(name);
   const click = sel => () => { const el = $(sel); if (el) el.click(); };
   const TYPES = [['hymn', '🎼 찬송가·PPT'], ['bible', '📖 성경'], ['song', '🎵 찬양'], ['text', '📢 공지'], ['title', '🏷 제목'], ['image', '🖼 이미지'], ['video', '🎬 영상'], ['slideshow', '🎞 슬라이드쇼'], ['camera', '📷 카메라'], ['audio', '🔊 음악'], ['blank', '⬛ 빈 화면']];
-  const EDITABLE = ['song', 'text', 'title'];
+  const EDITABLE = ['song', 'text', 'title', 'bible', 'hymn', 'image', 'video', 'slideshow', 'camera', 'blank'];
   let el = null;
   let items = [];
   let focus = -1;

@@ -793,3 +793,4 @@ button.on { border-color: var(--accent); }
 .cm-l1 i { font-style: normal; flex: none; }
 .cm-l1 b { min-width: 0; }
 .cm-open { flex: none; }
+.se-slide.skipped .se-thumb { opacity: .35; filter: grayscale(1); }

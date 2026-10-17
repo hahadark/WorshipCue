@@ -209,8 +209,8 @@
       const r = await cmd('searchReference', { query: it.ref, versionId: it.versionId || undefined });
       if (!r.ok) { app.showMsg(`${i + 1}번 '${it.title}': ${r.error}`, 'error', 5000); render(); renderEditor(); return false; }
       const passage = r.result.passage;
-      const count = SL.build(passage, app.splitOpts(tpl)).length;
-      await app.loadPassage(passage, { query: it.ref, index: fromEnd ? count - 1 : Math.min(prevIdx, count - 1), tpl, bg: it.bg || '' });
+      const count = decorate(it, SL.build(passage, app.splitOpts(tpl))).length;
+      await app.loadPassage(passage, { query: it.ref, index: fromEnd ? count - 1 : Math.min(prevIdx, count - 1), tpl, bg: it.bg || '', post: slides => decorate(it, slides) });
       app.preview.cue = cue;
       $('#resultTitle').textContent = `${i + 1}. ${it.title} — ${passage.title}`;
     } else {
@@ -228,7 +228,7 @@
     return true;
   }
 
-  function buildSlides(it, meta) {
+  function buildSlides(it, meta, { withSkipped = false, raw = false } = {}) {
     const opts = app.splitOpts(itemTpl(it));
     let slides = [];
     if (it.type === 'hymn' && meta) {
@@ -257,7 +257,8 @@
     else if (it.type === 'video' && it.file) slides = [{ kind: 'video', image: it.file, ref: it.title, label: '영상', parts: [], caption: '', video: { volume: it.volume ?? 1, sound: it.sound !== false, loop: !!it.loop, endAction: it.endAction || 'hold' } }];
     else if (it.type === 'blank') slides = [{ kind: 'blank', mode: it.mode, ref: it.title, label: it.mode === 'background' ? '배경' : '검은 화면', parts: [] }];
     // 제목 카드, 또는 내용이 비어 있으면 제목만
-    if (!slides.length) slides = [{ kind: 'title', ref: it.title, subtitle: it.subtitle || '', label: '제목', parts: [] }];
+    else if (it.type === 'title') slides = SL.titlePages(it).map((p, k) => SL.titleSlide(p, k));
+    if (!slides.length) slides = [{ kind: 'title', ref: it.title, subtitle: it.subtitle || '', label: '제목', parts: [], src: 0 }];
     // 순서별 배경 이미지 (글자 슬라이드)
     if (it.bg) slides.forEach(s => { if (s.kind === 'text' || s.kind === 'title') s.bg = it.bg; });
     // 곡 정보 (작사·작곡·저작권): 첫·마지막 슬라이드 아래에 작게
@@ -269,19 +270,55 @@
         if (it.creditShow === 'last' || it.creditShow === 'both') txt[txt.length - 1].footer = credit;
       }
     }
-    // 슬라이드 편집 (글상자 위치·꾸미기·덧붙인 것·슬라이드 배경)
-    if (it.edits && ['song', 'text', 'title'].includes(it.type)) {
-      slides.forEach(s => {
-        if (s.kind !== 'text' && s.kind !== 'title') return;
-        const e = SL.mergeEdit(it.edits, s.kind === 'title' ? 0 : s.src);
-        if (!e) return;
-        if (e.bg) s.bg = e.bg;
-        delete e.bg;
-        s.edit = e;
-        if (s.kind === 'title') s.src = 0;
+    return raw ? slides : decorate(it, slides, { withSkipped });
+  }
+
+  /**
+   * 슬라이드 꾸미기 (모든 순서): 글상자 위치·꾸미기·덧붙인 것·슬라이드 배경
+   * 찬양·공지·제목: 슬라이드 키 = 가사·글 덩어리 번호(src)
+   * 그 밖(성경·찬송가·그림·영상·슬라이드쇼·카메라·빈 화면): 키 = 슬라이드 번호, 덧붙인 제목 카드 = 'x'+id, 건너뛰기(skip)
+   */
+  function decorate(it, slides, { withSkipped = false, noEdits = false } = {}) {
+    const chunk = ['song', 'text', 'title'].includes(it.type);
+    let out = slides;
+    if (chunk) slides.forEach(s => { s.ekey = String(s.src ?? 0); if (s.src == null) s.src = 0; });
+    else {
+      slides.forEach((s, k) => { s.ekey = String(k); s.base = k; });
+      const skip = new Set(it.skip || []);
+      out = [];
+      const extraAt = at => (it.extra || []).filter(e => e.at === at).map(e => SL.titleSlide(e.text, 1, { label: '덧붙임', ekey: 'x' + e.id, xid: e.id, src: undefined }));
+      out.push(...extraAt(-1));
+      slides.forEach((s, k) => {
+        if (skip.has(k)) { if (withSkipped) out.push(Object.assign(s, { skipped: true })); } else out.push(s);
+        out.push(...extraAt(k));
       });
+      const last = slides.length - 1;
+      out.push(...(it.extra || []).filter(e => e.at > last).map(e => SL.titleSlide(e.text, 1, { label: '덧붙임', ekey: 'x' + e.id, xid: e.id, src: undefined })));
+      if (!out.some(s => !s.skipped) && !withSkipped) out = slides.slice(0, 1); // 다 건너뛰면 첫 장만
     }
-    return slides;
+    if (it.edits && !noEdits) out.forEach(s => {
+      const e = SL.mergeEdit(it.edits, s.ekey);
+      if (!e) return;
+      if (e.bg) s.bg = e.bg;
+      delete e.bg;
+      s.edit = e;
+    });
+    return out;
+  }
+  /** 슬라이드 편집기용: 꾸미기 전 원래 슬라이드 (성경은 본문을 찾아서) */
+  async function editorBase(i) {
+    const it = st.cue && st.cue.items[i];
+    if (!it) return [];
+    if (it.type === 'bible') {
+      if (!it.ref) return [];
+      const r = await cmd('searchReference', { query: it.ref, versionId: it.versionId || undefined });
+      if (!r.ok) return [];
+      const passage = app.withParallel ? await app.withParallel(r.result.passage) : r.result.passage;
+      return SL.build(passage, app.splitOpts(itemTpl(it))).map(s => (it.bg ? { ...s, bg: it.bg } : s));
+    }
+    let meta = null;
+    if (it.type === 'hymn') { try { meta = await hymnMeta(it); } catch { return []; } }
+    return buildSlides(it, meta, { raw: true });
   }
 
   /** 부를 순서: 이 순서에 적은 것 → (라이브러리 찬양이면) 라이브러리의 기본 순서 */
@@ -483,7 +520,8 @@
         <label>부를 순서</label><div class="ce-col"><input type="text" data-k="order" value="${esc(it.order || '')}" placeholder="${esc(songOrder({ ...it, order: '' }) || '비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴 후렴 (또는 1 C 2 C C)')}">
           <div class="ce-row ce-chips">${SL.lyricGroups(SL.lyricsChunks(it.lyrics)).filter(g => g.label).map(g => `<button type="button" data-chip="${esc(g.label)}" title="부를 순서 끝에 넣기">${esc(g.label)}</button>`).join('')}<button type="button" data-chip="" title="부를 순서 지우기 (가사 순서대로)">지우기</button><span id="ceOrderMsg" class="note"></span></div></div>`,
       text: `<label>내용</label><textarea data-k="body" rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="note">'---' 줄 = 다음 슬라이드</div>`,
-      title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">`,
+      title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">
+        <label>추가 슬라이드</label><textarea data-k="more" rows="${it.more ? 3 : 1}" placeholder="다음 슬라이드 (첫 줄 = 제목, 둘째 줄 = 부제) · '---' 줄로 또 다음 · 비우면 한 장">${esc(it.more || '')}</textarea>`,
       image: `<label>이미지</label><div class="ce-row">${it.image ? thumbTag(it.image) : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,
       camera: `<label>카메라</label><div class="ce-row"><span>📷 ${esc(it.label || '(고르세요)')}</span><button data-act="campick">바꾸기…</button><select data-k="fit"><option value="cover" ${it.fit !== 'contain' ? 'selected' : ''}>화면 채우기</option><option value="contain" ${it.fit === 'contain' ? 'selected' : ''}>전체 보이기</option></select><span class="note">라이브러리 '📷 카메라' 탭에서 고를 수도 있습니다</span></div>`,
       slideshow: `<label>그림</label><div class="ce-col"><div class="ss-list">${(it.images || []).map((u, k) => `<span class="ss-img" title="${esc(fileName(u))}">${thumbTag(u)}<span class="ss-act"><button data-ssleft="${k}" title="앞으로">◀</button><button data-ssdel="${k}" title="빼기">✕</button></span></span>`).join('') || '<span class="muted">아직 그림이 없습니다</span>'}</div>
@@ -495,7 +533,7 @@
     box.innerHTML = `<div class="ce-head"><span class="ce-ico">${ICON[it.type]}</span><b>${i + 1}번 ${TYPE[it.type]}</b>
         <span class="grow"></span><span id="cueSaved" class="muted"></span>
         <button data-act="up" title="위로 (Alt+↑)">▲</button><button data-act="down" title="아래로 (Alt+↓)">▼</button>
-        ${['song', 'text', 'title'].includes(it.type) ? '<button data-act="slideedit" class="primary" title="슬라이드마다 글상자 위치·꾸미기, 글·그림·도형 덧붙이기 (Ctrl+E)">✎ 슬라이드 편집</button>' : ''}
+        ${it.type !== 'audio' ? '<button data-act="slideedit" class="primary" title="슬라이드마다 글상자 위치·꾸미기, 글·그림·도형 덧붙이기 (Ctrl+E)">✎ 슬라이드 편집</button>' : ''}
         <button data-act="dup" title="이 순서 복제">복제</button><button data-act="del" title="이 순서 지우기 (Delete)">지우기</button>
         <button data-act="close" title="편집칸 닫기">✕</button></div>
       <div class="form ce-form">
@@ -983,6 +1021,8 @@
     selectQuiet: i => { if (st.cue && i >= 0 && i < st.cue.items.length) { st.sel = i; render(); } },
     item: i => (st.cue ? st.cue.items[i] : null),
     tplOf: i => (st.cue && st.cue.items[i] ? itemTpl(st.cue.items[i]) : null),
+    editorBase: i => editorBase(i),
+    decorate: (it, slides, o) => decorate(it, slides, o),
     /** 슬라이드 편집기: 항목을 고치고 저장·미리보기 갱신 (가사를 고쳤으면 라이브러리 찬양에도) */
     updateItem: (i, fn, { lyrics = false } = {}) => {
       const it = st.cue && st.cue.items[i];

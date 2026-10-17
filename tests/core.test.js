@@ -725,7 +725,7 @@ test('슬라이드 편집: 정리·합치기·큐시트 저장·송출 슬라이
   const cue = core.command('saveCue', { cue: { name: '편집', items: [{ type: 'song', title: '곡', lyrics: '가\n\n나', edits: e }, { type: 'image', title: '그림', edits: e }] } }).result;
   const got = core.command('getCue', { id: cue.id }).result;
   assert.equal(got.items[0].edits['2'].items[0].text, '후렴');
-  assert.equal(got.items[1].edits, undefined); // 그림 순서는 편집 없음
+  assert.equal(got.items[1].edits['2'].hideMain, true); // 그림 순서도 꾸미기 저장
   // 송출 슬라이드에 편집·덩어리 번호 유지
   const r = core.command('sendLive', { passage: { title: '곡' }, slides: [{ kind: 'text', ref: '', src: 1, edit: mergeEdit(e, 1), parts: [{ text: '나' }] }] });
   assert.equal(r.ok, true);
@@ -1100,4 +1100,19 @@ test('성능: 장절 100ms / 본문 300ms 이내', () => {
     assert.ok(ms < 300, `${q} ${ms}ms`);
   }
   core.store.close();
+});
+
+test('성경·그림 순서: 덧붙인 슬라이드(extra)·건너뛰기(skip) 저장', () => {
+  const core = newCore('extra');
+  const cue = core.command('saveCue', { cue: { name: '덧붙임', items: [
+    { type: 'bible', title: '본문', ref: '요3:16', extra: [{ id: 'ab12', at: 0, text: '말씀\n요한복음' }, { at: 1, text: '' }], skip: [2, 2, -1, 'x'], edits: { xab12: { bg: '#000000' }, bad: { bg: '#111111' } } },
+    { type: 'audio', title: '음악', extra: [{ at: 0, text: '안 됨' }], edits: { '*': { bg: '#000000' } } },
+  ] } }).result;
+  const got = core.command('getCue', { id: cue.id }).result;
+  assert.deepEqual(got.items[0].extra, [{ id: 'ab12', at: 0, text: '말씀\n요한복음' }]);
+  assert.deepEqual(got.items[0].skip, [2]);
+  assert.equal(got.items[0].edits.xab12.bg, '#000000');
+  assert.equal(got.items[0].edits.bad, undefined);
+  assert.equal(got.items[1].extra, undefined);
+  assert.equal(got.items[1].edits, undefined);
 });

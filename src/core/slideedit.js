@@ -88,7 +88,7 @@ function normalizeEdits(edits) {
   if (!edits || typeof edits !== 'object' || Array.isArray(edits)) return undefined;
   const out = {};
   for (const k of Object.keys(edits).slice(0, 300)) {
-    if (k !== '*' && !/^\d{1,4}$/.test(k)) continue;
+    if (k !== '*' && !/^\d{1,4}$/.test(k) && !/^x[a-z0-9]{1,16}$/i.test(k)) continue; // 숫자 = 슬라이드 번호, x… = 덧붙인 슬라이드
     const e = normalizeEdit(edits[k]);
     if (e) out[k] = e;
   }

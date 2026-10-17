@@ -208,6 +208,23 @@
     return Object.keys(out).length ? out : undefined;
   }
 
+  /** 제목 순서의 장들: ['제목\n부제', '둘째 장 제목\n부제', …] (첫 장 = 제목·부제 칸, 나머지 = 추가 슬라이드) */
+  function titlePages(it) {
+    return [[it.title || '', it.subtitle || ''].filter(Boolean).join('\n') || '제목', ...textChunks(it.more).map(c => c.text)];
+  }
+  /** 장들 → 제목 순서 칸 (title · subtitle · more) */
+  function fromTitlePages(pages) {
+    const ps = pages.map(p => String(p || '').trim()).filter(Boolean);
+    const [first = '제목', ...rest] = ps;
+    const [t, ...sub] = first.split('\n');
+    return { title: t.trim() || '제목', subtitle: sub.join(' ').trim(), more: rest.join('\n---\n') };
+  }
+  /** 장 하나 → 제목 카드 슬라이드 */
+  function titleSlide(page, k, opts = {}) {
+    const [t, ...sub] = String(page).split('\n');
+    return { kind: 'title', ref: t.trim(), subtitle: sub.join(' ').trim(), label: k ? `제목 ${k + 1}` : '제목', parts: [], src: k, ...opts };
+  }
+
   /** 공지 글의 k 번째 장 글을 바꾼다 */
   function setTextChunk(body, k, text) {
     const parts = String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/);
@@ -275,5 +292,5 @@
     return String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/).map(t => ({ label: '', text: t.trim() })).filter(c => c.text).map((c, k) => ({ ...c, src: k }));
   }
 
-  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, lyricGroups, arrange, setLyricsChunk, setTextChunk, mergeEdit, slideOp, slideOpEdits };
+  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, lyricGroups, arrange, setLyricsChunk, setTextChunk, mergeEdit, slideOp, slideOpEdits, titlePages, fromTitlePages, titleSlide };
 })(window);

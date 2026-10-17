@@ -190,6 +190,12 @@
 
   function buildContent(slide, t, versionName, opts = {}) {
     const area = buildContentInner(slide, t, versionName, opts);
+    // 글 없는 슬라이드: 덧붙인 글상자·그림·도형·카메라를 화면 전체 기준으로
+    const ed = slide.edit;
+    if (ed && ed.items && ed.items.length && ['image', 'score', 'video', 'camera', 'blank'].includes(slide.kind) && (ed.allOutputs || !lyricsOnly(t))) {
+      const full = { left: 0, top: 0, width: t.width, height: t.height };
+      area.insertAdjacentHTML('beforeend', editItemsHtml(ed.items, t, full, true) + editItemsHtml(ed.items, t, full, false));
+    }
     attachCameras(area);
     const cd = countdownHtml(slide, t);
     if (cd) {
