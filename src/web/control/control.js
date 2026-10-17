@@ -334,6 +334,8 @@
   async function directSend() {
     if (directMode() && Date.now() - lastUserAct < 2500) await sendPreview();
   }
+  /** 슬라이드 단추 글: '3. 후렴' (이름이 번호와 같으면 번호만) */
+  const chipLabel = (i, t) => (t && String(t) !== String(i + 1) ? `${i + 1}. ${t}` : String(i + 1));
   function renderStudio() {
     const b = $('#btnStudio');
     if (!b || !app.state) return;
@@ -414,7 +416,7 @@
     $('#pvCount').textContent = `${p.index + 1} / ${p.slides.length}`;
     const nx = p.slides[p.index + 1];
     $('#pvNextHint').innerHTML = nx ? `다음: <b>${esc(nx.ref)}</b> ${esc(slideSnippet(nx))}` : '<span>마지막 슬라이드</span>';
-    $('#pvSlides').innerHTML = p.slides.map((s, i) => `<button data-i="${i}" class="${i === p.index ? 'on' : ''}" title="${esc(slideSnippet(s))}">${i + 1}. ${esc(s.label || shortRef(s.ref) || slideSnippet(s).slice(0, 12))}</button>`).join('');
+    $('#pvSlides').innerHTML = p.slides.map((s, i) => `<button data-i="${i}" class="${i === p.index ? 'on' : ''}" title="${esc(slideSnippet(s))}">${esc(chipLabel(i, s.label || shortRef(s.ref) || slideSnippet(s).slice(0, 12)))}</button>`).join('');
     $('#pvSlides button.on')?.scrollIntoView({ block: 'nearest' });
     updateCommentary();
     if (window.BCGrid) window.BCGrid.update();
@@ -462,7 +464,7 @@
     $('#lvNextHint').title = hasJump ? '찬양 바로 가기: 1~9 = 절 · C = 후렴 · B = 브릿지 · E = 엔딩' : '';
     $('#lvNextHint').innerHTML = (hasJump ? '<span class="jump-hint">⌨ 1~9·C·B</span> ' : '') + (nx ? `다음: <b>${esc(nx.ref)}</b> ${esc(slideSnippet(nx))}`
       : settings().navMode === 'continuous' ? '범위 끝 — F6을 누르면 다음 절로 이어갑니다' : '마지막 슬라이드');
-    $('#lvSlides').innerHTML = live.slides.map((ref, i) => `<button data-i="${i}" class="${i === live.index ? 'on' : ''}">${i + 1}. ${esc(ref.startsWith('¶') ? ref.slice(1) : shortRef(ref))}</button>`).join('');
+    $('#lvSlides').innerHTML = live.slides.map((ref, i) => `<button data-i="${i}" class="${i === live.index ? 'on' : ''}">${esc(chipLabel(i, ref.startsWith('¶') ? ref.slice(1) : shortRef(ref)))}</button>`).join('');
     $('#lvSlides button.on')?.scrollIntoView({ block: 'nearest' });
     renderVideoBar();
     renderLayerButtons();

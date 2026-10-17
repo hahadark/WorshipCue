@@ -517,3 +517,10 @@ html { overflow: hidden; }
   .ws-pick > span { display: none; }
 }
 @media (max-width: 1100px) { .brand { display: none; } }
+/* 가운데 머리: 좁아도 한 줄 (제목은 말줄임) */
+.center-head { align-items: center; flex-wrap: nowrap; min-width: 0; }
+.center-head .view-tabs { display: inline-flex; flex: none; }
+#resultTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+#resultInfo { white-space: nowrap; flex: none; }
+/* 내용이 짧은 창은 내용 높이만큼 */
+.modal-box:has(.ai-form), .modal-box:has(.ws-manage) { height: auto; max-height: 90vh; width: min(980px, 94vw); }

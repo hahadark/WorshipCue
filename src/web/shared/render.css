@@ -11,7 +11,7 @@
   display: flex; flex-direction: column;
   transition: opacity var(--bc-fade, 300ms) ease;
 }
-.bc-block { box-sizing: border-box; max-width: 100%; }
+.bc-block { box-sizing: border-box; max-width: 100%; position: relative; } /* 순서별 배경(.bc-slidebg, absolute) 위에 글자 */
 .bc-text {
   word-break: keep-all;          /* 한국어는 어절 단위 줄바꿈 */
   overflow-wrap: anywhere;

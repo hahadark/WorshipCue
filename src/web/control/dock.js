@@ -96,9 +96,9 @@
       api.clear();
       group(['cue']);
       group(['main'], { referencePanel: 'cue', direction: 'right' });
-      group(['library', 'quick', 'stage'], { referencePanel: 'main', direction: 'below' });
       group(['preview'], { referencePanel: 'main', direction: 'right' });
       group(['live'], { referencePanel: 'preview', direction: 'below' });
+      group(['library', 'quick', 'stage'], { referencePanel: 'main', direction: 'below' });
       size('cue', { width: 340 }); size('preview', { width: Math.round(W * 0.28) }); size('library', { height: Math.round(H * 0.45) });
     } },
     { id: 'b-live', name: '예배 중 (송출 크게)', desc: '미리보기·LIVE 를 크게, 큐시트와 슬라이드 격자, 아래에 무대·타이머', build: () => {
@@ -106,10 +106,10 @@
       api.clear();
       group(['cue']);
       group(['main'], { referencePanel: 'cue', direction: 'right' });
-      group(['stage', 'library', 'quick'], { referencePanel: 'main', direction: 'below' });
       group(['live'], { referencePanel: 'main', direction: 'right' });
       group(['preview'], { referencePanel: 'live', direction: 'below' });
-      size('cue', { width: 300 }); size('live', { width: Math.round(W * 0.5) }); size('stage', { height: Math.round(H * 0.33) });
+      group(['stage', 'library', 'quick'], { referencePanel: 'main', direction: 'below' });
+      size('cue', { width: 300 }); size('live', { width: Math.round(W * 0.48) }); size('preview', { height: Math.round(H * 0.42) }); size('stage', { height: Math.round(H * 0.4) });
       if (window.BCGrid && !window.BCGrid.isOn()) { const b = document.querySelector('#slideView [data-sv="grid"]'); if (b) b.click(); }
     } },
     { id: 'b-simple', name: '간단 (큐시트 + LIVE)', desc: '큐시트와 LIVE 만. 노트북 등 작은 화면용', build: () => {
@@ -144,6 +144,7 @@
     app.cmd('setActiveWorkspace', { id });
     if (app.state) app.state.settings.activeWorkspace = id;
     requestAnimationFrame(fitScreens);
+    setTimeout(fitScreens, 250); setTimeout(fitScreens, 700); // 배치가 다 잡힌 뒤 화면 크기 다시 맞춤
     renderWorkspaceSelect();
     app.showMsg(`작업공간: ${ws.name}`, 'ok', 1200);
   }
