@@ -61,7 +61,7 @@
     if (!show) return;
     const p = app.preview;
     const tpl = app.tplFor('main', p.tpl || null);
-    const key = JSON.stringify([p.slides.length, p.passage && p.passage.title, p.passage && p.passage.versionName, tpl.id, p.slides.map(s => s.ref + s.label + (s.parts[0] ? s.parts[0].text.slice(0, 20) : '') + (s.image || '') + (s.bg || '') + (s.edit ? JSON.stringify(s.edit) : ''))]);
+    const key = JSON.stringify([p.slides.length, p.passage && p.passage.title, p.passage && p.passage.versionName, tpl.id, p.slides.map(s => s.ref + s.label + (s.parts[0] ? s.parts[0].text.slice(0, 20) : '') + (s.image || '') + (s.bg || '') + (s.footer || '') + (s.edit ? JSON.stringify(s.edit) : ''))]);
     if (key !== drawnKey) {
       drawnKey = key;
       grid.innerHTML = p.slides.map((s, k) => `<div class="sg-cell" data-k="${k}"${s.kind !== 'bible' && window.BCGroup && window.BCGroup.color(s.label) ? ` style="--gc:${window.BCGroup.color(s.label)}"` : ''}><div class="screen sg-screen"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button><div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('');

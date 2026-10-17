@@ -10,8 +10,8 @@
 
 const { normalizeEdits } = require('./slideedit');
 
-const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn', 'audio', 'video'];
-const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가', audio: '음악', video: '영상' };
+const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn', 'audio', 'video', 'slideshow'];
+const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가', audio: '음악', video: '영상', slideshow: '슬라이드쇼' };
 
 const str = (v, max = 20000) => String(v ?? '').slice(0, max);
 
@@ -24,13 +24,19 @@ function normalizeItem(x) {
   const it = { id: /^[a-z0-9]{4,40}$/i.test(x.id || '') ? x.id : newId(), type: x.type, title: str(x.title, 200).trim(), note: str(x.note, 1000) };
   switch (x.type) {
     case 'bible': it.ref = str(x.ref, 200).trim(); it.versionId = str(x.versionId, 40); break;
-    case 'song': it.lyrics = str(x.lyrics); it.showTitle = !!x.showTitle; it.credit = str(x.credit, 300); it.songId = str(x.songId, 60); it.order = str(x.order, 300); break;
+    case 'song': it.lyrics = str(x.lyrics); it.showTitle = !!x.showTitle; it.credit = str(x.credit, 300); it.creditShow = ['first', 'last', 'both'].includes(x.creditShow) ? x.creditShow : ''; it.songId = str(x.songId, 60); it.order = str(x.order, 300); break;
     case 'video': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.sound = x.sound !== false; it.loop = !!x.loop; it.endAction = ['hold', 'black', 'next'].includes(x.endAction) ? x.endAction : 'hold'; break;
     case 'audio': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.loop = !!x.loop; it.fadeOnLeave = x.fadeOnLeave !== false; break;
     case 'text': it.body = str(x.body); break;
     case 'title': it.subtitle = str(x.subtitle, 300); break;
     case 'image': it.image = str(x.image, 300); break;
     case 'blank': it.mode = x.mode === 'background' ? 'background' : 'black'; break;
+    case 'slideshow': // 예배 전 화면: 그림·광고 글을 자동으로 넘기며 반복 (+ 배경 음악 · 카운트다운)
+      it.images = (Array.isArray(x.images) ? x.images : []).slice(0, 200).map(u => str(u, 1500)).filter(Boolean);
+      it.body = str(x.body);
+      it.countdown = /^\d{1,2}:\d{2}$/.test(x.countdown || '') ? x.countdown : '';
+      it.countdownLabel = str(x.countdownLabel, 60);
+      break;
     case 'hymn':
       it.file = str(x.file, 1000); it.number = Number.isFinite(+x.number) ? +x.number : null;
       it.background = str(x.background, 300) || 'default'; // default(설정 기본값) | original | template | 이미지 주소
@@ -42,6 +48,28 @@ function normalizeItem(x) {
   // 슬라이드 편집 (글상자 위치·꾸미기·덧붙인 글·그림·도형)
   if (['song', 'text', 'title'].includes(x.type)) { const e = normalizeEdits(x.edits); if (e) it.edits = e; }
   it.duration = Math.max(0, Math.min(600, Number(x.duration) || 0)); // 예정 시간(분), 0 = 정하지 않음
+  // 송출할 때 자동으로 (배경 음악 · 타이머 · 무대 메시지 · 로고 화면 · 배경 · 오버레이 · 음악 멈춤)
+  if (x.type !== 'audio') {
+    it.music = str(x.music, 1500);
+    it.musicVolume = Math.max(0, Math.min(1, Number(x.musicVolume ?? 0.8) || 0));
+    const a = x.actions && typeof x.actions === 'object' ? x.actions : {};
+    const act = {};
+    const tm = Math.round(Number(a.timer) || 0); if (tm > 0) act.timer = Math.min(240, tm);
+    if (a.stageMsg) act.stageMsg = str(a.stageMsg, 200);
+    if (['on', 'off'].includes(a.logo)) act.logo = a.logo;
+    if (['hide', 'show'].includes(a.bg)) act.bg = a.bg;
+    if (a.ovOn) act.ovOn = str(a.ovOn, 60);
+    if (a.ovOff) act.ovOff = str(a.ovOff, 60);
+    if (a.stopMusic) act.stopMusic = true;
+    if (a.clearStage) act.clearStage = true;
+    if (Object.keys(act).length) it.actions = act;
+  }
+  // 자동 넘김: N초마다 다음 슬라이드, 반복이면 끝에서 처음으로 (슬라이드쇼는 기본 8초·반복)
+  if (x.type !== 'audio' && x.type !== 'video') {
+    const sec = Math.round(Number(x.autoSec ?? (x.type === 'slideshow' ? 8 : 0)) || 0);
+    it.autoSec = sec >= 2 ? Math.min(3600, sec) : 0;
+    it.autoLoop = x.autoLoop === undefined ? x.type === 'slideshow' : !!x.autoLoop;
+  }
   it.tplMain = str(x.tplMain, 80);
   it.tplOverlay = str(x.tplOverlay, 80);
   if (!it.title) it.title = TYPE_NAMES[x.type];

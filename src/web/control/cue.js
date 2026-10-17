@@ -12,8 +12,8 @@
   const $ = s => document.querySelector(s);
   const cmd = app.cmd;
 
-  const ICON = { video: '🎬', audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
-  const TYPE = { video: '영상', audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
+  const ICON = { slideshow: '🎞', video: '🎬', audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
+  const TYPE = { slideshow: '슬라이드쇼', video: '영상', audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
   let editorOn = true;
   try { editorOn = localStorage.getItem('wc-cue-editor') !== '0'; } catch { /* 무시 */ }
   const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map(), songs: new Map(), songTimer: null };
@@ -193,7 +193,7 @@
     const it = st.cue.items[i];
     const prevIdx = keepIndex && app.preview && app.preview.cue && app.preview.cue.index === i ? app.preview.index : 0;
     st.sel = i;
-    const cue = { id: st.cue.id, index: i, title: it.title, note: it.note || '' };
+    const cue = { id: st.cue.id, index: i, title: it.title, note: it.note || '', ...(it.autoSec >= 2 ? { auto: { sec: it.autoSec, loop: !!it.autoLoop } } : {}) };
     const tpl = itemTpl(it);
     if (it.type === 'audio') { // 음악: 화면은 그대로, 가운데에 정보만
       showAudioInfo(i, it);
@@ -243,12 +243,28 @@
     else if (it.type === 'song') slides = SL.buildText({ title: it.title, showTitle: it.showTitle, chunks: SL.arrange(SL.lyricsChunks(it.lyrics), songOrder(it)).chunks }, opts);
     else if (it.type === 'text') slides = SL.buildText({ title: it.title, showTitle: true, chunks: SL.textChunks(it.body) }, opts);
     else if (it.type === 'image' && it.image) slides = [{ kind: 'image', image: it.image, ref: it.title, label: '이미지', parts: [] }];
+    else if (it.type === 'slideshow') {
+      // 그림들 + 광고 글 (--- 로 나눔). 하나도 없으면 배경만 (카운트다운만 띄울 때)
+      slides = (it.images || []).map((img, k) => ({ kind: 'image', image: img, ref: it.title, label: `그림 ${k + 1}`, parts: [] }));
+      if ((it.body || '').trim()) slides.push(...SL.buildText({ title: it.title, showTitle: false, chunks: SL.textChunks(it.body) }, opts));
+      if (!slides.length) slides = [{ kind: 'blank', mode: 'background', ref: it.title, label: '배경', parts: [] }];
+      if (it.countdown) slides.forEach(s => { s.countdown = { target: it.countdown, label: it.countdownLabel || '예배 시작까지' }; });
+    }
     else if (it.type === 'video' && it.file) slides = [{ kind: 'video', image: it.file, ref: it.title, label: '영상', parts: [], caption: '', video: { volume: it.volume ?? 1, sound: it.sound !== false, loop: !!it.loop, endAction: it.endAction || 'hold' } }];
     else if (it.type === 'blank') slides = [{ kind: 'blank', mode: it.mode, ref: it.title, label: it.mode === 'background' ? '배경' : '검은 화면', parts: [] }];
     // 제목 카드, 또는 내용이 비어 있으면 제목만
     if (!slides.length) slides = [{ kind: 'title', ref: it.title, subtitle: it.subtitle || '', label: '제목', parts: [] }];
     // 순서별 배경 이미지 (글자 슬라이드)
     if (it.bg) slides.forEach(s => { if (s.kind === 'text' || s.kind === 'title') s.bg = it.bg; });
+    // 곡 정보 (작사·작곡·저작권): 첫·마지막 슬라이드 아래에 작게
+    if (it.type === 'song' && it.creditShow) {
+      const credit = (it.credit || (it.songId && st.songs.get(it.songId) ? st.songs.get(it.songId).credit : '') || '').trim();
+      const txt = slides.filter(s => s.kind === 'text');
+      if (credit && txt.length) {
+        if (it.creditShow === 'first' || it.creditShow === 'both') txt[0].footer = credit;
+        if (it.creditShow === 'last' || it.creditShow === 'both') txt[txt.length - 1].footer = credit;
+      }
+    }
     // 슬라이드 편집 (글상자 위치·꾸미기·덧붙인 것·슬라이드 배경)
     if (it.edits && ['song', 'text', 'title'].includes(it.type)) {
       slides.forEach(s => {
@@ -291,6 +307,58 @@
       if (r.ok) st.songs.set(it.songId, r.result);
       if (st.songPending === it.songId) st.songPending = null;
     }, 600);
+  }
+
+  // ---------------- 송출할 때 자동으로 (⑤) ----------------
+  /** 편집칸: 배경 음악 + 송출할 때 할 일 */
+  function actionsHtml(it) {
+    const a = it.actions || {};
+    const ovs = (app.state.settings.overlays || []);
+    const n = Object.keys(a).length + (it.music ? 1 : 0);
+    const ovSel = (k, extra) => `<select data-a="${k}"><option value="">—</option>${extra || ''}${ovs.map(o => `<option value="${esc(o.id)}" ${a[k] === o.id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select>`;
+    return `<label>배경 음악</label><div class="ce-row">${it.music ? `🔊 ${esc(fileName(it.music))} <input type="range" data-a="musicVolume" min="0" max="1" step="0.05" value="${it.musicVolume ?? 0.8}" title="소리 크기" style="width:90px"><button data-act="musicclear">빼기</button>` : '<span class="muted">없음</span>'}<button data-act="musicpick">🔊 ${it.music ? '바꾸기' : '고르기'}…</button><span class="note">송출하면 반복 재생, 다른 화면을 송출하면 서서히 꺼짐</span></div>
+      <label>자동 동작</label><div class="ce-col"><div class="ce-row"><button data-act="actmore" class="${n ? 'on' : ''}">⚡ 송출할 때 자동으로${n ? ` (${n})` : ''} ${st.actOpen ? '▴' : '▾'}</button><span class="note">${actSummary(it) || '타이머 시작 · 무대 메시지 · 로고 화면 · 배경 · 오버레이 · 음악 멈춤'}</span></div>
+      ${st.actOpen ? `<div class="act-grid">
+        <label>설교 타이머</label><div class="ce-row"><input type="number" data-a="timer" min="0" max="240" value="${a.timer || ''}" placeholder="0" style="width:70px"> 분 시작 <span class="note">0 = 안 함</span></div>
+        <label>무대 메시지</label><div class="ce-row"><input type="text" data-a="stageMsg" value="${esc(a.stageMsg || '')}" placeholder="예: 설교 시작 — 휴대폰을 무음으로" style="flex:1"><label class="tc-toggle"><input type="checkbox" data-a="clearStage" ${a.clearStage ? 'checked' : ''}> 메시지 지우기</label></div>
+        <label>로고 화면</label><div class="ce-row"><select data-a="logo"><option value="">그대로</option><option value="on" ${a.logo === 'on' ? 'selected' : ''}>켜기</option><option value="off" ${a.logo === 'off' ? 'selected' : ''}>끄기</option></select>
+          배경 <select data-a="bg"><option value="">그대로</option><option value="hide" ${a.bg === 'hide' ? 'selected' : ''}>지우기</option><option value="show" ${a.bg === 'show' ? 'selected' : ''}>다시 보이기</option></select></div>
+        <label>오버레이</label><div class="ce-row">켜기 ${ovSel('ovOn')} 끄기 ${ovSel('ovOff', `<option value="*" ${a.ovOff === '*' ? 'selected' : ''}>모두</option>`)}</div>
+        <label>음악</label><div class="ce-row"><label class="tc-toggle"><input type="checkbox" data-a="stopMusic" ${a.stopMusic ? 'checked' : ''}> 재생 중인 음악 서서히 멈춤</label></div>
+      </div>` : ''}</div>`;
+  }
+  function actSummary(it) {
+    const a = it.actions || {};
+    const ovName = id => (id === '*' ? '모두' : ((app.state.settings.overlays || []).find(o => o.id === id) || {}).name || '?');
+    return [a.timer && `⏱ 타이머 ${a.timer}분`, a.stageMsg && '💬 무대 메시지', a.clearStage && '메시지 지움', a.logo && `로고 ${a.logo === 'on' ? '켜기' : '끄기'}`, a.bg && `배경 ${a.bg === 'hide' ? '지우기' : '보이기'}`,
+      a.ovOn && `오버레이 켜기: ${ovName(a.ovOn)}`, a.ovOff && `오버레이 끄기: ${ovName(a.ovOff)}`, a.stopMusic && '음악 멈춤'].filter(Boolean).join(' · ');
+  }
+  /** 새로 송출된 순서의 자동 동작 (한 번만 · 방금 송출한 것만) */
+  let lastEnter = '';
+  function onEnter() {
+    const L = app.state && app.state.live;
+    if (!L || !L.hasLive || !L.passage || !st.cue || L.passage.cueId !== st.cue.id || L.passage.cueIndex < 0) return;
+    const key = `${L.sentAt}|${L.passage.cueIndex}`;
+    if (key === lastEnter) return;
+    lastEnter = key;
+    if (Date.now() - L.sentAt > 4000) return; // 프로그램을 다시 열었을 때 등 (오래전 송출)
+    const it = st.cue.items[L.passage.cueIndex];
+    if (it) runActions(it);
+  }
+  function runActions(it) {
+    const a = it.actions || {};
+    if (it.music && window.BCLib) window.BCLib.audio.play({ url: it.music, title: `${it.title} · 배경 음악`, volume: it.musicVolume ?? 0.8, loop: true, fadeOnLeave: true });
+    else if (a.stopMusic && window.BCLib) window.BCLib.audio.fadeOut(2500);
+    if (a.timer) cmd('stageTimer', { action: 'start', minutes: a.timer });
+    if (a.stageMsg) cmd('stageMessage', { text: a.stageMsg });
+    else if (a.clearStage) cmd('stageMessage', { text: '' });
+    if (a.logo) cmd('toggleLogoScreen', { on: a.logo === 'on' });
+    if (a.bg) cmd('toggleBackground', { on: a.bg === 'hide' });
+    if (a.ovOn) cmd('toggleOverlay', { id: a.ovOn, on: true });
+    if (a.ovOff === '*') (app.state.settings.overlays || []).filter(o => o.on && o.id !== a.ovOn).forEach(o => cmd('toggleOverlay', { id: o.id, on: false }));
+    else if (a.ovOff) cmd('toggleOverlay', { id: a.ovOff, on: false });
+    const s = actSummary(it);
+    if (s || it.music) app.showMsg(`⚡ ${it.title}: ${[it.music && '배경 음악', s].filter(Boolean).join(' · ')}`, 'info', 2500);
   }
 
   // ---------------- 음악 순서 ----------------
@@ -393,11 +461,16 @@
       song: `${it.songId ? `<label>라이브러리</label><div class="ce-row note">📚 라이브러리 찬양과 연결됨 — 가사를 고치면 이 찬양을 쓰는 모든 큐시트에 반영 <button data-act="unlink">연결 끊기</button></div>` : `<label>라이브러리</label><div class="ce-row note"><button data-act="tolib">📚 라이브러리에 저장</button> 저장하면 다음 주에도 검색해서 바로 넣을 수 있습니다</div>`}
         <label>가사</label><textarea data-k="lyrics" rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
         <span></span><div class="ce-row note"><label class="tc-toggle"><input type="checkbox" data-k="showTitle" ${it.showTitle ? 'checked' : ''}> 화면에 제목 표시</label> · 빈 줄 = 다음 슬라이드 · [1절] 줄은 슬라이드 이름</div>
+        <label>곡 정보</label><div class="ce-row"><input type="text" data-k="credit" value="${esc(it.credit || '')}" placeholder="${esc((it.songId && st.songs.get(it.songId) && st.songs.get(it.songId).credit) || '작사·작곡 · 저작권 (예: 작사 홍길동 · 작곡 김철수 · CCLI 1234567)')}" style="flex:1"><select data-k="creditShow" title="곡 정보를 화면 아래에 작게 보이기"><option value="" ${!it.creditShow ? 'selected' : ''}>보이지 않기</option><option value="first" ${it.creditShow === 'first' ? 'selected' : ''}>첫 슬라이드에</option><option value="last" ${it.creditShow === 'last' ? 'selected' : ''}>마지막 슬라이드에</option><option value="both" ${it.creditShow === 'both' ? 'selected' : ''}>처음과 끝에</option></select></div>
         <label>부를 순서</label><div class="ce-col"><input type="text" data-k="order" value="${esc(it.order || '')}" placeholder="${esc(songOrder({ ...it, order: '' }) || '비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴 후렴 (또는 1 C 2 C C)')}">
           <div class="ce-row ce-chips">${SL.lyricGroups(SL.lyricsChunks(it.lyrics)).filter(g => g.label).map(g => `<button type="button" data-chip="${esc(g.label)}" title="부를 순서 끝에 넣기">${esc(g.label)}</button>`).join('')}<button type="button" data-chip="" title="부를 순서 지우기 (가사 순서대로)">지우기</button><span id="ceOrderMsg" class="note"></span></div></div>`,
       text: `<label>내용</label><textarea data-k="body" rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="note">'---' 줄 = 다음 슬라이드</div>`,
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">`,
       image: `<label>이미지</label><div class="ce-row">${it.image ? thumbTag(it.image) : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,
+      slideshow: `<label>그림</label><div class="ce-col"><div class="ss-list">${(it.images || []).map((u, k) => `<span class="ss-img" title="${esc(fileName(u))}">${thumbTag(u)}<span class="ss-act"><button data-ssleft="${k}" title="앞으로">◀</button><button data-ssdel="${k}" title="빼기">✕</button></span></span>`).join('') || '<span class="muted">아직 그림이 없습니다</span>'}</div>
+          <div class="ce-row"><button data-act="ssadd">🖼 그림 추가…</button><span class="note">탐색기에서 그림 여러 장을 이 칸에 끌어다 놓아도 됩니다 (광고 PPT 는 그림으로 저장해서)</span></div></div>
+        <label>광고 글</label><textarea data-k="body" rows="3" placeholder="그림 뒤에 이어서 나갈 글 (--- 줄로 다음 장) · 비워도 됩니다">${esc(it.body || '')}</textarea>
+        <label>카운트다운</label><div class="ce-row"><input type="time" data-k="countdown" value="${esc(it.countdown || '')}"> 까지 <input type="text" data-k="countdownLabel" value="${esc(it.countdownLabel || '')}" placeholder="예배 시작까지" style="flex:1"><span class="note">시각을 비우면 카운트다운 없음</span></div>`,
       blank: `<label>화면</label><select data-k="mode"><option value="black" ${it.mode !== 'background' ? 'selected' : ''}>검은 화면 (로고도 숨김)</option><option value="background" ${it.mode === 'background' ? 'selected' : ''}>배경·로고만 보이기</option></select>`,
     }[it.type];
     box.innerHTML = `<div class="ce-head"><span class="ce-ico">${ICON[it.type]}</span><b>${i + 1}번 ${TYPE[it.type]}</b>
@@ -411,6 +484,8 @@
         ${fields}
         ${['song', 'text', 'title', 'bible'].includes(it.type) ? `<label>배경</label><div class="ce-row">${it.bg ? thumbTag(it.bg) : '<span class="muted">템플릿 배경</span>'}<button data-act="itembg">🖼 이미지·영상 고르기…</button>${it.bg ? '<button data-act="itembgclear">지우기</button>' : ''}</div>` : ''}
         ${it.type !== 'audio' ? `<label>템플릿</label><div class="ce-row">${tplSelect('tplMain', '예배당', it.tplMain)}${tplSelect('tplOverlay', 'OBS', it.tplOverlay)}</div>` : ''}
+        ${it.type !== 'audio' && it.type !== 'video' ? `<label>자동 넘김</label><div class="ce-row"><input type="number" data-k="autoSec" min="0" max="3600" value="${it.autoSec || ''}" placeholder="0" style="width:80px"> 초마다 <label class="tc-toggle"><input type="checkbox" data-k="autoLoop" ${it.autoLoop ? 'checked' : ''}> 끝나면 처음부터 반복</label><span class="note">0 = 끔 (F6 으로 넘김) · 숨김(F10) 중에는 멈춤</span></div>` : ''}
+        ${it.type !== 'audio' ? actionsHtml(it) : ''}
         <label>예정 시간</label><div class="ce-row"><input type="number" data-k="duration" min="0" max="600" value="${it.duration || ''}" placeholder="0" style="width:80px"> 분 <span class="note">${planTimes()[i] ? '예정 시작 ' + planTimes()[i] : '큐시트 위 ⏰ 에 예배 시작 시각을 넣으면 순서마다 예정 시각이 계산됩니다'}</span></div>
         <label>메모</label><input type="text" data-k="note" value="${esc(it.note || '')}" placeholder="조작자만 보는 메모 (예: 설교 후 바로)">
       </div>`;
@@ -465,6 +540,28 @@
   $('#cueEditor').addEventListener('input', e => { if (e.target.dataset.k) editChanged(e.target); });
   $('#cueEditor').addEventListener('change', e => { if (e.target.dataset.k && (e.target.tagName === 'SELECT' || e.target.type === 'checkbox')) editChanged(e.target); });
   $('#cueEditor').addEventListener('keydown', e => { if (e.key === 'Escape' && e.target.matches('input, textarea')) { e.target.blur(); } });
+  $('#cueEditor').addEventListener('click', e => {
+    const it = st.cue && st.cue.items[st.sel];
+    if (!it || it.type !== 'slideshow') return;
+    const d = e.target.closest('[data-ssdel]'), l = e.target.closest('[data-ssleft]');
+    if (!d && !l) return;
+    const k = +(d || l).dataset[d ? 'ssdel' : 'ssleft'];
+    const imgs = [...(it.images || [])];
+    if (d) imgs.splice(k, 1); else if (k > 0) [imgs[k - 1], imgs[k]] = [imgs[k], imgs[k - 1]];
+    it.images = imgs; save(); forceEditor(); previewItem(st.sel, { keepIndex: true });
+  });
+  // '송출할 때 자동으로' 칸 (data-a = actions 의 키)
+  $('#cueEditor').addEventListener('change', e => {
+    const el = e.target.closest('[data-a]');
+    const it = st.cue && st.cue.items[st.sel];
+    if (!el || !it) return;
+    const a = { ...(it.actions || {}) };
+    const k = el.dataset.a;
+    const v = el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) : el.value;
+    if (k === 'musicVolume') { it.musicVolume = v; save(); return; }
+    if (!v) delete a[k]; else a[k] = v;
+    it.actions = a; save(); forceEditor();
+  });
   // 부를 순서 단추: 이름표를 순서 끝에 붙이기 / 지우기
   $('#cueEditor').addEventListener('click', e => {
     const c = e.target.closest('[data-chip]');
@@ -485,6 +582,10 @@
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;
       case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); forceEditor(); break; }
       case 'del': removeItem(i); break;
+      case 'ssadd': if (window.BCLib) window.BCLib.pickImage(url => { it.images = [...(it.images || []), url]; save(); forceEditor(); previewItem(i, { keepIndex: true }); }); break;
+      case 'musicpick': if (window.BCLib) window.BCLib.pickAudio(f => { it.music = f.url; save(); forceEditor(); }); break;
+      case 'musicclear': it.music = ''; save(); forceEditor(); break;
+      case 'actmore': st.actOpen = !st.actOpen; forceEditor(); break;
       case 'slideedit': if (window.BCSlideEdit) window.BCSlideEdit.open(i); break;
       case 'chip': break;
       case 'videopick': if (window.BCLib) window.BCLib.pickVideo(url => { it.file = url; if (!it.title || it.title === TYPE.video) it.title = fileName(url).replace(/\.[^.]+$/, ''); save(); forceEditor(); render(); previewItem(i); }); break;
@@ -659,6 +760,7 @@
     if (!st.cue) return;
     const it = { id: newId(), type, title: extra.title || TYPE[type], note: '', ...extra };
     if (type === 'blank') it.mode = 'background';
+    if (type === 'slideshow') Object.assign(it, { images: extra.images || [], body: extra.body || '', autoSec: 8, autoLoop: true, countdown: '', countdownLabel: '예배 시작까지', title: extra.title || '예배 전 화면' });
     const at = st.sel >= 0 ? st.sel + 1 : st.cue.items.length;
     st.cue.items.splice(at, 0, it);
     st.sel = at;
@@ -917,7 +1019,7 @@
     editorOn: () => editorOn,
     /** 오른쪽 클릭 메뉴용: i 번째 순서에 하는 일 */
     itemAction: (i, act, extra) => itemAction(i, act, extra),
-    onLive: () => render(),
+    onLive: () => { render(); onEnter(); },
     // 다른 곳(다른 창·외부 연동)에서 바뀐 큐시트는 다시 불러온다. 방금 내가 저장한 것은 제외
     onCues: d => { refreshList(); if (st.cue && d && d.id === st.cue.id && Date.now() - st.lastSave > 1500) openCue(st.cue.id); },
   };

@@ -73,6 +73,16 @@
       }
     }
     let files2 = list.filter(x => ['ppt', 'image', 'video', 'audio', 'text'].includes(x.kind));
+    // 슬라이드쇼 편집칸에 그림들: 그림 추가
+    if (t.closest('#cueEditor') && window.BCCue && window.BCCue.selected() && window.BCCue.selected().type === 'slideshow') {
+      const imgs = files2.filter(f => f.kind === 'image');
+      if (imgs.length) {
+        window.BCCue.updateSelected(it => { it.images = [...(it.images || []), ...imgs.map(f => f.url)]; });
+        app.showMsg(`슬라이드쇼에 그림 ${imgs.length}장을 넣었습니다.`, 'ok', 2000);
+        files2 = files2.filter(f => f.kind !== 'image');
+        if (!files2.length) return;
+      }
+    }
     // 순서 편집칸에 그림·영상: 그 순서 배경
     if (t.closest('#cueEditor .ce-form') && files2.length === 1 && (files2[0].kind === 'image' || files2[0].kind === 'video') && window.BCCue) {
       const ok = window.BCCue.updateSelected(it => { if (['song', 'text', 'title', 'bible'].includes(it.type)) it.bg = files2[0].url; });

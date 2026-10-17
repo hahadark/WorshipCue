@@ -55,7 +55,7 @@ class WorshipCueCore extends EventEmitter {
       const first = all.find(v => v.id === 'nkrv') || all.find(v => v.id === 'krv') || all[0];
       this.settings.update(d => { d.versionId = first ? first.id : ''; });
     }
-    this.presentation.on('live', () => { this.syncVideo(); this.emit('live'); });
+    this.presentation.on('live', () => { this.syncVideo(); this.scheduleAuto(); this.emit('live'); });
     this.presentation.on('preview', () => this.emit('preview'));
     this.presentation.on('edge', ({ edge, live }) => {
       // 큐시트 항목을 송출 중이면 다음(이전) 순서로 넘어간다
@@ -72,6 +72,24 @@ class WorshipCueCore extends EventEmitter {
 
   versionId(args) {
     return (args && args.versionId) || this.settings.get().versionId;
+  }
+
+  // ---------------- 자동 넘김 (슬라이드쇼 · 순서의 '자동 넘김') ----------------
+  /** 송출이 바뀔 때마다: 이 송출에 자동 넘김이 있으면 다음 넘김을 예약 (숨김 중이면 멈춤) */
+  scheduleAuto() {
+    clearTimeout(this.autoTimer);
+    const P = this.presentation;
+    const L = P.live;
+    const a = L && L.passage && L.passage.auto;
+    if (!a || !L.visible || L.slides.length < 1) return;
+    const ver = P.version;
+    this.autoTimer = setTimeout(() => {
+      if (P.version !== ver || !P.live || !P.live.visible) return; // 그 사이 다른 송출·이동
+      if (P.live.index < P.live.slides.length - 1) P.move(1);
+      else if (a.loop) P.gotoSlide(0);
+      else P.move(1); // 끝: 큐시트 순서면 다음 순서로 (자동 넘김 설정에 따라)
+    }, a.sec * 1000);
+    if (this.autoTimer.unref) this.autoTimer.unref();
   }
 
   // ---------------- 화면 지우기 층 ----------------

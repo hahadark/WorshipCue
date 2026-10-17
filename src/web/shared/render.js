@@ -170,7 +170,31 @@
     }).join('');
   }
 
+  /** 슬라이드쇼 카운트다운: '예배 시작까지 04:59' (화면 오른쪽 아래) */
+  function countdownHtml(slide, t) {
+    const c = slide.countdown;
+    if (!c || !c.target) return '';
+    const s = Math.round(t.height / 1080 * 100) / 100;
+    startTicking();
+    return `<div class="bc-cd" style="position:absolute;right:${60 * s}px;bottom:${50 * s}px;padding:${14 * s}px ${26 * s}px;border-radius:${16 * s}px;background:rgba(0,0,0,.62);color:#fff;font-family:${t.font.family};text-align:center;z-index:5">`
+      + (c.label ? `<div style="font-size:${30 * s}px;opacity:.85">${esc(c.label)}</div>` : '')
+      + `<div class="bc-ov" data-ov="countdown" data-o='${esc(JSON.stringify({ target: c.target, doneText: c.doneText || '' }))}' style="font-size:${78 * s}px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1">${esc(countdownText({ target: c.target }))}</div></div>`;
+  }
+
   function buildContent(slide, t, versionName, opts = {}) {
+    const area = buildContentInner(slide, t, versionName, opts);
+    const cd = countdownHtml(slide, t);
+    if (cd) {
+      // 화면 기준 위치로 (본문 영역 안쪽 좌표 → 화면 전체)
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `position:absolute;left:${-parseFloat(area.style.left || 0)}px;top:${-parseFloat(area.style.top || 0)}px;width:${t.width}px;height:${t.height}px;pointer-events:none`;
+      wrap.innerHTML = cd;
+      area.appendChild(wrap);
+    }
+    return area;
+  }
+
+  function buildContentInner(slide, t, versionName, opts = {}) {
     let rect = contentRect(t);
     const area = document.createElement('div');
     area.className = 'bc-area';
@@ -229,11 +253,13 @@
         + (slide.subtitle ? `<div class="bc-t2" style="color:${t.reference.color}">${esc(slide.subtitle)}</div>` : '') + '</div></div>' + above;
       return area;
     }
+    const footer = slide.footer && !lyricsOnly(t)
+      ? `<div class="bc-footer" style="position:absolute;left:${t.width * 0.04 - rect.left}px;right:${rect.left + rect.width - t.width * 0.96}px;bottom:${(rect.top + rect.height) - t.height * 0.965}px;font-family:${t.font.family};font-size:${Math.round(t.height * 0.024)}px;color:${t.font.color};opacity:.78;text-align:${textAlign(t.align === 'right' ? 'right' : 'left')};${t.shadow && t.shadow.enabled ? `text-shadow:0 1px 4px rgba(0,0,0,.9);` : ''}">${esc(slide.footer)}</div>` : '';
     area.innerHTML = slideBg + below + `<div class="bc-block" style="${boxCss}text-align:${textAlign(t.align)};${textStyle(t)}">`
       + refHtml(slide, t, 'top')
       + `<div class="bc-text" style="font-size:${t.font.size}px">${partsHtml(slide, t)}</div>`
       + refHtml(slide, t, 'bottom') + ver + '</div>'
-      + fixedRefHtml(slide, t, rect) + above;
+      + fixedRefHtml(slide, t, rect) + above + footer;
     return area;
   }
 

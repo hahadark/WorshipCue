@@ -11,7 +11,7 @@
   const Cue = () => window.BCCue;
   const act = name => () => app.runAction && app.runAction(name);
   const click = sel => () => { const el = $(sel); if (el) el.click(); };
-  const TYPES = [['hymn', '🎼 찬송가·PPT'], ['bible', '📖 성경'], ['song', '🎵 찬양'], ['text', '📢 공지'], ['title', '🏷 제목'], ['image', '🖼 이미지'], ['video', '🎬 영상'], ['audio', '🔊 음악'], ['blank', '⬛ 빈 화면']];
+  const TYPES = [['hymn', '🎼 찬송가·PPT'], ['bible', '📖 성경'], ['song', '🎵 찬양'], ['text', '📢 공지'], ['title', '🏷 제목'], ['image', '🖼 이미지'], ['video', '🎬 영상'], ['slideshow', '🎞 슬라이드쇼'], ['audio', '🔊 음악'], ['blank', '⬛ 빈 화면']];
   const EDITABLE = ['song', 'text', 'title'];
   let el = null;
   let items = [];

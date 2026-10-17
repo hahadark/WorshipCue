@@ -27,6 +27,8 @@ function validateSlides(slides) {
       // 영상 재생 슬라이드: 소리·반복·끝나면
       ...(kind === 'video' ? { video: { volume: Math.max(0, Math.min(1, Number(s.video && s.video.volume) || 0)), sound: !!(s.video && s.video.sound), loop: !!(s.video && s.video.loop), endAction: ['hold', 'black', 'next'].includes(s.video && s.video.endAction) ? s.video.endAction : 'hold' } } : {}),
       ref: String(s.ref || ''),
+      ...(s.footer ? { footer: String(s.footer).slice(0, 300) } : {}),
+      ...(s.countdown && /^\d{1,2}:\d{2}$/.test(s.countdown.target || '') ? { countdown: { target: s.countdown.target, label: String(s.countdown.label || '').slice(0, 60) } } : {}), // 예배 시작까지 // 곡 정보 (작사·작곡·저작권) — 화면 아래 작게
       title: String(s.title || ''), // 전체 범위 (장절 '전체 범위 고정' 표시용)
       ...(Number.isInteger(s.src) && s.src >= 0 ? { src: s.src } : {}), // 원래 가사·글 덩어리 번호 (슬라이드 편집 키)
       ...(s.edit ? (e => (e ? { edit: e } : {}))(normalizeEdit(s.edit)) : {}), // 슬라이드 편집
@@ -61,6 +63,8 @@ function validatePassage(p) {
     note: String(p.note || '').slice(0, 1000), // 큐시트 순서 메모 (무대 화면에 보임)
     // 이 순서에만 쓰는 템플릿 (비우면 출력의 기본 템플릿)
     tpl: p.tpl ? { main: String(p.tpl.main || ''), overlay: String(p.tpl.overlay || '') } : null,
+    // 자동 넘김: sec 초마다 다음 슬라이드, loop 면 끝에서 처음으로
+    auto: p.auto && Number(p.auto.sec) >= 2 ? { sec: Math.min(3600, Math.round(Number(p.auto.sec))), loop: !!p.auto.loop } : null,
   };
 }
 

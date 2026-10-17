@@ -34,7 +34,7 @@
     ['순서 넣기', [
       { label: '🎼 찬송가·PPT', run: add('hymn') }, { label: '📖 성경', run: add('bible') }, { label: '🎵 찬양', run: add('song') },
       { label: '📢 공지', run: add('text') }, { label: '🏷 제목', run: add('title') }, { label: '🖼 이미지', run: add('image') },
-      { label: '🎬 영상', run: add('video') }, { label: '🔊 음악', run: add('audio') }, { label: '⬛ 빈 화면', run: add('blank') },
+      { label: '🎬 영상', run: add('video') }, { label: '🎞 슬라이드쇼 (예배 전 화면)', run: add('slideshow') }, { label: '🔊 음악', run: add('audio') }, { label: '⬛ 빈 화면', run: add('blank') },
     ]],
     ['송출', [
       { label: '송출', key: 'F9', run: act('sendPreview') },

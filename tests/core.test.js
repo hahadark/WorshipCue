@@ -770,6 +770,42 @@ test('채팅 AI (키 없이): 프롬프트·샘플, 붙여 넣은 답 → 큐시
   assert.match(bad.error, /JSON/);
 });
 
+test('슬라이드쇼·자동 넘김·자동 동작: 저장 정리, 코어가 N초마다 넘기고 반복', async () => {
+  const core = newCore('slideshow');
+  const cue = core.command('saveCue', { cue: { name: '예배 전', items: [
+    { type: 'slideshow', title: '예배 전 화면', images: ['/lib/file?p=a.png', '', '/lib/file?p=b.png'], countdown: '10:55', countdownLabel: '예배 시작까지', music: '/lib/file?p=m.mp3', actions: { timer: 0, bogus: 1, logo: 'off', ovOff: '*' } },
+    { type: 'title', title: '설교', actions: { timer: 35, stageMsg: '설교 시작' }, autoSec: 1 },
+    { type: 'audio', title: '음악', autoSec: 10, actions: { timer: 5 } },
+  ] } }).result;
+  const [ss, t, au] = core.command('getCue', { id: cue.id }).result.items;
+  assert.deepEqual(ss.images, ['/lib/file?p=a.png', '/lib/file?p=b.png']);
+  assert.equal(ss.autoSec, 8); // 슬라이드쇼 기본 8초 · 반복
+  assert.equal(ss.autoLoop, true);
+  assert.equal(ss.countdown, '10:55');
+  assert.deepEqual(ss.actions, { logo: 'off', ovOff: '*' });
+  assert.equal(ss.music, '/lib/file?p=m.mp3');
+  assert.deepEqual(t.actions, { timer: 35, stageMsg: '설교 시작' });
+  assert.equal(t.autoSec, 0); // 2초 미만은 끔
+  assert.equal(au.autoSec, undefined); // 음악 순서는 자동 넘김·동작 없음
+  assert.equal(au.actions, undefined);
+  // 코어 자동 넘김: 2초마다, 끝에서 처음으로
+  const r = core.command('sendLive', { passage: { title: '예배 전', auto: { sec: 2, loop: true } }, slides: [
+    { kind: 'image', image: '/a.png', parts: [], countdown: { target: '10:55', label: '예배 시작까지' } },
+    { kind: 'image', image: '/b.png', parts: [] },
+  ] });
+  assert.equal(r.ok, true);
+  assert.equal(core.presentation.live.slides[0].countdown.target, '10:55');
+  await new Promise(res => setTimeout(res, 2300));
+  assert.equal(core.presentation.live.index, 1);
+  await new Promise(res => setTimeout(res, 2100));
+  assert.equal(core.presentation.live.index, 0); // 반복
+  // 숨김(F10) 중에는 멈춤
+  core.command('toggleLive');
+  await new Promise(res => setTimeout(res, 2200));
+  assert.equal(core.presentation.live.index, 0);
+  clearTimeout(core.autoTimer);
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');
