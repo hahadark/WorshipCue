@@ -83,6 +83,7 @@
       '-',
       { label: '무대 화면·설교 타이머', run: () => window.BCDock && window.BCDock.show('stage') },
       { label: '📱 휴대폰 리모컨…', run: () => window.BCRemote && window.BCRemote.open() },
+      { label: '🎛 스트림덱 · 외부 단추 연결…', run: () => window.BCTrigger && window.BCTrigger.open() },
     ]],
     ['리모컨', [
       { label: '📱 리모컨 열기 (QR · 주소 · PIN)…', run: () => window.BCRemote && window.BCRemote.open() },

@@ -868,6 +868,34 @@ test('찬양 가져오기: OpenLyrics · ChordPro · ProPresenter 6 · txt → �
   assert.equal(core.command('listSongs', { query: '' }).result.filter(s => s.title === '아침 찬양').length, 1);
 });
 
+test('스트림덱·외부 단추: 열쇠가 맞을 때만 GET 으로 동작', async () => {
+  const core = newCore('trigger');
+  const port = 39000 + Math.floor(Math.random() * 500);
+  const srv = await startServer(core, { webDir: path.join(__dirname, '..', 'src', 'web'), port });
+  try {
+    const info = core.command('triggerInfo').result;
+    assert.match(info.key, /^[\w-]{10,}$/);
+    assert.ok(info.actions.some(a => a.id === 'next'));
+    core.command('sendLive', { passage: { title: '본문' }, slides: [{ kind: 'text', ref: '', parts: [{ text: '가' }] }, { kind: 'text', ref: '', parts: [{ text: '나' }] }] });
+    assert.equal((await get(port, '/api/trigger/next')).status, 403); // 열쇠 없음
+    assert.equal((await get(port, '/api/trigger/next?key=wrong')).status, 403);
+    const ok = await get(port, `/api/trigger/next?key=${info.key}`);
+    assert.equal(ok.status, 200, ok.body);
+    assert.equal(core.presentation.live.index, 1);
+    assert.equal((await get(port, `/api/trigger/hide?key=${info.key}`)).status, 200);
+    assert.equal(core.presentation.live.visible, false);
+    await get(port, `/api/trigger/timer?key=${info.key}&min=25`);
+    assert.equal(core.stage.timer.duration, 25 * 60000);
+    await get(port, `/api/trigger/message?key=${info.key}&text=${encodeURIComponent('5분 남았습니다')}`);
+    assert.equal(core.stage.message, '5분 남았습니다');
+    assert.equal((await get(port, `/api/trigger/nope?key=${info.key}`)).status, 400);
+    // 열쇠를 바꾸면 예전 주소는 거부
+    const nk = core.command('newTriggerKey').result.key;
+    assert.notEqual(nk, info.key);
+    assert.equal((await get(port, `/api/trigger/next?key=${info.key}`)).status, 403);
+  } finally { await srv.close(); }
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

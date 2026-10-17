@@ -140,6 +140,17 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
         if (!fp) { res.writeHead(404); return res.end(); }
         return serveFile(res, fp, core.hymns.cacheDir);
       }
+      // 스트림덱·Companion 등 외부 단추: 열쇠(key)가 맞아야 동작 (다른 웹사이트가 함부로 못 누르게)
+      if (p.startsWith('/api/trigger/')) {
+        const want = core.settings.get().triggerKey || '';
+        const got = String(url.searchParams.get('key') || '');
+        const crypto = require('crypto');
+        if (!want || got.length !== want.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want))) return json(res, 403, { ok: false, error: '열쇠(key)가 맞지 않습니다. WorshipCue → 도구 → 스트림덱·외부 단추에서 주소를 다시 복사하세요.' });
+        try {
+          const result = core.trigger(p.slice('/api/trigger/'.length), Object.fromEntries(url.searchParams));
+          return json(res, 200, { ok: true, result: result && result.ok === false ? result : true });
+        } catch (e) { return json(res, 400, { ok: false, error: e.message }); }
+      }
       if (p === '/api/state') return json(res, 200, core.getState());
       if (p === '/api/live') return json(res, 200, core.presentation.getLiveState());
       if (p === '/events') {

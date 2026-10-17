@@ -25,6 +25,15 @@ const { formatTitle } = require('./db');
 const OUTPUTS = ['main', 'overlay'];
 const PRINTABLE_PLAIN = /^(?:[A-Z0-9]|Space|Enter|Backspace|Tab|Minus|Equal|Comma|Period|Slash|Semicolon|Quote|BracketLeft|BracketRight|Backslash|Backquote)$/;
 
+/** 외부 단추 동작 목록 (스트림덱·Companion 안내용) */
+const TRIGGERS = [
+  ['next', '다음 슬라이드 (F6)'], ['prev', '이전 슬라이드 (F5)'], ['send', '미리보기 송출 (F9)'], ['hide', '글자 숨김·복원 (F10)'],
+  ['cue-next', '다음 순서 송출'], ['cue-prev', '이전 순서 송출'],
+  ['logo', '로고 화면 켜기·끄기'], ['bg', '배경 지우기·보이기'], ['overlays', '오버레이 끄기·다시 켜기'], ['clear-all', '모두 지우기'],
+  ['timer', '설교 타이머 시작 (?min=30)'], ['timer-pause', '타이머 일시정지·계속'], ['timer-reset', '타이머 지우기'],
+  ['message', '무대 메시지 (?text=…, 비우면 지움)'], ['draw-clear', '화면에 그린 것 지우기'],
+].map(([id, name]) => ({ id, name }));
+
 class WorshipCueCore extends EventEmitter {
   constructor({ dataDir, logEcho = false, seedDb = null }) {
     super();
@@ -77,6 +86,33 @@ class WorshipCueCore extends EventEmitter {
 
   versionId(args) {
     return (args && args.versionId) || this.settings.get().versionId;
+  }
+
+  /** 외부 단추 하나 실행 (열쇠 확인은 서버가 한다) */
+  trigger(action, q = {}) {
+    const C = (n, a) => { const r = this.command(n, a || {}); if (!r.ok) throw new Error(r.error); return r.result; };
+    const L = this.presentation.live;
+    switch (action) {
+      case 'next': return C('nextSlide');
+      case 'prev': return C('previousSlide');
+      case 'send': return C('sendLive');
+      case 'hide': return C('toggleLive');
+      case 'logo': return C('toggleLogoScreen');
+      case 'bg': return C('toggleBackground');
+      case 'overlays': return C('toggleOverlaysOff');
+      case 'clear-all': return C('clearAll');
+      case 'cue-next': case 'cue-prev': {
+        if (!L || !L.passage || !L.passage.cueId || L.passage.cueIndex < 0) throw new Error('송출 중인 큐시트 순서가 없습니다.');
+        this.emit('cue-next', { dir: action === 'cue-next' ? 1 : -1, version: this.presentation.version, cueId: L.passage.cueId, index: L.passage.cueIndex });
+        return {};
+      }
+      case 'timer': return C('stageTimer', { action: 'start', minutes: Number(q.min) || 30 });
+      case 'timer-pause': return C('stageTimer', { action: this.stage.timer.running ? 'pause' : 'resume' });
+      case 'timer-reset': return C('stageTimer', { action: 'reset' });
+      case 'message': return C('stageMessage', { text: String(q.text || '').slice(0, 300) });
+      case 'draw-clear': return C('drawClear');
+      default: throw new Error('알 수 없는 동작: ' + action);
+    }
   }
 
   // ---------------- 자동 넘김 (슬라이드쇼 · 순서의 '자동 넘김') ----------------
@@ -335,6 +371,16 @@ WorshipCueCore.prototype.commands = {
   },
   nextSlide() { return this.presentation.move(1); },
   previousSlide() { return this.presentation.move(-1); },
+  // ---- 스트림덱 · Companion · 외부 단추 (GET /api/trigger/<동작>?key=…) ----
+  triggerInfo() {
+    if (!this.settings.get().triggerKey) this.commands.newTriggerKey.call(this);
+    return { key: this.settings.get().triggerKey, actions: TRIGGERS };
+  },
+  newTriggerKey() {
+    const key = require('crypto').randomBytes(9).toString('base64url');
+    this.settings.update(d => { d.triggerKey = key; });
+    return { key, actions: TRIGGERS };
+  },
   gotoSlide(a) { return this.presentation.gotoSlide(a.index); },
   extendLive(a) { return this.presentation.extendLive(a); },
   clearLive() { return this.presentation.clear(); },
