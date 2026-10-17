@@ -72,7 +72,7 @@ if (!app.requestSingleInstanceLock()) {
       outputWin = new BrowserWindow({
         x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: d.bounds.height,
         frame: false, show: false, skipTaskbar: true, resizable: false, movable: false, minimizable: false,
-        fullscreenable: true, backgroundColor: '#000000', title: 'WorshipCue 출력', focusable: false,
+        fullscreenable: true, backgroundColor: '#000000', title: 'WorshipCue 출력', // 클릭하면 선택됨 (Esc 로 끄기). 켤 때는 showInactive 라 조작 화면 초점을 뺏지 않는다
         webPreferences: { backgroundThrottling: false, contextIsolation: true, sandbox: true },
       });
       outputWin.setMenu(null);
@@ -82,11 +82,36 @@ if (!app.requestSingleInstanceLock()) {
         core.logger.error('출력 창 렌더러가 종료되어 다시 불러옵니다.');
         setTimeout(() => { if (outputWin && !outputWin.isDestroyed()) outputWin.reload(); }, 500);
       });
+      outputWin.webContents.on('before-input-event', onOutputKey);
       outputWin.once('ready-to-show', () => placeOutput(d));
     } else {
       placeOutput(d);
     }
     core.emit('outputs');
+  }
+
+  /**
+   * 보조 화면 창을 클릭해 선택한 상태의 키: Esc = 보조 화면 끄기,
+   * 송출 키(이전·다음·송출·글자 숨김 · 보조 화면 켜기/끄기)는 조작 화면과 똑같이
+   */
+  function onOutputKey(ev, input) {
+    if (input.type !== 'keyDown') return;
+    const mods = [input.control && 'Ctrl', input.alt && 'Alt', input.shift && 'Shift', input.meta && 'Meta'].filter(Boolean);
+    let k = input.code || '';
+    if (!k || /^(Control|Shift|Alt|Meta)(Left|Right)$/.test(k)) return;
+    if (k.startsWith('Key')) k = k.slice(3); else if (k.startsWith('Digit')) k = k.slice(5); else if (k === 'NumpadEnter') k = 'Enter';
+    const combo = [...mods, k].join('+');
+    ev.preventDefault();
+    if (combo === 'Escape') {
+      setOutput({ enabled: false });
+      if (controlWin && !controlWin.isDestroyed()) controlWin.focus();
+      return;
+    }
+    if (input.isAutoRepeat && !['prevSlide', 'nextSlide'].some(a => core.settings.get().shortcuts[a] === combo)) return;
+    const sc = core.settings.get().shortcuts;
+    const action = Object.keys(sc).find(a => sc[a] === combo);
+    if (action === 'toggleOutputWindow') { setOutput({ enabled: false }); return; }
+    if (action && action in GLOBAL_ACTIONS) runGlobal(action);
   }
 
   function placeOutput(d) {

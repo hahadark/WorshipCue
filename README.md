@@ -332,7 +332,7 @@ BibleCast 와 **동시에 실행할 수 있도록** 데이터 폴더(`%APPDATA%\
 | Ctrl+Shift+E | 편집칸 보이기·숨기기 |
 | Ctrl+Alt+1~9 | 작업공간 바꾸기 |
 | Ctrl+Shift+= / Ctrl+Shift+- | 조작 화면 글자 크게 / 작게 |
-| Ctrl+Shift+F | 보조 화면(예배당) 켜기·끄기 |
+| Ctrl+Shift+F | 보조 화면(예배당) 켜기·끄기 (보조 화면을 클릭해 선택했으면 Esc 로도 끔) |
 | Ctrl+H | 송출 기록 |
 | Esc | 보조 화면 끄기 (열린 창이 있으면 창 닫기) |
 
