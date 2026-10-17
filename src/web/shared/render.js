@@ -164,6 +164,7 @@
       const pos = `position:absolute;left:${x.x * t.width / 100 - rect.left}px;top:${x.y * t.height / 100 - rect.top}px;width:${x.w * t.width / 100}px;height:${x.h * t.height / 100}px;opacity:${x.opacity ?? 1};border-radius:${x.type === 'shape' && x.ellipse ? '50%' : (x.radius || 0) + 'px'};overflow:hidden;box-sizing:border-box;`;
       if (x.type === 'image') return x.src ? (isVideo(x.src) ? videoTag(x.src, 'bc-eitem', pos, x.fit || 'cover') : `<img class="bc-eitem" alt="" src="${safeUrl(x.src)}" style="${pos}object-fit:${x.fit || 'cover'}">`) : '';
       if (x.type === 'shape') return `<div class="bc-eitem" style="${pos}background:${esc(x.fill || '#1d3557')}"></div>`;
+      if (x.type === 'camera') return camTag(x.deviceId, x.fit, pos + 'background:#000', 'bc-eitem');
       const just = { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[x.valign] || 'center';
       const shadow = t.shadow && t.shadow.enabled && !x.fill ? `text-shadow:${t.shadow.x}px ${t.shadow.y}px ${t.shadow.blur}px ${t.shadow.color};` : '';
       return `<div class="bc-eitem bc-etext" style="${pos}display:flex;flex-direction:column;justify-content:${just};padding:${(x.padding ?? 12) * k}px;${x.fill ? `background:${esc(x.fill)};` : ''}font-family:${t.font.family};font-size:${(x.size || 60) * k}px;color:${esc(x.color || '#fff')};font-weight:${x.bold ? 700 : 400};${x.italic ? 'font-style:italic;' : ''}line-height:1.3;text-align:${x.align || 'center'};white-space:pre-wrap;${shadow}">${esc(x.text || '')}</div>`;
@@ -181,8 +182,15 @@
       + `<div class="bc-ov" data-ov="countdown" data-o='${esc(JSON.stringify({ target: c.target, doneText: c.doneText || '' }))}' style="font-size:${78 * s}px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1">${esc(countdownText({ target: c.target }))}</div></div>`;
   }
 
+  /** 카메라 영상 자리 (만든 뒤 attachCameras 로 연결) */
+  function camTag(deviceId, fit, style, cls = '') {
+    return `<video class="bc-camv ${cls}" data-cam="${esc(deviceId || '')}" muted autoplay playsinline style="object-fit:${fit === 'contain' ? 'contain' : 'cover'};${style}"></video>`;
+  }
+  function attachCameras(root) { root.querySelectorAll('video[data-cam]').forEach(v => attachCamera(v, v.dataset.cam)); }
+
   function buildContent(slide, t, versionName, opts = {}) {
     const area = buildContentInner(slide, t, versionName, opts);
+    attachCameras(area);
     const cd = countdownHtml(slide, t);
     if (cd) {
       // 화면 기준 위치로 (본문 영역 안쪽 좌표 → 화면 전체)
@@ -212,6 +220,13 @@
       area.innerHTML = `<div class="bc-block bc-imgslide"><video class="bc-play" src="${safeUrl(slide.image || '')}" playsinline preload="auto" muted style="width:100%;height:100%;object-fit:contain;background:#000;display:block"></video></div>`;
       return area;
     }
+    // 카메라 슬라이드: 화면 가득
+    if (kind === 'camera') {
+      const c = slide.camera || {};
+      area.style.cssText = `left:0;top:0;width:${t.width}px;height:${t.height}px;`;
+      area.innerHTML = `<div class="bc-block bc-imgslide" style="background:#000">${camTag(c.deviceId, c.fit, 'position:absolute;inset:0;width:100%;height:100%')}</div>`;
+      return area;
+    }
     // 이미지·빈 화면: 화면 전체를 쓴다
     if (kind === 'image' || kind === 'blank' || kind === 'score') {
       area.style.cssText = `left:0;top:0;width:${t.width}px;height:${t.height}px;`;
@@ -238,7 +253,9 @@
     }
     // 슬라이드 자체 배경 (예: 교독문의 원래 배경): 화면 전체에 깔고 그 위에 글자
     const bgVid = slide.bg && !asLyrics && isVideo(slide.bg);
-    const slideBg = bgVid ? (opts.videoBgLayer ? '' : videoTag(slide.bg, 'bc-slidebg', `left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:#000`))
+    const bgCam = slide.bg && !asLyrics && String(slide.bg).startsWith('camera:');
+    const slideBg = bgCam ? camTag(String(slide.bg).slice(7), 'cover', `position:absolute;left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:#000`, 'bc-slidebg')
+      : bgVid ? (opts.videoBgLayer ? '' : videoTag(slide.bg, 'bc-slidebg', `left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:#000`))
       : slide.bg && !asLyrics ? `<div class="bc-slidebg" style="left:${-rect.left}px;top:${-rect.top}px;width:${t.width}px;height:${t.height}px;background:${slide.bg.startsWith('#') ? esc(slide.bg) : `#000 url('${safeUrl(slide.bg)}') center/cover no-repeat`}"></div>` : '';
     const justify = { top: 'flex-start', middle: 'center', bottom: 'flex-end' }[t.valign] || 'center';
     area.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;justify-content:${justify};`;
@@ -360,6 +377,19 @@
       if (!v.isConnected || v.closest('.bc-measure')) return;
       cameraStream(deviceId).then(s => { v.srcObject = s; v.play().catch(() => {}); }).catch(() => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'bc-cam-off', textContent: '📷 카메라 없음' })); });
     }, 0);
+  }
+
+  /** 배경 미디어 층: 카메라 · 그림 · 영상 (템플릿 배경 바로 위, 글자 아래) */
+  function buildMediaLayer(m) {
+    const el = document.createElement('div');
+    el.className = 'bc-medialayer';
+    el.dataset.key = JSON.stringify([m.type, m.deviceId, m.url, m.fit]);
+    const st = 'position:absolute;inset:0;width:100%;height:100%';
+    el.innerHTML = m.type === 'camera' ? camTag(m.deviceId, m.fit, st)
+      : m.type === 'video' ? videoTag(m.url, 'bc-mvid', st, m.fit)
+        : `<img alt="" src="${safeUrl(m.url)}" style="${st};object-fit:${m.fit === 'contain' ? 'contain' : 'cover'}">`;
+    attachCameras(el);
+    return el;
   }
 
   /** 컨테이너 크기에 맞춰 stage 를 축소/확대 */
@@ -504,7 +534,8 @@
       result = fit(area, t);
     }
     if (opts.overlays && opts.overlays.length) stage.appendChild(buildOverlays(opts.overlays, t));
-    if (opts.layers && opts.layers.hideBg) { stage.firstChild.style.opacity = '0'; stage.querySelectorAll('.bc-slidebg').forEach(x => { x.style.opacity = '0'; }); }
+    if (opts.layers && opts.layers.media) stage.insertBefore(buildMediaLayer(opts.layers.media), stage.children[1] || null);
+    if (opts.layers && opts.layers.hideBg) { stage.firstChild.style.opacity = '0'; stage.querySelectorAll('.bc-slidebg, .bc-medialayer').forEach(x => { x.style.opacity = '0'; }); }
     if (opts.layers && opts.layers.logo) stage.appendChild(buildLogoScreen(opts.layers.logoImage));
     scaleStage(stage, container, t);
     // 이전 화면은 새 화면의 그림이 준비될 때까지 뒤에 둔다
@@ -544,5 +575,5 @@
     svg.innerHTML = spot + lines;
   }
 
-  global.BCRender = { cameraStream, paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { buildMediaLayer, attachCameras, cameraStream, paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

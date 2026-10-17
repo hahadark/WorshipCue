@@ -150,7 +150,7 @@
       : S.key === '*' ? '공통: 여기서 바꾼 위치·꾸미기는 모든 슬라이드에 적용됩니다 (슬라이드에서 따로 바꾼 것이 우선)'
         : '끌어서 옮기기 · 모서리로 크기 · 더블클릭: 글 고치기 · Delete: 지우기 · 방향키: 미세 이동 · Ctrl+Z: 되돌리기';
   }
-  const NAMES = { text: '글상자', image: '그림', shape: '도형' };
+  const NAMES = { text: '글상자', image: '그림', shape: '도형', camera: '카메라' };
 
   // ---------------- 오른쪽 속성 ----------------
   const field = (label, html) => `<label>${label}</label><div class="se-row">${html}</div>`;
@@ -203,6 +203,9 @@
             + field('가로 정렬', seg('item.align', x.align, [['left', '왼쪽'], ['center', '가운데'], ['right', '오른쪽']]))
             + field('세로 정렬', seg('item.valign', x.valign, [['top', '위'], ['middle', '가운데'], ['bottom', '아래']]))
             + field('바탕 색', `<label class="tc-toggle"><input type="checkbox" data-chk="item.fillOn" ${x.fill ? 'checked' : ''}> 색 칠하기</label>${x.fill ? colIn('item.fill', x.fill) : ''}`);
+        } else if (x.type === 'camera') {
+          h += field('카메라', `📷 ${esc(x.label || '')}`)
+            + field('맞춤', seg('item.fit', x.fit, [['cover', '꽉 채우기'], ['contain', '전체 보이기']]));
         } else if (x.type === 'image') {
           h += field('그림', `<button type="button" data-a="imgpick">🖼 ${x.src ? '바꾸기' : '고르기'}…</button>`)
             + field('맞춤', seg('item.fit', x.fit, [['cover', '꽉 채우기'], ['contain', '전체 보이기']]));
@@ -417,7 +420,7 @@
   function init() {
     document.body.insertAdjacentHTML('beforeend', `<div id="se" class="se" tabindex="-1" hidden>
       <div class="se-top"><b id="seTitle">슬라이드 편집</b>
-        <span class="se-tools"><button data-add="text" title="글상자 덧붙이기">＋ 글상자</button><button data-add="image" title="그림·영상 덧붙이기">＋ 그림</button><button data-add="shape" title="색 도형 (띠·상자) 덧붙이기">＋ 도형</button>
+        <span class="se-tools"><button data-add="text" title="글상자 덧붙이기">＋ 글상자</button><button data-add="image" title="그림·영상 덧붙이기">＋ 그림</button><button data-add="shape" title="색 도형 (띠·상자) 덧붙이기">＋ 도형</button><button data-add="camera" title="카메라 화면 상자 (예: 설교자 화면 + 자막)">＋ 카메라</button>
         <span class="sep"></span><button data-a="undo" title="되돌리기 (Ctrl+Z)">↶</button><button data-a="redo" title="다시 하기 (Ctrl+Y)">↷</button>
         <span class="sep"></span><span class="view-tabs" id="seOut" title="어느 출력 모양으로 보며 편집할지"><button data-out="main" class="on">예배당</button><button data-out="overlay">OBS 자막</button></span></span>
         <span class="grow"></span><button data-a="close" class="primary" title="저장하고 닫기 (Esc)">완료</button></div>
@@ -432,6 +435,7 @@
       if (!b) return;
       if (b.dataset.add) {
         if (b.dataset.add === 'image') { if (window.BCLib) window.BCLib.pickImage(url => addItem('image', { src: url })); }
+        else if (b.dataset.add === 'camera') { if (window.BCCue) window.BCCue.pickCam(c => addItem('camera', { deviceId: c.deviceId, label: c.label, x: 55, y: 8, w: 40, h: 40, fit: 'cover' })); }
         else addItem(b.dataset.add);
         return;
       }

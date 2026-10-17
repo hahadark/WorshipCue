@@ -896,6 +896,34 @@ test('스트림덱·외부 단추: 열쇠가 맞을 때만 GET 으로 동작', a
   } finally { await srv.close(); }
 });
 
+test('카메라 (FreeShow 방식): 송출 배경 층 · 카메라 순서 · 슬라이드 · 편집기 상자', () => {
+  const core = newCore('camera');
+  // 송출 배경 층: 예배당 화면에만, 배경 숨김을 풀고, null 이면 끔
+  core.command('toggleBackground', { on: true });
+  const r = core.command('setBackgroundMedia', { media: { type: 'camera', deviceId: 'cam-1', label: '앞 카메라' } });
+  assert.equal(r.ok, true);
+  assert.equal(r.result.media.deviceId, 'cam-1');
+  assert.equal(r.result.hideBg, false);
+  assert.equal(core.outputPayload('main').layers.media.label, '앞 카메라');
+  assert.equal(core.outputPayload('overlay').layers.media, null); // OBS 자막(투명)에는 없음
+  assert.equal(core.command('setBackgroundMedia', { media: { type: 'flash' } }).ok, false);
+  core.command('setBackgroundMedia', { media: null });
+  assert.equal(core.outputPayload('main').layers.media, null);
+  // 카메라 순서
+  const cue = core.command('saveCue', { cue: { name: '카메라', items: [{ type: 'camera', title: '📷 앞', deviceId: 'cam-1', label: '앞 카메라', fit: 'weird' }] } }).result;
+  const it = core.command('getCue', { id: cue.id }).result.items[0];
+  assert.deepEqual([it.type, it.deviceId, it.label, it.fit], ['camera', 'cam-1', '앞 카메라', 'cover']);
+  // 카메라 슬라이드 송출
+  const s = core.command('sendLive', { passage: { title: '카메라' }, slides: [{ kind: 'camera', camera: { deviceId: 'cam-1', label: '앞', fit: 'contain' }, parts: [] }] });
+  assert.equal(s.ok, true);
+  assert.deepEqual(core.presentation.live.slides[0].camera, { deviceId: 'cam-1', label: '앞', fit: 'contain' });
+  // 슬라이드 편집기 카메라 상자
+  const { normalizeEdits } = require('../src/core/slideedit');
+  const e = normalizeEdits({ '0': { items: [{ type: 'camera', deviceId: 'cam-2', label: '설교자', x: 60, y: 5, w: 35, h: 35 }] } });
+  assert.equal(e['0'].items[0].type, 'camera');
+  assert.equal(e['0'].items[0].deviceId, 'cam-2');
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

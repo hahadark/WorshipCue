@@ -53,7 +53,7 @@ class WorshipCueCore extends EventEmitter {
     this.library = new Library(this);
     this.stage = { timer: { running: false, endAt: 0, remaining: 0, duration: 0 }, message: '' };
     // 화면 지우기 층: 배경 숨김 · 로고 화면 · 오버레이 끄기 전 켜져 있던 것
-    this.layers = { hideBg: false, logo: false, savedOverlays: [] };
+    this.layers = { hideBg: false, logo: false, savedOverlays: [], media: null }; // media = 배경 미디어 (카메라·그림·영상, 슬라이드와 따로)
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
@@ -138,7 +138,9 @@ class WorshipCueCore extends EventEmitter {
     const s = this.settings.get();
     const tpl = this.templateFor(output || 'main');
     const logo = s.logoScreenImage || (tpl.logo && tpl.logo.image) || '/shared/assets/sa-shield.png';
-    return { hideBg: this.layers.hideBg, logo: this.layers.logo, logoImage: logo, overlaysOff: this.layers.savedOverlays.length > 0 };
+    // 배경 미디어는 예배당 화면용 (OBS 자막은 투명이라 넣지 않음)
+    const media = this.layers.media && (!output || output === 'main') ? this.layers.media : null;
+    return { hideBg: this.layers.hideBg, logo: this.layers.logo, logoImage: logo, overlaysOff: this.layers.savedOverlays.length > 0, media };
   }
 
   // ---------------- AI 주보 → 큐시트 ----------------
@@ -699,6 +701,19 @@ WorshipCueCore.prototype.commands = {
     return this.remote ? this.remote.status() : { enabled: false, running: false, urls: [] };
   },
   // ---- 화면 지우기 ----
+  /** 배경 미디어 송출 (FreeShow 방식: 라이브러리에서 고르면 바로 배경 층에) — null 이면 끄기 */
+  setBackgroundMedia(a) {
+    const m = a && a.media;
+    if (!m) this.layers.media = null;
+    else {
+      const type = ['camera', 'image', 'video'].includes(m.type) ? m.type : null;
+      if (!type) throw new Error('알 수 없는 배경 종류입니다.');
+      this.layers.media = { type, deviceId: String(m.deviceId || '').slice(0, 200), url: String(m.url || '').slice(0, 1500), label: String(m.label || '').slice(0, 100), fit: m.fit === 'contain' ? 'contain' : 'cover' };
+      this.layers.hideBg = false; // 배경을 숨겨 두었으면 다시 보이게
+    }
+    this.emit('live');
+    return this.layersPayload();
+  },
   toggleBackground(a) { this.layers.hideBg = a && typeof a.on === 'boolean' ? a.on : !this.layers.hideBg; this.emit('live'); return this.layersPayload(); },
   toggleLogoScreen(a) { this.layers.logo = a && typeof a.on === 'boolean' ? a.on : !this.layers.logo; this.emit('live'); return this.layersPayload(); },
   /** 오버레이 모두 끄기 ↔ 다시 켜기 (끄기 전에 켜져 있던 것만) */

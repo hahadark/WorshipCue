@@ -744,3 +744,9 @@ button.on { border-color: var(--accent); }
 /* 메뉴 작은 제목 · 긴 메뉴는 화면 안에서 스크롤 */
 .mb-head { padding: 4px 10px 2px; font-size: 11px; font-weight: 700; color: var(--hl); letter-spacing: .3px; }
 .mb-drop { max-height: calc(100vh - 40px); overflow-y: auto; }
+
+/* 📷 카메라 탭 */
+.cam-cell video, .cam-cell .cam-err { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #000; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+.cam-cell.live { border-color: var(--live); box-shadow: 0 0 0 2px var(--live); }
+.live-dot { color: var(--danger-text); }
+.lib-cell-act button.primary { font-weight: 700; }

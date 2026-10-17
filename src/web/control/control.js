@@ -488,6 +488,7 @@
     }
     R.renderInto($('#lvScreen'), live.slide, tpl, { checker: true, hidden: !live.visible, versionName: live.passage.versionName, overlays: overlaysFor(app.view.lv), layers: app.state.layers });
     app.lvTpl = tpl;
+    if (window.BCLib && window.BCLib.onLayers) window.BCLib.onLayers();
     if (window.BCDraw) window.BCDraw.paintLive(); // 화면에 그린 것
     $('#lvInfo').textContent = [live.passage.cueIndex >= 0 && live.slide.kind !== 'bible' ? live.passage.itemTitle || live.slide.ref : live.slide.ref, live.passage.versionName].filter(Boolean).join(' · ');
     $('#lvCount').textContent = `${live.index + 1} / ${live.count}`;
@@ -1346,5 +1347,8 @@
     if (combo === 'F5' || combo === 'Ctrl+R' || combo === 'Ctrl+Shift+R') e.preventDefault();
   }, true);
 
-  connect();
+  // 코어 연결은 모든 스크립트(독·메뉴·편집기…)가 다 읽힌 뒤에.
+  // 먼저 연결하면 첫 상태가 dock.js 보다 먼저 와서 화면 배치를 못 만들고 빈 화면이 될 수 있다
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', connect, { once: true });
+  else connect();
 })();

@@ -12,8 +12,8 @@
   const $ = s => document.querySelector(s);
   const cmd = app.cmd;
 
-  const ICON = { slideshow: '🎞', video: '🎬', audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
-  const TYPE = { slideshow: '슬라이드쇼', video: '영상', audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
+  const ICON = { camera: '📷', slideshow: '🎞', video: '🎬', audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
+  const TYPE = { camera: '카메라', slideshow: '슬라이드쇼', video: '영상', audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
   let editorOn = true;
   try { editorOn = localStorage.getItem('wc-cue-editor') !== '0'; } catch { /* 무시 */ }
   const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map(), songs: new Map(), songTimer: null };
@@ -243,6 +243,7 @@
     else if (it.type === 'song') slides = SL.buildText({ title: it.title, showTitle: it.showTitle, chunks: SL.arrange(SL.lyricsChunks(it.lyrics), songOrder(it)).chunks }, opts);
     else if (it.type === 'text') slides = SL.buildText({ title: it.title, showTitle: true, chunks: SL.textChunks(it.body) }, opts);
     else if (it.type === 'image' && it.image) slides = [{ kind: 'image', image: it.image, ref: it.title, label: '이미지', parts: [] }];
+    else if (it.type === 'camera') slides = [{ kind: 'camera', camera: { deviceId: it.deviceId || '', label: it.label || '', fit: it.fit || 'cover' }, ref: it.title, label: '카메라', parts: [] }];
     else if (it.type === 'slideshow') {
       // 그림들 + 광고 글 (--- 로 나눔). 하나도 없으면 배경만 (카운트다운만 띄울 때)
       slides = (it.images || []).map((img, k) => ({ kind: 'image', image: img, ref: it.title, label: `그림 ${k + 1}`, parts: [] }));
@@ -307,6 +308,20 @@
       if (r.ok) st.songs.set(it.songId, r.result);
       if (st.songPending === it.songId) st.songPending = null;
     }, 600);
+  }
+
+  /** 카메라 고르기 (목록 + 미리보기) */
+  async function pickCam(done) {
+    let devs = [];
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      s.getTracks().forEach(x => x.stop());
+      devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    } catch (e) { return app.showMsg('카메라를 찾지 못했습니다: ' + e.message, 'error', 4000); }
+    if (!devs.length) return app.showMsg('연결된 카메라(웹캠·캡처보드)가 없습니다.', 'error', 3000);
+    app.openModal('📷 카메라 고르기', `<div class="cam-pick"><div class="cam-list">${devs.map((d, k) => `<button type="button" class="cam-item" data-k="${k}"><video muted autoplay playsinline data-cam="${esc(d.deviceId)}"></video><span>${esc(d.label || '카메라 ' + (k + 1))}</span></button>`).join('')}</div></div>`);
+    document.querySelectorAll('.cam-item video').forEach(v => window.BCRender.cameraStream(v.dataset.cam).then(s => { v.srcObject = s; }).catch(() => {}));
+    document.querySelectorAll('.cam-item').forEach(b => b.onclick = () => { const d = devs[+b.dataset.k]; app.closeModal(); done({ deviceId: d.deviceId, label: d.label || '카메라' }); });
   }
 
   // ---------------- 송출할 때 자동으로 (⑤) ----------------
@@ -467,6 +482,7 @@
       text: `<label>내용</label><textarea data-k="body" rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="note">'---' 줄 = 다음 슬라이드</div>`,
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">`,
       image: `<label>이미지</label><div class="ce-row">${it.image ? thumbTag(it.image) : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,
+      camera: `<label>카메라</label><div class="ce-row"><span>📷 ${esc(it.label || '(고르세요)')}</span><button data-act="campick">바꾸기…</button><select data-k="fit"><option value="cover" ${it.fit !== 'contain' ? 'selected' : ''}>화면 채우기</option><option value="contain" ${it.fit === 'contain' ? 'selected' : ''}>전체 보이기</option></select><span class="note">라이브러리 '📷 카메라' 탭에서 고를 수도 있습니다</span></div>`,
       slideshow: `<label>그림</label><div class="ce-col"><div class="ss-list">${(it.images || []).map((u, k) => `<span class="ss-img" title="${esc(fileName(u))}">${thumbTag(u)}<span class="ss-act"><button data-ssleft="${k}" title="앞으로">◀</button><button data-ssdel="${k}" title="빼기">✕</button></span></span>`).join('') || '<span class="muted">아직 그림이 없습니다</span>'}</div>
           <div class="ce-row"><button data-act="ssadd">🖼 그림 추가…</button><span class="note">탐색기에서 그림 여러 장을 이 칸에 끌어다 놓아도 됩니다 (광고 PPT 는 그림으로 저장해서)</span></div></div>
         <label>광고 글</label><textarea data-k="body" rows="3" placeholder="그림 뒤에 이어서 나갈 글 (--- 줄로 다음 장) · 비워도 됩니다">${esc(it.body || '')}</textarea>
@@ -494,7 +510,7 @@
   }
 
   /** 편집칸 썸네일 (영상이면 첫 장면) */
-  const thumbTag = url => (window.BCRender.isVideo(url) ? `<video class="ce-thumb" muted preload="metadata" src="${esc(url)}#t=1"></video>` : `<img class="ce-thumb" src="${esc(url)}" alt="">`);
+  const thumbTag = url => (String(url).startsWith('camera:') ? '<span class="ce-thumb cam-th">📷 카메라</span>' : window.BCRender.isVideo(url) ? `<video class="ce-thumb" muted preload="metadata" src="${esc(url)}#t=1"></video>` : `<img class="ce-thumb" src="${esc(url)}" alt="">`);
   function showOrderMsg(it) {
     const m = $('#ceOrderMsg');
     if (!m) return;
@@ -582,6 +598,7 @@
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;
       case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); forceEditor(); break; }
       case 'del': removeItem(i); break;
+      case 'campick': pickCam(c => { it.deviceId = c.deviceId; it.label = c.label; if (!it.title || /^📷/.test(it.title) || it.title === TYPE.camera) it.title = '📷 ' + c.label; save(); forceEditor(); render(); previewItem(i, { keepIndex: true }); }); break;
       case 'ssadd': if (window.BCLib) window.BCLib.pickImage(url => { it.images = [...(it.images || []), url]; save(); forceEditor(); previewItem(i, { keepIndex: true }); }); break;
       case 'musicpick': if (window.BCLib) window.BCLib.pickAudio(f => { it.music = f.url; save(); forceEditor(); }); break;
       case 'musicclear': it.music = ''; save(); forceEditor(); break;
@@ -760,6 +777,7 @@
     if (!st.cue) return;
     const it = { id: newId(), type, title: extra.title || TYPE[type], note: '', ...extra };
     if (type === 'blank') it.mode = 'background';
+    if (type === 'camera' && !it.deviceId) { pickCam(c => { it.deviceId = c.deviceId; it.label = c.label; it.title = '📷 ' + c.label; save(); forceEditor(); render(); previewItem(at); }); }
     if (type === 'slideshow') Object.assign(it, { images: extra.images || [], body: extra.body || '', autoSec: 8, autoLoop: true, countdown: '', countdownLabel: '예배 시작까지', title: extra.title || '예배 전 화면' });
     const at = st.sel >= 0 ? st.sel + 1 : st.cue.items.length;
     st.cue.items.splice(at, 0, it);
@@ -997,6 +1015,7 @@
     openCue: async id => { await refreshList(); showSide('cue'); return openCue(id); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
     selected: () => (st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null),
     selIndex: () => st.sel,
+    pickCam: done => pickCam(done),
     /** 고른 순서만 바꾼다 (미리보기 없이) — 끌어다 놓은 파일을 그 다음 자리에 넣을 때 */
     selectQuiet: i => { if (st.cue && i >= 0 && i < st.cue.items.length) { st.sel = i; render(); } },
     item: i => (st.cue ? st.cue.items[i] : null),

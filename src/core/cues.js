@@ -10,8 +10,8 @@
 
 const { normalizeEdits } = require('./slideedit');
 
-const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn', 'audio', 'video', 'slideshow'];
-const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가', audio: '음악', video: '영상', slideshow: '슬라이드쇼' };
+const TYPES = ['bible', 'song', 'text', 'title', 'image', 'blank', 'hymn', 'audio', 'video', 'slideshow', 'camera'];
+const TYPE_NAMES = { bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면', hymn: '찬송가', audio: '음악', video: '영상', slideshow: '슬라이드쇼', camera: '카메라' };
 
 const str = (v, max = 20000) => String(v ?? '').slice(0, max);
 
@@ -31,6 +31,9 @@ function normalizeItem(x) {
     case 'title': it.subtitle = str(x.subtitle, 300); break;
     case 'image': it.image = str(x.image, 300); break;
     case 'blank': it.mode = x.mode === 'background' ? 'background' : 'black'; break;
+    case 'camera': // 카메라 화면 (웹캠·캡처보드) 가득
+      it.deviceId = str(x.deviceId, 200); it.label = str(x.label, 100); it.fit = x.fit === 'contain' ? 'contain' : 'cover';
+      break;
     case 'slideshow': // 예배 전 화면: 그림·광고 글을 자동으로 넘기며 반복 (+ 배경 음악 · 카운트다운)
       it.images = (Array.isArray(x.images) ? x.images : []).slice(0, 200).map(u => str(u, 1500)).filter(Boolean);
       it.body = str(x.body);

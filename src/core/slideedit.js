@@ -42,7 +42,7 @@ function style(s) {
 }
 
 function item(x, i) {
-  if (!x || !['text', 'image', 'shape'].includes(x.type)) return null;
+  if (!x || !['text', 'image', 'shape', 'camera'].includes(x.type)) return null;
   const r = rect(x) || { x: 10, y: 10, w: 30, h: 20 };
   const o = {
     id: /^[a-z0-9]{2,30}$/i.test(x.id || '') ? x.id : 'e' + i + Math.random().toString(36).slice(2, 7),
@@ -59,6 +59,8 @@ function item(x, i) {
     });
   } else if (x.type === 'image') {
     Object.assign(o, { src: str(x.src, 1500), fit: x.fit === 'contain' ? 'contain' : 'cover' });
+  } else if (x.type === 'camera') {
+    Object.assign(o, { deviceId: str(x.deviceId, 200), label: str(x.label, 100), fit: x.fit === 'contain' ? 'contain' : 'cover' });
   } else {
     Object.assign(o, { fill: color(x.fill) || '#1d3557', ellipse: !!x.ellipse });
   }

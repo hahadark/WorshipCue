@@ -11,7 +11,7 @@
   const cmd = (...a) => app.cmd(...a);
   const R = window.BCRender;
 
-  const TABS = [['songs', '찬양'], ['hymns', '찬송가·PPT'], ['images', '이미지·영상'], ['audio', '음악'], ['overlays', '오버레이'], ['templates', '템플릿']];
+  const TABS = [['songs', '찬양'], ['hymns', '찬송가·PPT'], ['images', '이미지·영상'], ['cameras', '📷 카메라'], ['audio', '음악'], ['overlays', '오버레이'], ['templates', '템플릿']];
   const st = { tab: 'songs', q: {}, rows: [], sel: 0, folder: { image: '', audio: '' } };
   let searchTimer = null;
 
@@ -32,7 +32,7 @@
   function show(tab) {
     st.tab = tab;
     root().querySelectorAll('.lib-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-    ({ songs: drawSongs, hymns: drawHymns, images: () => drawFiles('image'), audio: () => drawFiles('audio'), overlays: drawOverlays, templates: drawTemplates })[tab]();
+    ({ songs: drawSongs, hymns: drawHymns, cameras: drawCameras, images: () => drawFiles('image'), audio: () => drawFiles('audio'), overlays: drawOverlays, templates: drawTemplates })[tab]();
   }
 
   // ---------------- 공통: 검색줄·목록·끌기 ----------------
@@ -202,11 +202,12 @@
     if (st.tab !== (kind === 'audio' ? 'audio' : 'images')) return;
     if (kind === 'image') {
       const b = body(`<div class="lib-grid">${st.rows.map((f, k) => `<div class="lib-cell ${f.video ? 'is-video' : ''}" data-k="${k}" title="${esc(f.name)}">${thumb(f)}<span>${f.video ? '🎞 ' : ''}${esc(f.name)}</span>
-        <div class="lib-cell-act"><button data-bg="${k}" title="고른 순서의 배경으로">배경</button><button data-tb="${k}" title="빠른 설정에서 고른 출력(예배당/OBS)의 템플릿 배경으로">전체 배경</button>${f.video ? '' : `<button data-lg="${k}" title="이 그림을 로고 오버레이로">로고</button>`}</div></div>`).join('') || '<div class="empty">찾는 그림·영상이 없습니다.</div>'}</div>`);
+        <div class="lib-cell-act"><button data-live="${k}" class="primary" title="지금 송출 화면의 배경으로 바로 (슬라이드와 따로, 다른 순서로 넘어가도 그대로)">▶ 송출 배경</button><button data-bg="${k}" title="고른 순서의 배경으로">배경</button><button data-tb="${k}" title="빠른 설정에서 고른 출력(예배당/OBS)의 템플릿 배경으로">전체 배경</button>${f.video ? '' : `<button data-lg="${k}" title="이 그림을 로고 오버레이로">로고</button>`}</div></div>`).join('') || '<div class="empty">찾는 그림·영상이 없습니다.</div>'}</div>`);
       const item = k => (st.rows[k].video
         ? { type: 'video', extra: { file: st.rows[k].url, title: st.rows[k].name, sound: true, volume: 1, loop: false, endAction: 'hold' } }
         : { type: 'image', extra: { image: st.rows[k].url, title: st.rows[k].name } });
       b.querySelectorAll('[data-tb]').forEach(x => x.onclick = e => { e.stopPropagation(); setTemplateBg(st.rows[+x.dataset.tb]); });
+      b.querySelectorAll('[data-live]').forEach(x => x.onclick = e => { e.stopPropagation(); const f = st.rows[+x.dataset.live]; liveMedia({ type: f.video ? 'video' : 'image', url: f.url, label: f.name }); });
       bindRows(b, k => { const it = item(k); addToCue(it.type, it.extra, st.rows[k].name); }, item);
       b.querySelectorAll('[data-bg]').forEach(x => x.onclick = e => { e.stopPropagation(); setItemBg(st.rows[+x.dataset.bg].url); });
       b.querySelectorAll('[data-lg]').forEach(x => x.onclick = e => { e.stopPropagation(); editOverlay({ type: 'logo', image: st.rows[+x.dataset.lg].url, name: st.rows[+x.dataset.lg].name, size: 140 }); });
@@ -217,6 +218,56 @@
       b.querySelectorAll('[data-play]').forEach(x => x.onclick = e => { e.stopPropagation(); const k = +x.dataset.play; audio.play({ url: st.rows[k].url, title: st.rows[k].name, list: st.rows, index: k }); });
     }
   }
+  // ---------------- 📷 카메라 (웹캠 · 캡처보드 · OBS 가상 카메라) ----------------
+  /** 송출 배경 층에 바로 (같은 것을 다시 누르면 끄기) */
+  async function liveMedia(m) {
+    const cur = app.state && app.state.layers && app.state.layers.media;
+    const same = cur && m && cur.type === m.type && (cur.deviceId || '') === (m.deviceId || '') && (cur.url || '') === (m.url || '');
+    const r = await cmd('setBackgroundMedia', { media: same ? null : m });
+    if (!r.ok) return app.showMsg(r.error, 'error');
+    app.showMsg(same || !m ? '송출 배경을 껐습니다.' : `송출 배경: ${m.label || (m.type === 'camera' ? '카메라' : '미디어')}`, 'ok', 1800);
+    if (st.tab === 'cameras') drawCameras();
+  }
+  async function drawCameras() {
+    bar(`<span class="muted" style="flex:1">웹캠·캡처보드를 누르면 송출 화면의 배경으로 바로 나갑니다 (슬라이드는 그 위에)</span><button data-refresh title="카메라를 새로 꽂았을 때">새로 찾기</button><button data-off class="danger" title="송출 배경 끄기">배경 끄기</button>`);
+    root().querySelector('[data-refresh]').onclick = () => drawCameras();
+    root().querySelector('[data-off]').onclick = () => liveMedia(null);
+    let devs = [];
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); // 이름을 보려면 한 번 허락이 필요
+      s.getTracks().forEach(x => x.stop());
+      devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    } catch (e) {
+      if (st.tab === 'cameras') body(`<div class="empty">카메라를 찾지 못했습니다.<br><span class="muted">${esc(e.message)} — 웹캠·캡처보드를 꽂고 '새로 찾기' 를 누르세요.</span></div>`);
+      return;
+    }
+    if (st.tab !== 'cameras') return;
+    st.cams = devs;
+    const cur = app.state && app.state.layers && app.state.layers.media;
+    const on = d => cur && cur.type === 'camera' && cur.deviceId === d.deviceId;
+    const b = body(devs.length ? `<div class="lib-grid">${devs.map((d, k) => `<div class="lib-cell cam-cell ${on(d) ? 'live' : ''}" data-k="${k}" title="${esc(d.label)}"><video muted autoplay playsinline data-cam="${esc(d.deviceId)}"></video><span>📷 ${esc(d.label || '카메라 ' + (k + 1))}${on(d) ? ' · <b class="live-dot">LIVE 배경</b>' : ''}</span>
+        <div class="lib-cell-act"><button data-live="${k}" class="primary">${on(d) ? '■ 배경 끄기' : '▶ 송출 배경'}</button><button data-add="${k}" title="카메라 화면 가득 나오는 순서로 큐시트에 넣기">순서로</button><button data-bg="${k}" title="고른 순서(찬양·공지 등)의 배경으로">순서 배경</button><button data-tb="${k}" title="예배당 화면 템플릿 배경으로 (모든 화면)">전체 배경</button></div></div>`).join('')}</div>`
+      : '<div class="empty">연결된 카메라가 없습니다.<br><span class="muted">USB 웹캠을 꽂거나, HDMI 카메라는 캡처보드로 연결하세요. OBS 의 \'가상 카메라 시작\' 도 여기 나옵니다.</span></div>');
+    b.querySelectorAll('video[data-cam]').forEach(v => window.BCRender.cameraStream(v.dataset.cam).then(s => { v.srcObject = s; }).catch(() => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'cam-err', textContent: '열 수 없음 (다른 프로그램이 쓰는 중?)' })); }));
+    const dev = k => devs[+k];
+    const camItem = k => ({ type: 'camera', extra: { deviceId: dev(k).deviceId, label: dev(k).label, title: '📷 ' + (dev(k).label || '카메라') } });
+    bindRows(b, k => liveMedia({ type: 'camera', deviceId: dev(k).deviceId, label: dev(k).label }), camItem);
+    b.querySelectorAll('[data-live]').forEach(x => x.onclick = e => { e.stopPropagation(); liveMedia({ type: 'camera', deviceId: dev(x.dataset.live).deviceId, label: dev(x.dataset.live).label }); });
+    b.querySelectorAll('[data-add]').forEach(x => x.onclick = e => { e.stopPropagation(); const it = camItem(x.dataset.add); addToCue(it.type, it.extra, it.extra.title); });
+    b.querySelectorAll('[data-bg]').forEach(x => x.onclick = e => { e.stopPropagation(); setItemBg('camera:' + dev(x.dataset.bg).deviceId); });
+    b.querySelectorAll('[data-tb]').forEach(x => x.onclick = async e => {
+      e.stopPropagation();
+      const d = dev(x.dataset.tb);
+      const t = structuredClone(app.tplFor('main'));
+      t.background.type = 'camera'; t.background.camera = { deviceId: d.deviceId, label: d.label };
+      if (t.background.dim == null) t.background.dim = 0;
+      const r = await cmd('saveTemplate', { template: t });
+      app.showMsg(r.ok ? `예배당 화면 템플릿 배경을 '${d.label}' 카메라로 바꿨습니다.` : r.error, r.ok ? 'ok' : 'error', 2500);
+    });
+  }
+  /** 송출 배경이 바뀌면 카메라 탭 표시 갱신 */
+  function onLayers() { if (st.tab === 'cameras' && root()) { const cur = JSON.stringify((app.state.layers || {}).media || null); if (cur !== st.lastMedia) { st.lastMedia = cur; drawCameras(); } } }
+
   /** 썸네일: 영상은 첫 장면 (소리 없음) */
   function thumb(f) {
     return f.video ? `<video muted preload="metadata" src="${esc(f.url)}#t=1"></video>` : `<img loading="lazy" src="${esc(f.url)}" alt="">`;
@@ -467,7 +518,7 @@
   }
 
   window.BCLib = {
-    init, show, audio, tab: () => st.tab, importSongs: paths => importSongs(paths),
+    init, show, audio, tab: () => st.tab, liveMedia: m => liveMedia(m), onLayers: () => onLayers(), importSongs: paths => importSongs(paths),
     pickImage: done => pickFile('image', f => done(f.url)),
     pickVideo: done => pickFile('image', f => done(f.url), { video: 'only' }),
     pickAudio: done => pickFile('audio', done),

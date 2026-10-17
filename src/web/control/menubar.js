@@ -9,7 +9,8 @@
   const click = sel => () => { const el = $(sel); if (el) el.click(); };
   const act = name => () => app.runAction && app.runAction(name);
   const add = type => () => { const b = $(`#cueAdd [data-add="${type}"]`); if (b) b.click(); };
-  const lib = tab => () => { if (window.BCDock) window.BCDock.show('library'); if (window.BCLib) window.BCLib.show(tab); };
+  // 라이브러리 패널을 연 뒤(배치가 잡힌 뒤) 탭을 바꾼다
+  const lib = tab => () => { if (window.BCDock) window.BCDock.show('library'); setTimeout(() => window.BCLib && window.BCLib.show(tab), 120); };
   const settings = tab => () => window.BCSettings && window.BCSettings.open(tab);
   const ed = a => () => { const b = $(`#cueEditor [data-act="${a}"]`); if (b) b.click(); else app.showMsg('큐시트에서 순서를 먼저 고르세요.', 'info', 1500); };
   const panel = id => ({ label: () => (window.BCDock && window.BCDock.isOpen(id) ? '✓ ' : '　') + window.BCDock.panels.find(p => p.id === id).title, run: () => (window.BCDock.isOpen(id) ? window.BCDock.hide(id) : window.BCDock.show(id)) });
@@ -34,7 +35,7 @@
       H('순서 넣기 (고른 순서 다음에)'),
       { label: '🎼 찬송가·PPT', run: add('hymn') }, { label: '📖 성경', run: add('bible') }, { label: '🎵 찬양', run: add('song') },
       { label: '📢 공지', run: add('text') }, { label: '🏷 제목', run: add('title') }, { label: '🖼 이미지', run: add('image') },
-      { label: '🎬 영상', run: add('video') }, { label: '🔊 음악', run: add('audio') }, { label: '🎞 슬라이드쇼 (예배 전 화면)', run: add('slideshow') }, { label: '⬛ 빈 화면', run: add('blank') },
+      { label: '🎬 영상', run: add('video') }, { label: '🔊 음악', run: add('audio') }, { label: '🎞 슬라이드쇼 (예배 전 화면)', run: add('slideshow') }, { label: '📷 카메라', run: add('camera') }, { label: '⬛ 빈 화면', run: add('blank') },
       H('고른 순서'),
       { label: '편집칸에서 고치기', key: 'F2', run: act('cueEdit') },
       { label: '✎ 슬라이드 편집 (글상자·그림·도형)', key: 'Ctrl+E', run: slideEdit },
@@ -51,6 +52,9 @@
       { label: '글자 숨김·복원', key: 'F10', run: act('toggleClear') },
       { label: '배경 지우기·보이기', run: click('#bBg') }, { label: '오버레이 끄기·다시 켜기', run: click('#bOvOff') },
       { label: '로고 화면', run: click('#bLogo') }, { label: '음악 멈춤', run: click('#bAudio') }, { label: '모두 지우기', run: click('#bAll') },
+      H('송출 배경 (카메라·그림·영상)'),
+      { label: '📷 카메라·미디어 고르기…', run: lib('cameras') },
+      { label: () => (app.state && app.state.layers && app.state.layers.media ? `■ 송출 배경 끄기 (${app.state.layers.media.label || '미디어'})` : '　송출 배경 끄기'), run: () => window.BCLib && window.BCLib.liveMedia(null) },
       '-',
       { label: () => on(window.BCDraw && window.BCDraw.isOn(), '✎ 화면에 그리기·강조 (LIVE 위에서)'), run: () => window.BCDraw && window.BCDraw.toggle() },
       { label: () => on(app.state && app.state.settings.previewMode === false, '미리보기 끄기 (클릭하면 바로 송출)'), run: click('#btnStudio') },
@@ -77,7 +81,7 @@
     ['도구', [
       H('라이브러리'),
       { label: '🎵 찬양', run: lib('songs') }, { label: '🎼 찬송가·PPT (폴더 · 온라인에서 찾기)', run: lib('hymns') },
-      { label: '🖼 이미지·영상', run: lib('images') }, { label: '🔊 음악', run: lib('audio') },
+      { label: '🖼 이미지·영상', run: lib('images') }, { label: '📷 카메라', run: lib('cameras') }, { label: '🔊 음악', run: lib('audio') },
       { label: '🕒 오버레이 (로고·시계·카운트다운·배너)', run: lib('overlays') }, { label: '🎨 템플릿', run: lib('templates') },
       H('예배 중'),
       { label: '⏱ 무대·설교 타이머 패널', run: () => window.BCDock && window.BCDock.show('stage') },

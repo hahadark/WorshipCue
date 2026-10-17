@@ -61,7 +61,7 @@
     layer.className = 'bc-vlayer';
     layer.style.opacity = '0';
     layer.innerHTML = `<video src="${R.safeUrl(url)}" autoplay muted loop playsinline preload="auto"></video>`;
-    stage.insertBefore(layer, stage.children[1] || null); // 템플릿 배경 바로 위, 글자 아래
+    stage.insertBefore(layer, mediaEl && mediaEl.isConnected ? mediaEl.nextSibling : (stage.children[1] || null)); // 템플릿 배경(·배경 미디어) 바로 위, 글자 아래
     const v = layer.querySelector('video');
     const show = () => { layer.style.transition = `opacity ${ms}ms ease`; layer.style.opacity = '1'; };
     if (v.readyState >= 2) requestAnimationFrame(show); else { v.addEventListener('loadeddata', show, { once: true }); setTimeout(show, 1500); }
@@ -141,9 +141,25 @@
 
   // ---------- 배경 숨김 · 로고 화면 ----------
   let logoEl = null;
+  let mediaEl = null;
+  /** 배경 미디어 층 바꾸기 (같은 것이면 그대로 — 카메라·영상이 끊기지 않게) */
+  function applyMedia(m) {
+    const key = m ? JSON.stringify([m.type, m.deviceId, m.url, m.fit]) : '';
+    if (mediaEl && mediaEl.dataset.key === key && mediaEl.isConnected) return;
+    const old = mediaEl;
+    mediaEl = null;
+    if (old) { old.style.opacity = '0'; setTimeout(() => old.remove(), 450); }
+    if (!m) return;
+    const el = R.buildMediaLayer(m);
+    el.style.opacity = '0';
+    stage.insertBefore(el, stage.children[1] || null); // 템플릿 배경 바로 위
+    mediaEl = el;
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = '1'; }));
+  }
   function applyLayers(p) {
     const L = p.layers || {};
     stage.classList.toggle('hide-bg', !!L.hideBg);
+    applyMedia(L.media || null);
     const want = L.logo ? L.logoImage : '';
     if (logoEl && (!want || logoEl.dataset.img !== want)) { const old = logoEl; logoEl = null; old.style.opacity = '0'; setTimeout(() => old.remove(), 450); }
     if (want && !logoEl) {
@@ -167,7 +183,7 @@
     bg.style.opacity = (!show && p.template.clearHidesBackground) ? '0' : '1';
 
     renderOverlays(p, stageChanged);
-    if (stageChanged) logoEl = null;
+    if (stageChanged) { logoEl = null; mediaEl = null; }
     applyLayers(p);
     if (!stageChanged && key === lastKey) { applyVideo(p); ack(p); return; }
     lastKey = key;

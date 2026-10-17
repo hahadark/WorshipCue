@@ -11,7 +11,7 @@
   const Cue = () => window.BCCue;
   const act = name => () => app.runAction && app.runAction(name);
   const click = sel => () => { const el = $(sel); if (el) el.click(); };
-  const TYPES = [['hymn', '🎼 찬송가·PPT'], ['bible', '📖 성경'], ['song', '🎵 찬양'], ['text', '📢 공지'], ['title', '🏷 제목'], ['image', '🖼 이미지'], ['video', '🎬 영상'], ['slideshow', '🎞 슬라이드쇼'], ['audio', '🔊 음악'], ['blank', '⬛ 빈 화면']];
+  const TYPES = [['hymn', '🎼 찬송가·PPT'], ['bible', '📖 성경'], ['song', '🎵 찬양'], ['text', '📢 공지'], ['title', '🏷 제목'], ['image', '🖼 이미지'], ['video', '🎬 영상'], ['slideshow', '🎞 슬라이드쇼'], ['camera', '📷 카메라'], ['audio', '🔊 음악'], ['blank', '⬛ 빈 화면']];
   const EDITABLE = ['song', 'text', 'title'];
   let el = null;
   let items = [];
@@ -145,6 +145,7 @@
       { label: '음악 멈춤', run: click('#bAudio') },
       { label: $('#bLogo') ? $('#bLogo').textContent : '로고 화면', run: click('#bLogo') },
       { label: '모두 지우기', run: click('#bAll'), danger: true },
+      ...(app.state && app.state.layers && app.state.layers.media ? [{ label: `송출 배경 끄기 (${app.state.layers.media.label || '미디어'})`, run: () => window.BCLib && window.BCLib.liveMedia(null) }] : [{ label: '📷 송출 배경 (카메라·미디어)…', run: () => { window.BCDock && window.BCDock.show('library'); setTimeout(() => window.BCLib && window.BCLib.show('cameras'), 120); } }]),
     ];
   }
   function previewMenu() {

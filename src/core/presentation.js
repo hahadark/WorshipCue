@@ -11,7 +11,7 @@ const MAX_TEXT = 5000;
 function validateSlides(slides) {
   if (!Array.isArray(slides) || !slides.length) throw new Error('슬라이드가 없습니다.');
   if (slides.length > MAX_SLIDES) throw new Error('슬라이드가 너무 많습니다.');
-  const KINDS = ['bible', 'text', 'title', 'image', 'blank', 'score', 'video'];
+  const KINDS = ['bible', 'text', 'title', 'image', 'blank', 'score', 'video', 'camera'];
   return slides.map((s, i) => {
     const kind = KINDS.includes(s && s.kind) ? s.kind : 'bible';
     // 제목 카드·이미지·빈 화면은 본문(parts)이 없어도 된다
@@ -25,6 +25,7 @@ function validateSlides(slides) {
       ...(typeof s.caption === 'string' ? { caption: s.caption.slice(0, 2000) } : {}), // PPT·찬송가 슬라이드의 가사 (OBS '가사만' 출력용)
       mode: s.mode === 'background' ? 'background' : 'black',
       // 영상 재생 슬라이드: 소리·반복·끝나면
+      ...(kind === 'camera' ? { camera: { deviceId: String((s.camera && s.camera.deviceId) || '').slice(0, 200), label: String((s.camera && s.camera.label) || '').slice(0, 100), fit: s.camera && s.camera.fit === 'contain' ? 'contain' : 'cover' } } : {}),
       ...(kind === 'video' ? { video: { volume: Math.max(0, Math.min(1, Number(s.video && s.video.volume) || 0)), sound: !!(s.video && s.video.sound), loop: !!(s.video && s.video.loop), endAction: ['hold', 'black', 'next'].includes(s.video && s.video.endAction) ? s.video.endAction : 'hold' } } : {}),
       ref: String(s.ref || ''),
       ...(s.footer ? { footer: String(s.footer).slice(0, 300) } : {}),

@@ -78,3 +78,7 @@
 
 /* 카메라 배경 */
 .bc-cam-off { position: absolute; inset: 0; display: grid; place-items: center; color: #666; font-size: 40px; }
+
+/* 배경 미디어 층 (카메라·그림·영상) — 배경 지우기(숨김)와 함께 숨는다 */
+.bc-medialayer { position: absolute; inset: 0; overflow: hidden; transition: opacity 400ms ease; }
+.bc-stage.hide-bg .bc-medialayer { opacity: 0 !important; }
