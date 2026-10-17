@@ -1,4 +1,4 @@
-/* 상단 메뉴바: 파일 · 편집 · 순서 넣기 · 송출 · 보기 · 도구 · 설정 · 도움말
+/* 상단 메뉴바: 파일 · 편집 · 순서 넣기 · 송출 · 보기 · 작업공간 · 도구 · 리모컨 · 설정 · 도움말
  * 메뉴 항목은 기존 단추·기능을 그대로 부른다 (같은 동작)
  */
 (function () {
@@ -19,8 +19,8 @@
       { label: '새 큐시트 · 복제 · 가져오기·내보내기…', run: click('#cueMenu') },
       { label: '🤖 주보로 큐시트 만들기 (AI)…', run: () => window.BCAI && window.BCAI.open() },
       '-',
-      { label: '성경 데이터 가져오기…', run: settings('data') },
       { label: '송출 기록', key: 'Ctrl+H', run: act('openHistory') },
+      { label: '성경 데이터 가져오기…', run: settings('data') },
     ]],
     ['편집', [
       { label: '고른 순서 고치기', key: 'F2', run: act('cueEdit') },
@@ -51,27 +51,40 @@
       panel('cue'), panel('main'), panel('quick'), panel('library'), panel('stage'), panel('preview'), panel('live'),
       '-',
       { label: '슬라이드 목록 / 격자 바꾸기', run: () => { const on = window.BCGrid && window.BCGrid.isOn(); const b = $(`#slideView [data-sv="${on ? 'list' : 'grid'}"]`); if (b) b.click(); } },
-      { label: '화면 배치 (잠그기·기본 배치)…', run: () => window.BCDock && window.BCDock.openMenu() },
-      { label: '기본 배치로 되돌리기', run: () => { if (window.BCDock) { window.BCDock.resetLayout(); app.showMsg('기본 배치로 되돌렸습니다.', 'ok', 1500); } } },
       { label: '🖥 무대 화면 창 열기', run: () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720') },
     ]],
+    ['작업공간', () => {
+      const D = window.BCDock;
+      if (!D) return [];
+      const act = D.activeWorkspace();
+      return [
+        ...D.workspaces().slice(0, 9).map((w, i) => ({ label: (w.id === act ? '✓ ' : '　') + w.name, key: 'Ctrl+Alt+' + (i + 1), run: () => D.applyWorkspace(w.id) })),
+        ...D.workspaces().slice(9).map(w => ({ label: (w.id === act ? '✓ ' : '　') + w.name, run: () => D.applyWorkspace(w.id) })),
+        '-',
+        { label: '＋ 지금 배치를 새 작업공간으로 저장…', run: () => D.saveAsWorkspace() },
+        { label: '지금 작업공간에 배치 덮어쓰기', run: () => D.overwriteWorkspace() },
+        { label: '작업공간 관리 (이름·순서·지우기)…', run: () => D.manageWorkspaces() },
+        '-',
+        { label: '패널 보이기·잠그기…', run: () => D.openMenu() },
+        { label: '기본 배치로 되돌리기', run: () => { D.resetLayout(); app.showMsg('기본 배치로 되돌렸습니다.', 'ok', 1500); } },
+      ];
+    }],
     ['도구', [
       { label: '찬양 라이브러리', run: lib('songs') }, { label: '찬송가·PPT (폴더·온라인에서 찾기)', run: lib('hymns') },
       { label: '이미지·영상', run: lib('images') }, { label: '음악', run: lib('audio') },
       { label: '오버레이 (로고·시계·카운트다운·배너)', run: lib('overlays') }, { label: '템플릿', run: lib('templates') },
       '-',
       { label: '무대 화면·설교 타이머', run: () => window.BCDock && window.BCDock.show('stage') },
-      { label: '📱 휴대폰 리모컨', run: () => { if (window.BCDock) window.BCDock.show('stage'); setTimeout(() => {
-        // 무대 패널 안쪽만 스크롤 (스크롤 되는 칸: .dock-body 또는 .stg)
-        const row = $('#rmOn') && $('#rmOn').closest('.stg-row');
-        if (!row) return;
-        for (const sc of [row.closest('.stg'), row.closest('.dock-body')]) {
-          if (sc && sc.scrollHeight > sc.clientHeight) { sc.scrollTop += row.getBoundingClientRect().top - sc.getBoundingClientRect().top - 40; break; }
-        }
-        $('#rmOn').focus({ preventScroll: true });
-      }, 250); } },
+      { label: '📱 휴대폰 리모컨…', run: () => window.BCRemote && window.BCRemote.open() },
+    ]],
+    ['리모컨', [
+      { label: '📱 리모컨 열기 (QR · 주소 · PIN)…', run: () => window.BCRemote && window.BCRemote.open() },
+      { label: () => (window.BCRemote && window.BCRemote.status().enabled ? '✓ 리모컨 켜짐 — 끄기' : '　리모컨 켜기'), run: () => window.BCRemote && window.BCRemote.toggle() },
+      { label: 'PIN 바꾸기', run: () => window.BCRemote && window.BCRemote.newPin() },
     ]],
     ['설정', [
+      { label: '설정 열기…', run: settings() },
+      '-',
       { label: '테마', run: settings('themes') }, { label: '출력 (모니터·OBS)', run: settings('output') },
       { label: '템플릿 편집', run: settings('templates') }, { label: '검색·분할', run: settings('behavior') },
       { label: '단축키', run: settings('shortcuts') }, { label: '성경 데이터', run: settings('data') },
@@ -84,17 +97,18 @@
   ];
 
   let openIdx = -1;
+  const menuItems = i => (typeof MENUS[i][1] === 'function' ? MENUS[i][1]() : MENUS[i][1]);
   function init() {
     const bar = document.createElement('nav');
     bar.className = 'menubar';
-    bar.innerHTML = MENUS.map(([n], i) => `<button class="mb-top" data-m="${i}">${esc(n)}</button>`).join('') + '<div class="mb-drop" hidden></div>';
+    bar.innerHTML = MENUS.map(([n], i) => `<button class="mb-top" data-m="${i}"${n === '리모컨' ? ' data-remote="1" title="휴대폰 리모컨 (켜져 있으면 초록 점)"' : ''}>${esc(n)}</button>`).join('') + '<div class="mb-drop" hidden></div>';
     document.body.insertBefore(bar, document.body.firstChild);
     const drop = bar.querySelector('.mb-drop');
     const show = i => {
       openIdx = i;
       bar.querySelectorAll('.mb-top').forEach(b => b.classList.toggle('on', +b.dataset.m === i));
       if (i < 0) { drop.hidden = true; return; }
-      const items = MENUS[i][1];
+      const items = menuItems(i);
       drop.innerHTML = items.map((it, k) => it === '-' ? '<div class="mb-sep"></div>' : `<button class="mb-item" data-k="${k}"><span>${esc(typeof it.label === 'function' ? it.label() : it.label)}</span>${it.key ? `<kbd>${esc(it.key)}</kbd>` : ''}</button>`).join('');
       const t = bar.querySelector(`.mb-top[data-m="${i}"]`);
       drop.style.left = t.offsetLeft + 'px';
@@ -104,7 +118,7 @@
       const t = e.target.closest('.mb-top');
       if (t) { show(openIdx === +t.dataset.m ? -1 : +t.dataset.m); return; }
       const it = e.target.closest('.mb-item');
-      if (it) { const m = MENUS[openIdx][1][+it.dataset.k]; show(-1); try { m.run(); } catch (err) { app.showMsg(err.message, 'error'); } }
+      if (it) { const m = menuItems(openIdx)[+it.dataset.k]; show(-1); try { m.run(); } catch (err) { app.showMsg(err.message, 'error'); } }
     });
     bar.addEventListener('mouseover', e => { const t = e.target.closest('.mb-top'); if (t && openIdx >= 0 && +t.dataset.m !== openIdx) show(+t.dataset.m); });
     document.addEventListener('mousedown', e => { if (openIdx >= 0 && !bar.contains(e.target)) show(-1); }, true);

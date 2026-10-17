@@ -77,6 +77,8 @@ function defaults() {
     logoScreenImage: '',  // '로고 화면' 단추에 쓸 그림 (비우면 템플릿 로고 → 레드 쉴드)        // 출력 위에 겹치는 층 (로고·시계·카운트다운·배너·글자)
     previewMode: true,   // false = 미리보기 끔: 클릭한 본문·순서를 바로 송출 (OBS 스튜디오 모드 끄기)
     dockLayout: '',      // 조작 화면 독 배치 (dockview JSON)
+    workspaces: [],      // 저장한 작업공간 [{ id, name, layout }] (dockview JSON)
+    activeWorkspace: 'b-default', // 지금 작업공간 (b-… = 기본 제공)
     dockLocked: false,   // 독 배치 잠금
     bethlehemDir: '',    // 베들레헴 BethlehemWin 폴더 (새찬송가 가사 DB). 비우면 자동으로 찾는다
     songInboxDir: '',    // 받은 찬양 PPT 를 모아 둘 폴더 (비우면 문서\WorshipCue 찬양 PPT)

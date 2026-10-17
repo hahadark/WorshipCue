@@ -121,7 +121,7 @@
     es.addEventListener('cue-next', e => window.BCCue && window.BCCue.onCueNext(JSON.parse(e.data)));
     es.addEventListener('song-downloaded', e => window.BCCue && window.BCCue.onSongDownloaded(JSON.parse(e.data)));
     es.addEventListener('song-inbox', e => window.BCCue && window.BCCue.onSongInbox(JSON.parse(e.data)));
-    es.addEventListener('remote', e => window.BCStage && window.BCStage.drawRemote(JSON.parse(e.data)));
+    es.addEventListener('remote', e => window.BCRemote && window.BCRemote.onStatus(JSON.parse(e.data)));
     es.addEventListener('remote-cue', e => { const d = JSON.parse(e.data); if (window.BCCue) window.BCCue.sendItem(d.index); });
     es.addEventListener('songs', e => { const d = JSON.parse(e.data); if (window.BCLib) window.BCLib.onSongs(d); if (window.BCCue) window.BCCue.onSongs(d); });
     es.addEventListener('cues', e => window.BCCue && window.BCCue.onCues(JSON.parse(e.data)));
@@ -147,6 +147,7 @@
     if (window.BCStage) window.BCStage.init();
     if (window.BCGrid) window.BCGrid.init();
     if (window.BCMenu) window.BCMenu.init();
+    if (window.BCRemote) window.BCRemote.init();
     // 로딩 화면 닫기: 배치가 자리 잡은 뒤 (숨긴 창에서는 화면 그리기 신호가 없으므로 시간으로)
     setTimeout(() => cmd('uiReady'), 150);
     if (!app.state.versions.length) showWelcome();
@@ -350,7 +351,6 @@
     renderStudio();
     showMsg(next ? '미리보기를 켰습니다. 고른 본문은 미리보기에 놓이고 F9 로 송출합니다.' : '미리보기를 껐습니다. 이제 클릭한 본문·순서·슬라이드가 바로 송출됩니다.', next ? 'ok' : 'info', 3500);
   };
-  $('#btnLayout').onclick = () => window.BCDock && window.BCDock.openMenu();
   app.splitOpts = over => splitOpts(over === undefined ? pvOver() : over);
 
   /** 템플릿·분할 설정이 바뀌면 미리보기를 다시 분할 (Live 는 그대로) */
@@ -1000,7 +1000,6 @@
     $('#bOvOff').classList.toggle('active', !!L.overlaysOff); $('#bOvOff').textContent = L.overlaysOff ? '오버레이 다시 켜기' : '오버레이 끄기';
     $('#bLogo').classList.toggle('active', !!L.logo); $('#bLogo').textContent = L.logo ? '로고 화면 끄기' : '로고 화면';
   }
-  $('#btnHistory').onclick = () => openHistory();
   $('#btnSettings').onclick = () => window.BCSettings.open();
   $('#mode').onchange = e => cmd('updateSettings', { patch: { searchMode: e.target.value } });
   $('#navMode').onchange = e => cmd('updateSettings', { patch: { navMode: e.target.value } });

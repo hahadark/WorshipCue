@@ -627,6 +627,17 @@ WorshipCueCore.prototype.commands = {
   saveOverlay(a) { const o = this.library.saveOverlay(a.overlay || {}); this.settingsChanged('overlays'); this.emit('live'); return o; },
   deleteOverlay(a) { this.library.deleteOverlay(String(a.id)); this.settingsChanged('overlays'); this.emit('live'); return {}; },
   toggleOverlay(a) { const o = this.library.toggleOverlay(String(a.id), a.on); this.settingsChanged('overlays'); this.emit('live'); return o; },
+  /** 작업공간 목록 저장 (이름·배치) / 지금 작업공간 */
+  saveWorkspaces(a) {
+    const list = (Array.isArray(a.list) ? a.list : []).slice(0, 30).map(w => ({
+      id: /^[a-z0-9-]{3,40}$/i.test(w.id || '') ? w.id : 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: String(w.name || '').trim().slice(0, 40) || '작업공간',
+      layout: String(w.layout || '').slice(0, 300000),
+    })).filter(w => w.layout);
+    this.settings.update(d => { d.workspaces = list; if (typeof a.active === 'string') d.activeWorkspace = a.active.slice(0, 60); });
+    return { workspaces: list, active: this.settings.get().activeWorkspace };
+  },
+  setActiveWorkspace(a) { this.settings.update(d => { d.activeWorkspace = String(a.id || '').slice(0, 60); }); return {}; },
   /** 조작 화면 독 배치 저장 (다른 화면에 알릴 필요 없음) */
   saveDockLayout(a) {
     const s = String(a.layout || '');

@@ -79,6 +79,157 @@
     if (app.state && app.state.settings.previewMode === false) hide('preview');
   }
 
+  // ---------------- 작업공간 (배치 모음) ----------------
+  /** 패널 한 묶음 만들기: ids 를 처음 것 기준으로 탭으로 합침 */
+  function group(ids, position) {
+    const [first, ...rest] = ids;
+    api.addPanel({ id: first, component: first, title: byId[first].title, ...(position ? { position } : {}) });
+    rest.forEach(id => api.addPanel({ id, component: id, title: byId[id].title, position: { referencePanel: first, direction: 'within' } }));
+    api.getPanel(first).api.setActive();
+  }
+  const size = (id, s) => { try { api.getPanel(id).group.api.setSize(s); } catch { /* 무시 */ } };
+  const dims = () => ({ W: $('#dock').clientWidth || 1600, H: $('#dock').clientHeight || 800 });
+  const BUILTIN = [
+    { id: 'b-default', name: '기본', desc: '큐시트 · 본문/편집 · 빠른 설정·라이브러리 · 미리보기·LIVE', build: () => defaultLayout() },
+    { id: 'b-prep', name: '예배 준비 (편집 크게)', desc: '큐시트와 편집칸·라이브러리를 크게, 미리보기·LIVE 는 작게', build: () => {
+      const { W, H } = dims();
+      api.clear();
+      group(['cue']);
+      group(['main'], { referencePanel: 'cue', direction: 'right' });
+      group(['library', 'quick', 'stage'], { referencePanel: 'main', direction: 'below' });
+      group(['preview'], { referencePanel: 'main', direction: 'right' });
+      group(['live'], { referencePanel: 'preview', direction: 'below' });
+      size('cue', { width: 340 }); size('preview', { width: Math.round(W * 0.28) }); size('library', { height: Math.round(H * 0.45) });
+    } },
+    { id: 'b-live', name: '예배 중 (송출 크게)', desc: '미리보기·LIVE 를 크게, 큐시트와 슬라이드 격자, 아래에 무대·타이머', build: () => {
+      const { W, H } = dims();
+      api.clear();
+      group(['cue']);
+      group(['main'], { referencePanel: 'cue', direction: 'right' });
+      group(['stage', 'library', 'quick'], { referencePanel: 'main', direction: 'below' });
+      group(['live'], { referencePanel: 'main', direction: 'right' });
+      group(['preview'], { referencePanel: 'live', direction: 'below' });
+      size('cue', { width: 300 }); size('live', { width: Math.round(W * 0.5) }); size('stage', { height: Math.round(H * 0.33) });
+      if (window.BCGrid && !window.BCGrid.isOn()) { const b = document.querySelector('#slideView [data-sv="grid"]'); if (b) b.click(); }
+    } },
+    { id: 'b-simple', name: '간단 (큐시트 + LIVE)', desc: '큐시트와 LIVE 만. 노트북 등 작은 화면용', build: () => {
+      api.clear();
+      group(['cue']);
+      group(['live', 'main'], { referencePanel: 'cue', direction: 'right' });
+      size('cue', { width: 360 });
+    } },
+  ];
+  function userWorkspaces() { return (app.state && app.state.settings.workspaces) || []; }
+  function allWorkspaces() { return [...BUILTIN.map(b => ({ ...b, builtin: true })), ...userWorkspaces()]; }
+  function activeWorkspace() { return (app.state && app.state.settings.activeWorkspace) || 'b-default'; }
+  function currentLayoutJson() { return JSON.stringify({ v: 2, known: PANELS.map(p => p.id), layout: api.toJSON() }); }
+
+  /** 작업공간으로 바꾸기 */
+  function applyWorkspace(id) {
+    const ws = allWorkspaces().find(w => w.id === id);
+    if (!ws) return;
+    restoring = true;
+    try {
+      if (ws.builtin) ws.build();
+      else {
+        const data = JSON.parse(ws.layout);
+        api.fromJSON(data.v === 2 ? data.layout : data);
+      }
+      if (app.state && app.state.settings.previewMode === false) hide('preview');
+    } catch (e) {
+      app.showMsg('작업공간을 열지 못했습니다: ' + e.message, 'error');
+      defaultLayout();
+    } finally { restoring = false; }
+    save();
+    app.cmd('setActiveWorkspace', { id });
+    if (app.state) app.state.settings.activeWorkspace = id;
+    requestAnimationFrame(fitScreens);
+    renderWorkspaceSelect();
+    app.showMsg(`작업공간: ${ws.name}`, 'ok', 1200);
+  }
+
+  async function storeWorkspaces(list, active) {
+    const r = await app.cmd('saveWorkspaces', { list, active });
+    if (!r.ok) { app.showMsg(r.error, 'error'); return; }
+    if (app.state) { app.state.settings.workspaces = r.result.workspaces; app.state.settings.activeWorkspace = r.result.active; }
+    renderWorkspaceSelect();
+  }
+  /** 지금 배치를 새 작업공간으로 */
+  async function saveAsWorkspace(name) {
+    name = (name ?? prompt('새 작업공간 이름 (예: 수요예배, 찬양팀, 노트북)', '')) || '';
+    if (!name.trim()) return;
+    const id = 'w' + Date.now().toString(36);
+    await storeWorkspaces([...userWorkspaces(), { id, name: name.trim(), layout: currentLayoutJson() }], id);
+    app.showMsg(`'${name.trim()}' 작업공간을 저장했습니다.`, 'ok', 1800);
+  }
+  /** 지금 작업공간(저장한 것)에 덮어쓰기 */
+  async function overwriteWorkspace() {
+    const id = activeWorkspace();
+    const list = userWorkspaces();
+    const ws = list.find(w => w.id === id);
+    if (!ws) return saveAsWorkspace(); // 기본 제공은 덮어쓰지 않고 새로 저장
+    ws.layout = currentLayoutJson();
+    await storeWorkspaces(list, id);
+    app.showMsg(`'${ws.name}' 작업공간에 지금 배치를 저장했습니다.`, 'ok', 1800);
+  }
+  /** 작업공간 관리 창: 이름 바꾸기 · 덮어쓰기 · 지우기 · 순서 */
+  function manageWorkspaces() {
+    const draw = () => {
+      const act = activeWorkspace();
+      const list = userWorkspaces();
+      app.openModal('작업공간 관리', `<div class="ws-manage">
+        <div class="note">작업공간 = 패널 배치 모음. 예배 준비·예배 중·찬양팀 연습처럼 상황마다 저장해 두고 위쪽 선택칸이나 Ctrl+Alt+숫자로 바꿉니다.</div>
+        <h4>기본 제공</h4>
+        ${BUILTIN.map((b, i) => `<div class="ws-row ${b.id === act ? 'on' : ''}"><b>${esc(b.name)}</b><span class="muted">${esc(b.desc)}</span><kbd>Ctrl+Alt+${i + 1}</kbd><button data-use="${b.id}">열기</button></div>`).join('')}
+        <h4>내 작업공간</h4>
+        ${list.length ? list.map((w, i) => `<div class="ws-row ${w.id === act ? 'on' : ''}" data-id="${esc(w.id)}"><input type="text" data-name value="${esc(w.name)}">${BUILTIN.length + i < 9 ? `<kbd>Ctrl+Alt+${BUILTIN.length + i + 1}</kbd>` : '<span></span>'}<button data-use="${esc(w.id)}">열기</button><button data-over title="지금 배치로 덮어쓰기">지금 배치 저장</button><button data-up title="위로">▲</button><button data-del class="danger">지우기</button></div>`).join('') : '<div class="muted">아직 없습니다. 아래 단추로 지금 배치를 저장하세요.</div>'}
+        <div class="row-flex" style="margin-top:12px"><button id="wsNew" class="primary">＋ 지금 배치를 새 작업공간으로</button></div>
+      </div>`);
+      document.querySelectorAll('.ws-manage [data-use]').forEach(b => b.onclick = () => { applyWorkspace(b.dataset.use); draw(); });
+      document.querySelectorAll('.ws-manage .ws-row[data-id]').forEach(row => {
+        const id = row.dataset.id;
+        const L = () => userWorkspaces().map(w => ({ ...w }));
+        row.querySelector('[data-name]').onchange = e => { const l = L(); l.find(w => w.id === id).name = e.target.value; storeWorkspaces(l); };
+        row.querySelector('[data-over]').onclick = async () => { const l = L(); l.find(w => w.id === id).layout = currentLayoutJson(); await storeWorkspaces(l); app.showMsg('지금 배치를 저장했습니다.', 'ok', 1200); };
+        row.querySelector('[data-up]').onclick = async () => { const l = L(); const i = l.findIndex(w => w.id === id); if (i > 0) { [l[i - 1], l[i]] = [l[i], l[i - 1]]; await storeWorkspaces(l); draw(); } };
+        row.querySelector('[data-del]').onclick = async () => { if (!confirm('이 작업공간을 지울까요?')) return; await storeWorkspaces(L().filter(w => w.id !== id), activeWorkspace() === id ? 'b-default' : undefined); draw(); };
+      });
+      $('#wsNew').onclick = async () => { await saveAsWorkspace(); draw(); };
+    };
+    draw();
+  }
+  /** 상단의 작업공간 선택칸 */
+  function renderWorkspaceSelect() {
+    const sel = $('#wsSel');
+    if (!sel) return;
+    const act = activeWorkspace();
+    sel.innerHTML = `<optgroup label="기본 제공">${BUILTIN.map(b => `<option value="${b.id}" ${b.id === act ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</optgroup>`
+      + (userWorkspaces().length ? `<optgroup label="내 작업공간">${userWorkspaces().map(w => `<option value="${esc(w.id)}" ${w.id === act ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</optgroup>` : '')
+      + '<optgroup label="──────"><option value="__save">＋ 지금 배치 저장…</option><option value="__manage">작업공간 관리…</option></optgroup>';
+  }
+  function initWorkspaceUi() {
+    const sel = $('#wsSel');
+    if (sel) {
+      renderWorkspaceSelect();
+      sel.onchange = async e => {
+        const v = e.target.value;
+        if (v === '__save') await saveAsWorkspace(); else if (v === '__manage') manageWorkspaces(); else applyWorkspace(v);
+        renderWorkspaceSelect();
+      };
+    }
+    // Ctrl+Alt+1~9 = 작업공간 바꾸기
+    window.addEventListener('keydown', e => {
+      if (!e.ctrlKey || !e.altKey || e.shiftKey || e.metaKey) return;
+      const n = Number(e.key);
+      if (!(n >= 1 && n <= 9)) return;
+      const ws = allWorkspaces()[n - 1];
+      if (!ws) return;
+      e.preventDefault(); e.stopPropagation();
+      applyWorkspace(ws.id);
+    }, true);
+  }
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
   function save() {
     if (restoring) return;
     clearTimeout(saveTimer);
@@ -159,6 +310,7 @@
     } catch { defaultLayout(); }
     restoring = false;
     if (known && PANELS.some(p => !known.includes(p.id))) save();
+    initWorkspaceUi();
     // 미리보기 끔(바로 송출)이면 미리보기 패널은 닫는다
     if (app.state.settings.previewMode === false) hide('preview');
     setLocked(!!app.state.settings.dockLocked);
@@ -197,6 +349,9 @@
   function resetLayout() {
     restoring = true;
     try { defaultLayout(); } finally { restoring = false; }
+    app.cmd('setActiveWorkspace', { id: 'b-default' });
+    if (app.state) app.state.settings.activeWorkspace = 'b-default';
+    renderWorkspaceSelect();
     save();
     requestAnimationFrame(fitScreens);
   }
@@ -222,5 +377,8 @@
     $('#dkReset').onclick = () => { resetLayout(); app.closeModal(); app.showMsg('기본 배치로 되돌렸습니다.', 'ok', 1500); };
   }
 
-  window.BCDock = { init, show, hide, isOpen, openMenu, fitScreens, resetLayout, panels: PANELS };
+  window.BCDock = {
+    init, show, hide, isOpen, openMenu, fitScreens, resetLayout, panels: PANELS,
+    workspaces: allWorkspaces, activeWorkspace, applyWorkspace, saveAsWorkspace, overwriteWorkspace, manageWorkspaces,
+  };
 })();

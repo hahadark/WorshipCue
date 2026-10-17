@@ -480,3 +480,40 @@ video.ce-thumb { background: #000; }
 
 /* 페이지 전체는 스크롤되지 않음 (배치 틀어짐 방지) */
 html { overflow: hidden; }
+
+/* 휴대폰 리모컨 창 */
+.rm { min-width: 560px; }
+.rm-off { text-align: center; padding: 10px 20px; line-height: 1.7; }
+.rm-off .rm-big { font-size: 54px; }
+.rm-off button { font-size: 16px; padding: 10px 22px; margin: 6px 0 4px; }
+.rm-on { display: flex; gap: 22px; align-items: flex-start; }
+.rm-qr { flex: none; width: 210px; height: 210px; background: #fff; border-radius: 8px; padding: 6px; box-sizing: border-box; }
+.rm-qr svg { width: 100%; height: 100%; display: block; }
+.rm-info { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.rm-step { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.rm-url { font-size: 20px; font-weight: 700; color: #9ec5ff; user-select: all; }
+.rm-pin { font-size: 36px; font-weight: 800; letter-spacing: 6px; color: #ffd479; font-variant-numeric: tabular-nums; }
+.mb-top.rm-live::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; margin-left: 5px; vertical-align: middle; box-shadow: 0 0 6px #3ddc84; }
+.modal-box:has(.rm) { height: auto; max-height: 90vh; width: min(900px, 94vw); }
+
+/* 작업공간 */
+#wsSel { max-width: 200px; }
+.ws-manage h4 { margin: 14px 0 6px; }
+.ws-row { display: grid; grid-template-columns: 200px 1fr auto auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 4px; }
+.ws-row[data-id] { grid-template-columns: 1fr auto auto auto auto auto; }
+.ws-row.on { border-color: var(--accent); background: #1e2a44; }
+.ws-row kbd { color: var(--muted); font-size: 11px; }
+
+/* 상단·하단 정리 */
+.ws-pick { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+#btnSettings { font-size: 16px; padding: 6px 10px; }
+.ft-group { display: inline-flex; gap: 4px; align-items: center; padding: 3px; border: 1px solid var(--line); border-radius: 8px; }
+.ft-nav { border-color: transparent; padding: 0; gap: 8px; }
+.clear-group kbd { font-size: 10px; }
+@media (max-width: 1400px) {
+  .bottom kbd, .clear-group kbd { display: none; }
+  .big { padding: 8px 12px; font-size: 14px; }
+  .clear-group button { padding: 7px 8px; font-size: 12px; }
+  .ws-pick > span { display: none; }
+}
+@media (max-width: 1100px) { .brand { display: none; } }

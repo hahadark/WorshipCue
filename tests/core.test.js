@@ -687,6 +687,21 @@ test('AI 주보 → 큐시트: 한글 주보 글자, AI 요청 형식, 찬송가
   core.store.close();
 });
 
+test('작업공간: 저장·이름 정리·지금 작업공간', () => {
+  const core = newCore('ws');
+  const r = core.command('saveWorkspaces', { list: [{ id: 'bad id!', name: '  수요예배  ', layout: '{"v":2}' }, { name: '빈 배치', layout: '' }, { name: 'x'.repeat(80), layout: '{}' }], active: 'b-live' });
+  assert.equal(r.ok, true);
+  const ws = r.result.workspaces;
+  assert.equal(ws.length, 2); // 배치가 빈 것은 버린다
+  assert.equal(ws[0].name, '수요예배');
+  assert.match(ws[0].id, /^[a-z0-9-]+$/i);
+  assert.equal(ws[1].name.length, 40);
+  assert.equal(core.settings.get().activeWorkspace, 'b-live');
+  core.command('setActiveWorkspace', { id: ws[0].id });
+  assert.equal(core.settings.get().activeWorkspace, ws[0].id);
+  assert.equal(core.settings.get().workspaces.length, 2);
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

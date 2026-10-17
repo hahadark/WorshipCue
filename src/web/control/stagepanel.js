@@ -24,8 +24,7 @@
       <div class="stg-row">${QUICK_MSG.map(m => `<button data-msg="${esc(m)}">${esc(m)}</button>`).join('')}</div>
       <div class="stg-prev"><iframe id="stFrame" title="무대 화면 미리보기" src="/outputs/stage"></iframe></div>
       <h4>📱 휴대폰 리모컨</h4>
-      <div class="stg-row"><label class="tc-toggle"><input type="checkbox" id="rmOn"> 켜기 (같은 Wi-Fi 의 휴대폰·태블릿에서 다음·이전·숨김·순서 송출·무대 메시지)</label></div>
-      <div id="rmInfo" class="stg-remote"></div>
+      <div class="stg-row"><button id="rmOpen">📱 리모컨 열기 (QR · 주소 · PIN)…</button><span class="muted">메뉴바 '리모컨' 에서도 열 수 있습니다</span></div>
     </div>`;
     $('#stOpen').onclick = () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720');
     $('#stCopy').onclick = () => { navigator.clipboard.writeText(url).then(() => app.showMsg('무대 화면 주소를 복사했습니다.', 'ok', 1500)); };
@@ -45,21 +44,7 @@
     const prev = el.querySelector('.stg-prev');
     new ResizeObserver(() => prev.style.setProperty('--s', String(prev.clientWidth / 1280))).observe(prev);
     setInterval(tick, 250);
-    $('#rmOn').onchange = async e => { const r = await cmd('setRemote', { enabled: e.target.checked }); if (!r.ok) app.showMsg(r.error, 'error'); drawRemote(r.ok ? r.result : null); };
-    cmd('remoteStatus').then(r => r.ok && drawRemote(r.result));
-  }
-
-  /** 리모컨 상태: 주소·PIN */
-  function drawRemote(s) {
-    const box = $('#rmInfo');
-    if (!box || !s) return;
-    $('#rmOn').checked = !!s.enabled;
-    if (!s.enabled) { box.innerHTML = '<span class="muted">꺼져 있음</span>'; return; }
-    if (!s.running) { box.innerHTML = `<span class="err-text">${esc(s.error || '시작하지 못했습니다.')}</span>`; return; }
-    box.innerHTML = `<div>휴대폰 브라우저에서 이 주소를 여세요:</div>${s.urls.map(u => `<div class="stg-url">${esc(u)}</div>`).join('') || '<span class="err-text">네트워크 주소를 찾지 못했습니다 (Wi-Fi·랜 연결 확인)</span>'}
-      <div>PIN <b class="stg-pin">${esc(s.pin)}</b> <button id="rmNewPin" title="새 PIN 으로 바꾸면 연결된 휴대폰은 다시 입력해야 합니다">PIN 바꾸기</button></div>
-      <div class="muted">처음 켤 때 Windows 방화벽 창이 뜨면 '개인 네트워크' 를 허용하세요.</div>`;
-    $('#rmNewPin').onclick = async () => { const r = await cmd('setRemote', { newPin: true }); if (r.ok) drawRemote(r.result); };
+    $('#rmOpen').onclick = () => window.BCRemote && window.BCRemote.open();
   }
 
   function tick() {
@@ -75,5 +60,5 @@
     el.className = 'stg-time' + (neg ? ' over' : left < 300000 ? ' warn' : '');
   }
 
-  window.BCStage = { init, drawRemote };
+  window.BCStage = { init };
 })();
