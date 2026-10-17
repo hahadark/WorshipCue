@@ -133,7 +133,7 @@
     wrap.style.width = Math.round(t.width * s) + 'px';
     wrap.style.height = Math.round(t.height * s) + 'px';
     const src = curSource();
-    if (!src) { $('#seRender').innerHTML = ''; return; }
+    if (!src) { $('#seRender').innerHTML = ''; $('#seHandles').innerHTML = ''; $('#seHint').textContent = '이 순서에는 아직 내용이 없습니다. 편집칸에서 가사·내용을 먼저 쓰세요.'; return; }
     R.renderInto($('#seRender'), effSlide(src, S.key), t, { checker: true });
     // 손잡이: 본문 + 덧붙인 것 (공통 것은 '공통' 에서만 고칠 수 있음)
     const e = effEdit();
@@ -556,5 +556,44 @@
     const y = inside ? Math.max(0, Math.min(100 - h, (cy - r.top) / r.height * 100 - h / 2)) : 35;
     addItem('image', { src: url, x: r1(x), y: r1(y), w, h });
   }
-  window.BCSlideEdit = { init, open, openPreviewSlide, close, dropImage, isOpen: () => !$('#se').hidden };
+  /** 오른쪽 클릭 메뉴 (ctxmenu.js 가 부른다) */
+  function menuFor(t) {
+    const btn = a => () => { const b = $(`#se [data-a="${a}"]`); if (b) b.click(); };
+    const add = [
+      { label: '＋ 글상자', run: () => addItem('text') },
+      { label: '＋ 그림…', run: () => window.BCLib && window.BCLib.pickImage(url => addItem('image', { src: url })) },
+      { label: '＋ 도형 (띠·상자)', run: () => addItem('shape') },
+    ];
+    const history = [{ label: '되돌리기', key: 'Ctrl+Z', run: undo, disabled: !S.undo.length }, { label: '다시 하기', key: 'Ctrl+Y', run: redo, disabled: !S.redo.length }];
+    const slide = t.closest('#seList .se-slide');
+    if (slide) {
+      S.key = slide.dataset.key; S.sel = 'main'; draw();
+      return [{ head: S.key === '*' ? '공통 (모든 슬라이드)' : '슬라이드' },
+        { label: '이 꾸미기를 모든 슬라이드에', run: btn('tocommon'), disabled: S.key === '*' || !raw(false).box && !raw(false).style },
+        { label: S.key === '*' ? '공통 꾸미기 지우기' : '이 슬라이드 초기화', run: btn('reset'), danger: true }];
+    }
+    const box = t.closest('#seHandles .se-box');
+    if (box && !box.classList.contains('locked')) {
+      const id = box.dataset.id;
+      if (S.sel !== id) { S.sel = id; draw({ list: false }); }
+      if (id === 'main') {
+        return [{ head: '본문 글상자' },
+          { label: '글 고치기', key: 'Enter · 더블클릭', run: () => inlineEdit('main'), disabled: S.key === '*' },
+          { label: '템플릿 위치로', run: btn('mainreset') },
+          { label: '꾸미기 초기화', run: btn('stylereset') },
+          '-', ...add, '-', ...history];
+      }
+      const x = target();
+      return [{ head: NAMES[x ? x.type : 'text'] },
+        ...(x && x.type === 'text' ? [{ label: '글 고치기', key: 'Enter · 더블클릭', run: () => inlineEdit(id) }] : []),
+        ...(x && x.type === 'image' ? [{ label: '그림 바꾸기…', run: btn('imgpick') }] : []),
+        { label: '복제', key: 'Ctrl+D', run: dupSelected },
+        { label: x && x.below ? '본문 글 앞으로' : '본문 글 뒤로', run: btn('layer') },
+        { label: '지우기', key: 'Delete', run: delSelected, danger: true },
+        '-', ...history];
+    }
+    if (t.closest('#seCenter')) return [{ head: '덧붙이기' }, ...add, '-', ...history, '-', { label: '완료 (닫기)', key: 'Esc', run: close }];
+    return [];
+  }
+  window.BCSlideEdit = { init, open, openPreviewSlide, close, dropImage, menuFor, isOpen: () => !$('#se').hidden };
 })();

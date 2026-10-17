@@ -24,6 +24,7 @@ const DEFAULT_SHORTCUTS = {
   cuePrev: 'Ctrl+ArrowUp',
   cueNext: 'Ctrl+ArrowDown',
   cueEdit: 'F2',
+  toggleEditor: 'Ctrl+Shift+E',
 };
 
 const SHORTCUT_LABELS = {
@@ -45,6 +46,7 @@ const SHORTCUT_LABELS = {
   cuePrev: '큐시트 이전 순서 미리보기',
   cueNext: '큐시트 다음 순서 미리보기',
   cueEdit: '선택한 순서 편집',
+  toggleEditor: '편집칸 보이기·숨기기',
 };
 
 function defaults() {

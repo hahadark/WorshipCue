@@ -256,6 +256,14 @@ if (!app.requestSingleInstanceLock()) {
       show: false,
       webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false, preload: path.join(__dirname, 'preload.js') },
     });
+    // 글 입력칸·고른 글: 잘라내기·복사·붙여넣기 메뉴 (그 밖의 곳은 조작 화면이 자기 메뉴를 띄운다)
+    controlWin.webContents.on('context-menu', (e, p) => {
+      if (!p.isEditable && !p.selectionText) return;
+      const t = p.isEditable
+        ? [{ role: 'undo', label: '되돌리기' }, { role: 'redo', label: '다시 하기' }, { type: 'separator' }, { role: 'cut', label: '잘라내기' }, { role: 'copy', label: '복사' }, { role: 'paste', label: '붙여넣기' }, { type: 'separator' }, { role: 'selectAll', label: '모두 선택' }]
+        : [{ role: 'copy', label: '복사' }];
+      Menu.buildFromTemplate(t).popup({ window: controlWin });
+    });
     try {
       const vs = core.store.listVersions();
       splashCall(`setInfo(${JSON.stringify(`성경 ${vs.length}종 · 큐시트 ${core.store.listCues().length}개`)})`);

@@ -14,6 +14,8 @@
 
   const ICON = { video: '🎬', audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
   const TYPE = { video: '영상', audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
+  let editorOn = true;
+  try { editorOn = localStorage.getItem('wc-cue-editor') !== '0'; } catch { /* 무시 */ }
   const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map(), songs: new Map(), songTimer: null };
   /** 순서별 템플릿 { main, overlay } (없으면 null = 출력 기본) */
   const itemTpl = it => (it.tplMain || it.tplOverlay ? { main: it.tplMain || '', overlay: it.tplOverlay || '' } : null);
@@ -326,13 +328,6 @@
     app.setPreviewIndex(+r.dataset.k);
     document.querySelectorAll('#results .srow').forEach(x => x.classList.toggle('in-pv', x === r));
   });
-  // 오른쪽 클릭: 그 슬라이드 편집
-  $('#results').addEventListener('contextmenu', e => {
-    const r = e.target.closest('.srow');
-    if (!r || !app.preview || !app.preview.cue || !window.BCSlideEdit) return;
-    e.preventDefault();
-    window.BCSlideEdit.openPreviewSlide(+r.dataset.k);
-  });
   $('#results').addEventListener('dblclick', e => {
     const r = e.target.closest('.srow');
     if (r && app.preview) { app.setPreviewIndex(+r.dataset.k); app.sendPreview(); }
@@ -363,7 +358,8 @@
     const box = $('#cueEditor');
     const it = st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null;
     const cueTab = !$('#cuePanel').hidden;
-    if (!it || !cueTab) { box.hidden = true; box.dataset.id = ''; return; }
+    drawEditorToggle();
+    if (!it || !cueTab || !editorOn) { box.hidden = true; box.dataset.id = ''; return; }
     // 같은 항목을 고치는 중이면 다시 그리지 않는다 (입력 중 커서가 튀지 않도록)
     if (box.dataset.id === it.id && !box.hidden && box.contains(document.activeElement)) return;
     box.hidden = false;
@@ -406,7 +402,7 @@
     box.innerHTML = `<div class="ce-head"><span class="ce-ico">${ICON[it.type]}</span><b>${i + 1}번 ${TYPE[it.type]}</b>
         <span class="grow"></span><span id="cueSaved" class="muted"></span>
         <button data-act="up" title="위로 (Alt+↑)">▲</button><button data-act="down" title="아래로 (Alt+↓)">▼</button>
-        ${['song', 'text', 'title'].includes(it.type) ? '<button data-act="slideedit" class="primary" title="슬라이드마다 글상자 위치·꾸미기, 글·그림·도형 덧붙이기 (Ctrl+E)">✏ 슬라이드 편집</button>' : ''}
+        ${['song', 'text', 'title'].includes(it.type) ? '<button data-act="slideedit" class="primary" title="슬라이드마다 글상자 위치·꾸미기, 글·그림·도형 덧붙이기 (Ctrl+E)">✎ 슬라이드 편집</button>' : ''}
         <button data-act="dup" title="이 순서 복제">복제</button><button data-act="del" title="이 순서 지우기 (Delete)">지우기</button>
         <button data-act="close" title="편집칸 닫기">✕</button></div>
       <div class="form ce-form">
@@ -483,7 +479,7 @@
     const i = st.sel;
     const it = st.cue.items[i];
     switch (b.dataset.act) {
-      case 'close': $('#cueEditor').hidden = true; $('#cueEditor').dataset.id = ''; break;
+      case 'close': setEditor(false); app.showMsg('편집칸을 숨겼습니다. 다시 보려면 가운데 위 ✎ 편집칸 단추 · F2 · Ctrl+Shift+E', 'info', 3500); break;
       case 'up': if (i > 0) { moveItem(i, i - 1); st.sel = i - 1; renderEditor(true); } break;
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;
       case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); forceEditor(); break; }
@@ -525,6 +521,25 @@
 
   function forceEditor() { $('#cueEditor').dataset.id = ''; renderEditor(); }
 
+  // ---------------- 편집칸 보이기·숨기기 (토글) ----------------
+  function setEditor(on) {
+    editorOn = !!on;
+    try { localStorage.setItem('wc-cue-editor', editorOn ? '1' : '0'); } catch { /* 무시 */ }
+    forceEditor();
+  }
+  function drawEditorToggle() {
+    let b = $('#ceToggle');
+    if (!b) {
+      const tabs = $('#centerTabs');
+      if (!tabs) return;
+      tabs.insertAdjacentHTML('afterend', '<button id="ceToggle" class="ce-toggle" title="큐시트 순서 편집칸 보이기·숨기기 (Ctrl+Shift+E)">✎ 편집칸</button>');
+      b = $('#ceToggle');
+      b.onclick = () => { setEditor(!editorOn); if (editorOn) focusTitle(); };
+    }
+    b.classList.toggle('on', editorOn);
+    b.hidden = !(st.cue && st.sel >= 0 && !$('#cuePanel').hidden);
+  }
+
   function pickImage(done) {
     const inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp,image/gif';
@@ -545,7 +560,7 @@
     const row = e.target.closest('.cue-item');
     if (!row) return;
     const i = +row.dataset.i;
-    if (ed) { st.sel = i; render(); forceEditor(); focusTitle(); return; }
+    if (ed) { st.sel = i; render(); setEditor(true); focusTitle(); return; }
     previewItem(i);
   });
   list.addEventListener('dblclick', e => {
@@ -596,6 +611,33 @@
     items.splice(to, 0, it);
     if (st.sel === from) st.sel = to;
     save();
+  }
+
+  async function itemAction(i, act, extra) {
+    const it = st.cue && st.cue.items[i];
+    if (!it) return;
+    switch (act) {
+      case 'preview': previewItem(i); break;
+      case 'send': showSide('cue'); sendItem(i); break;
+      case 'edit': st.sel = i; render(); setEditor(true); focusTitle(); break;
+      case 'up': if (i > 0) { moveItem(i, i - 1); render(); forceEditor(); } break;
+      case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); render(); forceEditor(); } break;
+      case 'top': if (i > 0) { moveItem(i, 0); render(); forceEditor(); } break;
+      case 'bottom': if (i < st.cue.items.length - 1) { moveItem(i, st.cue.items.length - 1); render(); forceEditor(); } break;
+      case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); render(); forceEditor(); break; }
+      case 'del': removeItem(i); render(); break;
+      case 'note': { const v = prompt(`${i + 1}번 '${it.title}' 조작자 메모 (무대 화면에도 보임)`, it.note || ''); if (v !== null) { it.note = v.trim(); save(); render(); forceEditor(); } break; }
+      case 'duration': { const v = prompt(`${i + 1}번 '${it.title}' 예정 시간 (분)`, it.duration || ''); if (v !== null) { it.duration = Math.max(0, Math.min(600, parseInt(v, 10) || 0)); save(); render(); forceEditor(); } break; }
+      case 'rename': { const v = prompt('제목', it.title); if (v && v.trim()) { it.title = v.trim(); save(); render(); forceEditor(); } break; }
+      case 'tolib': {
+        const r = await cmd('saveSong', { song: { title: it.title, lyrics: it.lyrics || '', credit: it.credit || '' } });
+        if (!r.ok) { app.showMsg(r.error, 'error'); break; }
+        it.songId = r.result.id; st.songs.set(it.songId, r.result); save(); forceEditor();
+        app.showMsg(`'${it.title}' 을(를) 찬양 라이브러리에 저장했습니다.`, 'ok', 2500);
+        break;
+      }
+      case 'addAfter': st.sel = i; render(); { const b = $(`#cueAdd [data-add="${extra}"]`); if (b) b.click(); } break;
+    }
   }
 
   function removeItem(i) {
@@ -869,7 +911,11 @@
     /** 고른 순서를 바꾸고 저장·미리보기 갱신 */
     updateSelected: fn => { const it = st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null; if (!it) return false; fn(it); save(); forceEditor(); previewItem(st.sel, { keepIndex: true }); return true; },
     onSongs: d => { if (d && d.id) st.songs.delete(d.id); },
-    edit: () => { if (st.cue && st.sel >= 0) { showSide('cue'); forceEditor(); focusTitle(); } },
+    edit: () => { if (st.cue && st.sel >= 0) { showSide('cue'); setEditor(true); focusTitle(); } },
+    toggleEditor: () => { setEditor(!editorOn); if (editorOn) focusTitle(); app.showMsg(editorOn ? '편집칸을 켰습니다.' : '편집칸을 숨겼습니다.', 'info', 1200); },
+    editorOn: () => editorOn,
+    /** 오른쪽 클릭 메뉴용: i 번째 순서에 하는 일 */
+    itemAction: (i, act, extra) => itemAction(i, act, extra),
     onLive: () => render(),
     // 다른 곳(다른 창·외부 연동)에서 바뀐 큐시트는 다시 불러온다. 방금 내가 저장한 것은 제외
     onCues: d => { refreshList(); if (st.cue && d && d.id === st.cue.id && Date.now() - st.lastSave > 1500) openCue(st.cue.id); },

@@ -24,7 +24,7 @@
     ]],
     ['편집', [
       { label: '고른 순서 고치기', key: 'F2', run: act('cueEdit') },
-      { label: '✏ 슬라이드 편집 (글상자·그림·도형)', key: 'Ctrl+E', run: () => { const p = app.preview; if (window.BCSlideEdit) { if (p && p.cue) window.BCSlideEdit.openPreviewSlide(p.index); else if (window.BCCue && window.BCCue.selIndex() >= 0) window.BCSlideEdit.open(window.BCCue.selIndex()); else app.showMsg('큐시트에서 찬양·공지·제목 순서를 고르세요.', 'info', 2000); } } },
+      { label: '✎ 슬라이드 편집 (글상자·그림·도형)', key: 'Ctrl+E', run: () => { const p = app.preview; if (window.BCSlideEdit) { if (p && p.cue) window.BCSlideEdit.openPreviewSlide(p.index); else if (window.BCCue && window.BCCue.selIndex() >= 0) window.BCSlideEdit.open(window.BCCue.selIndex()); else app.showMsg('큐시트에서 찬양·공지·제목 순서를 고르세요.', 'info', 2000); } } },
       { label: '순서 위로', run: ed('up') }, { label: '순서 아래로', run: ed('down') },
       { label: '순서 복제', run: ed('dup') }, { label: '순서 지우기', run: ed('del') },
       '-',
@@ -51,6 +51,7 @@
     ['보기', [
       panel('cue'), panel('main'), panel('quick'), panel('library'), panel('stage'), panel('preview'), panel('live'),
       '-',
+      { label: () => (window.BCCue && window.BCCue.editorOn() ? '✓ ' : '　') + '편집칸 보이기 (큐시트 순서 고치기)', key: 'Ctrl+Shift+E', run: act('toggleEditor') },
       { label: '슬라이드 목록 / 격자 바꾸기', run: () => { const on = window.BCGrid && window.BCGrid.isOn(); const b = $(`#slideView [data-sv="${on ? 'list' : 'grid'}"]`); if (b) b.click(); } },
       { label: '🖥 무대 화면 창 열기', run: () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720') },
       '-',

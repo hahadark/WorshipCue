@@ -28,8 +28,6 @@
       if (e.target.closest('.sg-edit')) { if (window.BCSlideEdit) window.BCSlideEdit.openPreviewSlide(+c.dataset.k); return; }
       app.setPreviewIndex(+c.dataset.k);
     });
-    // 오른쪽 클릭: 슬라이드 편집
-    grid.addEventListener('contextmenu', e => { const c = e.target.closest('.sg-cell'); if (c && window.BCSlideEdit) { e.preventDefault(); window.BCSlideEdit.openPreviewSlide(+c.dataset.k); } });
     grid.addEventListener('dblclick', e => { const c = e.target.closest('.sg-cell'); if (c && !e.target.closest('.sg-edit')) { app.setPreviewIndex(+c.dataset.k); app.sendPreview(); } });
     grid.addEventListener('keydown', e => {
       if (!app.preview) return;
@@ -66,7 +64,7 @@
     const key = JSON.stringify([p.slides.length, p.passage && p.passage.title, tpl.id, p.slides.map(s => s.ref + s.label + (s.parts[0] ? s.parts[0].text.slice(0, 20) : '') + (s.image || '') + (s.bg || '') + (s.edit ? JSON.stringify(s.edit) : ''))]);
     if (key !== drawnKey) {
       drawnKey = key;
-      grid.innerHTML = p.slides.map((s, k) => `<div class="sg-cell" data-k="${k}"><div class="screen sg-screen"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✏</button><div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('');
+      grid.innerHTML = p.slides.map((s, k) => `<div class="sg-cell" data-k="${k}"><div class="screen sg-screen"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button><div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('');
       grid.querySelectorAll('.sg-cell').forEach(c => {
         const s = p.slides[+c.dataset.k];
         R.renderInto(c.querySelector('.sg-screen'), s, tpl, { checker: true, versionName: p.passage.versionName });

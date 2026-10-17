@@ -151,6 +151,7 @@
     if (window.BCUiTheme) window.BCUiTheme.init();
     if (window.BCSlideEdit) window.BCSlideEdit.init();
     if (window.BCDrop) window.BCDrop.init();
+    if (window.BCCtx) window.BCCtx.init();
     // 로딩 화면 닫기: 배치가 자리 잡은 뒤 (숨긴 창에서는 화면 그리기 신호가 없으므로 시간으로)
     setTimeout(() => cmd('uiReady'), 150);
     if (!app.state.versions.length) showWelcome();
@@ -1216,6 +1217,7 @@
     cuePrev: () => window.BCCue && window.BCCue.move(-1),
     cueNext: () => window.BCCue && window.BCCue.move(1),
     cueEdit: () => window.BCCue && window.BCCue.edit(),
+    toggleEditor: () => window.BCCue && window.BCCue.toggleEditor(),
     openHistory: () => openHistory(),
     previewPrevSlide: () => setPreviewIndex((app.preview?.index ?? 0) - 1),
     previewNextSlide: () => setPreviewIndex((app.preview?.index ?? 0) + 1),
@@ -1277,6 +1279,7 @@
 
   window.addEventListener('keydown', e => {
     if (!app.state) return;
+    if (window.BCCtx && window.BCCtx.isOpen()) return; // 오른쪽 클릭 메뉴가 키를 받는다 (Esc 로 보조 화면이 꺼지지 않게)
     const combo = comboOf(e);
     if (!combo) return;
     if (app.capturing) { e.preventDefault(); e.stopPropagation(); app.capturing(combo); return; }
