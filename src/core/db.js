@@ -90,6 +90,13 @@ class BibleStore {
     this.db.exec(SCHEMA);
     // 큐시트 예배 시작 시각 칸 (예전 DB 에는 없으면 추가)
     if (!this.db.prepare('PRAGMA table_info(Cuesheets)').all().some(c => c.name === 'start_time')) this.db.exec("ALTER TABLE Cuesheets ADD COLUMN start_time TEXT NOT NULL DEFAULT ''");
+    // 큐시트 관리: 메모 · 고정 · 서식(새 큐시트의 바탕) · 휴지통(지운 시각)
+    const cols = this.db.prepare('PRAGMA table_info(Cuesheets)').all().map(c => c.name);
+    if (!cols.includes('memo')) this.db.exec("ALTER TABLE Cuesheets ADD COLUMN memo TEXT NOT NULL DEFAULT ''");
+    if (!cols.includes('pinned')) this.db.exec('ALTER TABLE Cuesheets ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0');
+    if (!cols.includes('template')) this.db.exec('ALTER TABLE Cuesheets ADD COLUMN template INTEGER NOT NULL DEFAULT 0');
+    if (!cols.includes('deleted_at')) this.db.exec("ALTER TABLE Cuesheets ADD COLUMN deleted_at TEXT NOT NULL DEFAULT ''");
+    if (!cols.includes('created_at')) this.db.exec("ALTER TABLE Cuesheets ADD COLUMN created_at TEXT NOT NULL DEFAULT ''");
     const ins = this.db.prepare('INSERT OR REPLACE INTO BibleBooks (id, name, short_name, testament, book_order) VALUES (?, ?, ?, ?, ?)');
     this.transaction(() => { for (const b of BOOKS) ins.run(b.id, b.name, b.short, b.testament, b.id); });
     this.structure = new Map(); // versionId → Map(bookId → [verseCount per chapter, index = chapter-1])
@@ -315,19 +322,44 @@ class BibleStore {
   }
 
   // ---------- 큐시트 (예배 순서) ----------
-  listCues() {
-    return this.db.prepare('SELECT id, name, service_date, items, updated_at FROM Cuesheets ORDER BY COALESCE(service_date, \'\') DESC, updated_at DESC').all()
-      .map(r => ({ id: r.id, name: r.name, serviceDate: r.service_date || '', updatedAt: r.updated_at, count: safeJson(r.items, []).length }));
+  /** 큐시트 목록 (trash: 휴지통만). 고정한 것이 먼저, 그다음 예배 날짜 최신순 */
+  listCues(trash = false) {
+    return this.db.prepare(`SELECT id, name, service_date, start_time, items, updated_at, created_at, memo, pinned, template, deleted_at FROM Cuesheets WHERE (deleted_at = '') = ? ORDER BY pinned DESC, COALESCE(service_date, '') DESC, updated_at DESC`).all(trash ? 0 : 1)
+      .map(r => {
+        const items = safeJson(r.items, []);
+        return { id: r.id, name: r.name, serviceDate: r.service_date || '', startTime: r.start_time || '', updatedAt: r.updated_at, createdAt: r.created_at || '', count: items.length,
+          memo: r.memo || '', pinned: !!r.pinned, template: !!r.template, deletedAt: r.deleted_at || '',
+          preview: items.slice(0, 40).map(x => ({ type: x.type, title: x.title || '', sub: x.ref || x.subtitle || (x.number != null ? x.number + '장' : '') || '' })) };
+      });
+  }
+  /** 이름·날짜·메모·고정·서식만 바꾸기 (순서는 그대로) */
+  updateCueMeta(id, m) {
+    const sets = [], vals = [];
+    if (typeof m.name === 'string') { sets.push('name = ?'); vals.push(m.name); }
+    if (typeof m.serviceDate === 'string') { sets.push('service_date = ?'); vals.push(m.serviceDate); }
+    if (typeof m.memo === 'string') { sets.push('memo = ?'); vals.push(m.memo); }
+    if (typeof m.pinned === 'boolean') { sets.push('pinned = ?'); vals.push(m.pinned ? 1 : 0); }
+    if (typeof m.template === 'boolean') { sets.push('template = ?'); vals.push(m.template ? 1 : 0); }
+    if (typeof m.deletedAt === 'string') { sets.push('deleted_at = ?'); vals.push(m.deletedAt); }
+    if (!sets.length) return;
+    this.db.prepare(`UPDATE Cuesheets SET ${sets.join(', ')} WHERE id = ?`).run(...vals, id);
+  }
+  /** 휴지통에서 오래된 것 비우기 */
+  purgeTrash(days = 30) {
+    const before = new Date(Date.now() - days * 86400000).toISOString();
+    return this.db.prepare("DELETE FROM Cuesheets WHERE deleted_at != '' AND deleted_at < ?").run(before).changes;
   }
 
   getCue(id) {
     const r = this.db.prepare('SELECT * FROM Cuesheets WHERE id = ?').get(id);
-    return r ? { id: r.id, name: r.name, serviceDate: r.service_date || '', startTime: r.start_time || '', items: safeJson(r.items, []), updatedAt: r.updated_at } : null;
+    return r ? { id: r.id, name: r.name, serviceDate: r.service_date || '', startTime: r.start_time || '', items: safeJson(r.items, []), updatedAt: r.updated_at, memo: r.memo || '', pinned: !!r.pinned, template: !!r.template, deletedAt: r.deleted_at || '' } : null;
   }
 
   saveCue(cue) {
-    this.db.prepare('INSERT OR REPLACE INTO Cuesheets (id, name, service_date, start_time, items, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(cue.id, cue.name, cue.serviceDate || '', cue.startTime || '', JSON.stringify(cue.items || []), new Date().toISOString());
+    const old = this.db.prepare('SELECT created_at, deleted_at FROM Cuesheets WHERE id = ?').get(cue.id);
+    const now = new Date().toISOString();
+    this.db.prepare('INSERT OR REPLACE INTO Cuesheets (id, name, service_date, start_time, items, updated_at, memo, pinned, template, deleted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(cue.id, cue.name, cue.serviceDate || '', cue.startTime || '', JSON.stringify(cue.items || []), now, cue.memo || '', cue.pinned ? 1 : 0, cue.template ? 1 : 0, (old && old.deleted_at) || '', (old && old.created_at) || now);
     return this.getCue(cue.id);
   }
 

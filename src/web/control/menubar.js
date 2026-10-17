@@ -23,7 +23,7 @@
   // 하는 일 순서대로: 파일 → 큐시트(준비) → 송출(예배 중) → 보기 → 도구 → 리모컨 → 설정 → 도움말
   const MENUS = [
     ['파일', [
-      { label: '새 큐시트 · 복제 · 내보내기·가져오기…', run: click('#cueMenu') },
+      { label: '📋 큐시트 관리 (새로 · 복제 · 서식 · 휴지통)…', run: click('#cueMenu') },
       { label: '🤖 주보로 큐시트 만들기 (AI)…', run: () => window.BCAI && window.BCAI.open() },
       '-',
       { label: '📥 찬양 가져오기 (OpenLP · ChordPro · ProPresenter · PPT)…', run: () => { lib('songs')(); setTimeout(() => { const b = document.querySelector('#panelLibrary [data-import]'); if (b) b.click(); }, 300); } },
@@ -43,6 +43,7 @@
       { label: '복제', run: ed('dup') }, { label: '지우기', key: 'Delete', run: ed('del') },
       '-',
       { label: () => on(window.BCCue && window.BCCue.editorOn(), '편집칸 보이기'), key: 'Ctrl+Shift+E', run: act('toggleEditor') },
+      { label: () => on(window.BCCue && window.BCCue.timesOn(), '⏰ 예배 진행 시계 (시작 시각 · 예정 시간)'), run: () => window.BCCue && window.BCCue.setTimes(!window.BCCue.timesOn()) },
     ]],
     ['송출', [
       { label: '송출', key: 'F9', run: act('sendPreview') },

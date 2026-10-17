@@ -924,6 +924,54 @@ test('카메라 (FreeShow 방식): 송출 배경 층 · 카메라 순서 · 슬�
   assert.equal(e['0'].items[0].deviceId, 'cam-2');
 });
 
+test('큐시트 관리: 메모·고정·서식, 다음 주 복제, 휴지통, 여러 개 내보내기·가져오기, 순서지 글', () => {
+  const core = newCore('cuemgr');
+  const a = core.command('saveCue', { cue: { name: '2026-10-18 주일 예배', serviceDate: '2026-10-18', startTime: '11:00', items: [{ type: 'title', title: '예배로 부름', subtitle: '인도: 홍길동' }, { type: 'bible', title: '성경봉독', ref: '시 23:1-6', note: '일어서서' }] } }).result;
+  const b = core.command('saveCue', { cue: { name: '수요 예배', serviceDate: '2026-10-21', items: [{ type: 'title', title: '찬양' }] } }).result;
+  // 메모·고정·서식 (순서는 그대로)
+  const m = core.command('updateCueMeta', { id: a.id, memo: '성찬 주일', pinned: true, template: true, serviceDate: 'bad' }).result;
+  assert.equal(m.memo, '성찬 주일'); assert.equal(m.pinned, true); assert.equal(m.template, true);
+  assert.equal(m.serviceDate, '2026-10-18'); // 이상한 날짜는 무시
+  assert.equal(m.items.length, 2);
+  let list = core.command('listCues').result;
+  assert.equal(list[0].id, a.id); // 고정이 맨 위
+  assert.equal(list[0].preview[1].sub, '시 23:1-6');
+  // 순서를 저장해도 메모·고정은 남는다
+  core.command('saveCue', { cue: { ...core.command('getCue', { id: a.id }).result, name: '2026-10-18 주일 예배' } });
+  assert.equal(core.command('getCue', { id: a.id }).result.memo, '성찬 주일');
+  // 다음 주로 복제: 날짜 +7, 이름 속 날짜도
+  const n = core.command('duplicateCue', { id: a.id, nextWeek: true }).result;
+  assert.equal(n.serviceDate, '2026-10-25');
+  assert.equal(n.name, '2026-10-25 주일 예배');
+  assert.equal(n.pinned, false); assert.equal(n.template, false); assert.equal(n.memo, '');
+  assert.notEqual(n.items[0].id, core.command('getCue', { id: a.id }).result.items[0].id);
+  // 휴지통 → 되살리기 → 아주 지우기
+  core.command('trashCues', { ids: [b.id, n.id] });
+  assert.equal(core.command('listCues').result.length, 1);
+  assert.equal(core.command('listCues', { trash: true }).result.length, 2);
+  core.command('restoreCues', { ids: [b.id] });
+  assert.equal(core.command('listCues').result.length, 2);
+  core.command('purgeCues', { ids: [n.id, a.id] }); // 휴지통에 없는 a 는 그대로
+  assert.equal(core.command('listCues', { trash: true }).result.length, 0);
+  assert.equal(core.command('getCue', { id: a.id }).ok, true);
+  // 여러 개 내보내기 → 가져오기
+  const ex = core.command('exportCues', { ids: [a.id, b.id] }).result;
+  assert.equal(ex.cues.length, 2);
+  const im = core.command('importCues', { data: ex }).result;
+  assert.equal(im.count, 2);
+  assert.equal(core.command('listCues').result.length, 4);
+  assert.equal(core.command('importCues', { data: { name: '하나', items: [{ type: 'blank' }] } }).result.count, 1); // 예전 형식(하나)
+  assert.equal(core.command('importCues', { data: { foo: 1 } }).ok, false);
+  // 순서지 글
+  const t = core.command('cueText', { id: a.id }).result.text;
+  assert.match(t, /■ 2026-10-18 주일 예배 \(2026-10-18 11:00\)/);
+  assert.match(t, /2\. 성경봉독 — 시 23:1-6 {2}\(일어서서\)/);
+  assert.match(t, /※ 성찬 주일/);
+  // 지우기(deleteCue) 는 휴지통으로
+  core.command('deleteCue', { id: b.id });
+  assert.ok(core.command('listCues', { trash: true }).result.some(c => c.id === b.id));
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

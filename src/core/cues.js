@@ -86,6 +86,9 @@ function normalizeCue(c) {
     name: str(c.name, 200).trim(),
     serviceDate: /^\d{4}-\d{2}-\d{2}$/.test(c.serviceDate || '') ? c.serviceDate : '',
     startTime: /^\d{1,2}:\d{2}$/.test(c.startTime || '') ? c.startTime : '', // 예배 시작 시각 (진행 시계)
+    memo: str(c.memo, 1000), // 큐시트 메모 (관리 창)
+    pinned: !!c.pinned, // 맨 위에 고정
+    template: !!c.template, // 서식: 새 큐시트의 바탕으로 쓰기
     items: (Array.isArray(c.items) ? c.items : []).slice(0, 500).map(normalizeItem),
   };
 }

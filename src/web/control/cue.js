@@ -37,7 +37,7 @@
     const r = await cmd('listCues');
     st.list = r.ok ? r.result : [];
     const sel = $('#cueSel');
-    sel.innerHTML = st.list.map(c => `<option value="${esc(c.id)}">${esc(c.name)} (${c.count})</option>`).join('') || '<option value="">(큐시트 없음)</option>';
+    sel.innerHTML = st.list.map(c => `<option value="${esc(c.id)}">${c.pinned ? '📌 ' : ''}${c.template ? '📄 ' : ''}${esc(c.name)} (${c.count})</option>`).join('') || '<option value="">(큐시트 없음)</option>';
     if (st.cue) sel.value = st.cue.id;
   }
 
@@ -95,7 +95,7 @@
         <span class="cue-no">${i + 1}</span>
         <span class="cue-ico" title="${TYPE[it.type]}">${ICON[it.type]}</span>
         <span class="cue-body"><b>${esc(it.title)}</b><span class="cue-detail">${esc(detail(it))}</span>${it.note ? `<span class="cue-note">📝 ${esc(it.note)}</span>` : ''}</span>
-        ${plan[i] ? `<span class="cue-time" title="예정 시작${it.duration ? ' · ' + it.duration + '분' : ''}">${plan[i]}${it.duration ? `<small>${it.duration}분</small>` : ''}</span>` : ''}
+        ${plan[i] && timesOn() ? `<span class="cue-time" title="예정 시작${it.duration ? ' · ' + it.duration + '분' : ''}">${plan[i]}${it.duration ? `<small>${it.duration}분</small>` : ''}</span>` : ''}
         <button class="cue-edit" data-edit="${i}" title="이 순서 고치기 (F2)">✎</button>
       </div>`).join('') : '<div class="empty">아래 버튼으로 예배 순서를 추가하세요.</div>';
     el.querySelector('.cue-item.sel')?.scrollIntoView({ block: 'nearest' });
@@ -127,9 +127,12 @@
     const a = actuals();
     if (!a[idx]) { a[idx] = Date.now(); try { localStorage.setItem(actualKey(), JSON.stringify(a)); } catch { /* 무시 */ } }
   }
+  const timesOn = () => app.state && app.state.settings.cueTimes !== false;
   function renderClock() {
     const el = $('#cueClock');
     if (!el || !st.cue) return;
+    el.hidden = !timesOn();
+    if (!timesOn()) return;
     const pm = planMinutes();
     const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
     const live = app.state.live;
@@ -502,7 +505,7 @@
         ${it.type !== 'audio' ? `<label>템플릿</label><div class="ce-row">${tplSelect('tplMain', '예배당', it.tplMain)}${tplSelect('tplOverlay', 'OBS', it.tplOverlay)}</div>` : ''}
         ${it.type !== 'audio' && it.type !== 'video' ? `<label>자동 넘김</label><div class="ce-row"><input type="number" data-k="autoSec" min="0" max="3600" value="${it.autoSec || ''}" placeholder="0" style="width:80px"> 초마다 <label class="tc-toggle"><input type="checkbox" data-k="autoLoop" ${it.autoLoop ? 'checked' : ''}> 끝나면 처음부터 반복</label><span class="note">0 = 끔 (F6 으로 넘김) · 숨김(F10) 중에는 멈춤</span></div>` : ''}
         ${it.type !== 'audio' ? actionsHtml(it) : ''}
-        <label>예정 시간</label><div class="ce-row"><input type="number" data-k="duration" min="0" max="600" value="${it.duration || ''}" placeholder="0" style="width:80px"> 분 <span class="note">${planTimes()[i] ? '예정 시작 ' + planTimes()[i] : '큐시트 위 ⏰ 에 예배 시작 시각을 넣으면 순서마다 예정 시각이 계산됩니다'}</span></div>
+        ${timesOn() ? `<label>예정 시간</label><div class="ce-row"><input type="number" data-k="duration" min="0" max="600" value="${it.duration || ''}" placeholder="0" style="width:80px"> 분 <span class="note">${planTimes()[i] ? '예정 시작 ' + planTimes()[i] : '큐시트 위 ⏰ 에 예배 시작 시각을 넣으면 순서마다 예정 시각이 계산됩니다'}</span></div>` : ''}
         <label>메모</label><input type="text" data-k="note" value="${esc(it.note || '')}" placeholder="조작자만 보는 메모 (예: 설교 후 바로)">
       </div>`;
     if (it.type === 'bible') checkRef(it);
@@ -928,52 +931,8 @@
     $('#hQ').focus();
   }
 
-  // ---------------- 큐시트 관리 (⋯) ----------------
-  $('#cueMenu').onclick = () => {
-    const c = st.cue;
-    app.openModal('큐시트 관리', `<div class="form">
-      <h4>지금 큐시트</h4>
-      <label>이름</label><input type="text" id="mName" value="${esc(c ? c.name : '')}">
-      <label>예배 날짜</label><input type="date" id="mDate" value="${esc(c ? c.serviceDate : '')}">
-      <span></span><div class="row-flex"><button id="mSave">이름·날짜 저장</button><button id="mDup">복제 (다음 주 순서 만들기)</button><button id="mExport">파일로 내보내기</button><button id="mDel">삭제</button></div>
-      <h4>새 큐시트</h4>
-      <span></span><div class="row-flex"><button id="mAI" class="primary">🤖 주보로 만들기 (AI)</button><button id="mNew">기본 순서로 새로 만들기</button><button id="mNewEmpty">빈 큐시트</button><button id="mImport">파일에서 가져오기 (.json)</button></div>
-      <span></span><div class="note">기본 순서: 예배로 부름 · 찬양 · 대표기도 · 성경 봉독 · 설교 · 광고 · 축도 · 빈 화면 (자유롭게 고치세요)</div>
-    </div>`);
-    $('#mSave').onclick = async () => { c.name = $('#mName').value.trim() || c.name; c.serviceDate = $('#mDate').value; app.closeModal(); save(); };
-    $('#mDup').onclick = async () => { const r = await cmd('duplicateCue', { id: c.id }); app.closeModal(); if (r.ok) { await refreshList(); openCue(r.result.id); } };
-    $('#mDel').onclick = async () => {
-      if (!confirm(`'${c.name}' 큐시트를 삭제할까요? 되돌릴 수 없습니다.`)) return;
-      await cmd('deleteCue', { id: c.id }); app.closeModal(); st.cue = null; await refreshList();
-      if (st.list[0]) openCue(st.list[0].id); else init();
-    };
-    $('#mAI').onclick = () => { app.closeModal(); if (window.BCAI) window.BCAI.open(); };
-    $('#mNew').onclick = async () => { const r = await cmd('newCue', {}); app.closeModal(); if (r.ok) { await refreshList(); openCue(r.result.id); } };
-    $('#mNewEmpty').onclick = async () => { const r = await cmd('newCue', { empty: true }); app.closeModal(); if (r.ok) { await refreshList(); openCue(r.result.id); } };
-    $('#mExport').onclick = () => {
-      const blob = new Blob([JSON.stringify({ worshipcue: 1, name: c.name, serviceDate: c.serviceDate, items: c.items }, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${c.name.replace(/[\\/:*?"<>|]/g, '_')}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-      app.showMsg('큐시트를 파일로 내보냈습니다 (다운로드 폴더).', 'ok', 2500);
-    };
-    $('#mImport').onclick = () => {
-      const inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = '.json,application/json';
-      inp.onchange = async () => {
-        try {
-          const d = JSON.parse(await inp.files[0].text());
-          const r = await cmd('saveCue', { cue: { name: d.name || '가져온 큐시트', serviceDate: d.serviceDate || '', items: (d.items || []).map(x => ({ ...x, id: '' })) } });
-          if (!r.ok) throw new Error(r.error);
-          app.closeModal(); await refreshList(); openCue(r.result.id);
-          app.showMsg('큐시트를 가져왔습니다.', 'ok', 2000);
-        } catch (err) { app.showMsg('가져오기 실패: ' + err.message, 'error'); }
-      };
-      inp.click();
-    };
-  };
+  // ---------------- 큐시트 관리 (⋯) → 관리 창 (cuemanager.js) ----------------
+  $('#cueMenu').onclick = () => window.BCCueMgr && window.BCCueMgr.open(st.cue ? st.cue.id : '');
 
   // ---------------- 온라인에서 받은 찬양 PPT ----------------
   function showInbox(s) {
@@ -1010,11 +969,15 @@
 
   window.BCCue = {
     init, render, onCueNext, move, showSide, onSongDownloaded, onSongInbox: showInbox,
+    currentId: () => (st.cue ? st.cue.id : ''),
     addItem: (type, extra) => addItem(type, extra),
     sendItem: i => { showSide('cue'); return sendItem(i); },
     openCue: async id => { await refreshList(); showSide('cue'); return openCue(id); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
     selected: () => (st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null),
     selIndex: () => st.sel,
+    timesOn: () => timesOn(),
+    /** 예배 진행 시계 켜기·끄기 */
+    setTimes: async on => { await cmd('updateSettings', { patch: { cueTimes: !!on } }); app.state.settings.cueTimes = !!on; render(); renderClock(); forceEditor(); app.showMsg(on ? '예배 진행 시계를 켰습니다 (⏰ 시작 시각 · 순서별 예정 시간).' : '예배 진행 시계를 껐습니다. 큐시트 관리·설정에서 다시 켤 수 있습니다.', 'info', 3000); },
     pickCam: done => pickCam(done),
     /** 고른 순서만 바꾼다 (미리보기 없이) — 끌어다 놓은 파일을 그 다음 자리에 넣을 때 */
     selectQuiet: i => { if (st.cue && i >= 0 && i < st.cue.items.length) { st.sel = i; render(); } },

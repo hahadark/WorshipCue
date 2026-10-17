@@ -75,7 +75,7 @@
       { label: '✎ 슬라이드 편집', key: 'Ctrl+E', run: () => window.BCSlideEdit && window.BCSlideEdit.open(i), disabled: !can },
       { label: '제목 바꾸기…', run: A('rename') },
       { label: `메모${it.note ? ' 고치기' : ' 달기'}…`, run: A('note') },
-      { label: '예정 시간…', run: A('duration') },
+      ...(Cue().timesOn() ? [{ label: '예정 시간…', run: A('duration') }] : []),
       ...(it.type === 'song' && !it.songId ? [{ label: '📚 찬양 라이브러리에 저장', run: A('tolib') }] : []),
       '-',
       { label: '위로', key: 'Alt+↑', run: A('up'), disabled: i === 0 },

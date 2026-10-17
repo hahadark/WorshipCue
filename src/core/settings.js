@@ -74,6 +74,7 @@ function defaults() {
     imageFolders: [],    // [{ name, path }] 라이브러리 이미지 폴더
     ui: { theme: 'dark', scale: 100 }, // 조작 화면 테마·글자 크기 (송출 디자인과 별개)
     droppedFiles: [],
+    cueTimes: true,      // 예배 진행 시계 (⏰ 시작 시각 · 순서별 예정 시간) 쓰기
     triggerKey: '',      // 스트림덱·외부 단추용 주소의 열쇠 (처음 쓸 때 만든다)
     parallelVersionId: '', // 병행 번역본 (두 번역 함께 송출, '' = 안 함)    // 바깥에서 끌어다 놓은 파일 (등록 폴더 밖이어도 열 수 있게, 최근 500개)
     audioFolders: [],    // [{ name, path }] 라이브러리 음악 폴더

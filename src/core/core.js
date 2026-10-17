@@ -81,6 +81,7 @@ class WorshipCueCore extends EventEmitter {
         this.emit('extend-request', { dir: edge === 'end' ? 1 : -1, version: this.presentation.version });
       }
     });
+    try { const n = this.store.purgeTrash(30); if (n) this.logger.info(`휴지통: 30일 지난 큐시트 ${n}개를 비웠습니다`); } catch { /* 무시 */ }
     this.logger.info('WorshipCue 시작');
   }
 
@@ -475,6 +476,7 @@ WorshipCueCore.prototype.commands = {
       if (['range', 'continuous'].includes(p.navMode)) d.navMode = p.navMode;
       if (typeof p.globalShortcuts === 'boolean') d.globalShortcuts = p.globalShortcuts;
       if (typeof p.cueAdvance === 'boolean') d.cueAdvance = p.cueAdvance;
+      if (typeof p.cueTimes === 'boolean') d.cueTimes = p.cueTimes;
       if (typeof p.hymnBackground === 'string') d.hymnBackground = p.hymnBackground.slice(0, 300);
       if (typeof p.songSearchUrl === 'string') d.songSearchUrl = p.songSearchUrl.trim().slice(0, 500);
       if (typeof p.songDownloadDir === 'string') d.songDownloadDir = p.songDownloadDir.trim().slice(0, 500);
@@ -870,7 +872,74 @@ WorshipCueCore.prototype.commands = {
     return this.desktop.pickFolder(a.title || '폴더 고르기');
   },
   // ---- 큐시트 (예배 순서) ----
-  listCues() { return this.store.listCues(); },
+  listCues(a) { return this.store.listCues(!!(a && a.trash)); },
+  /** 큐시트 관리: 이름·날짜·메모·고정·서식 */
+  updateCueMeta(a) {
+    const c = this.store.getCue(String(a.id));
+    if (!c) throw new Error('큐시트를 찾을 수 없습니다.');
+    const m = {};
+    if (typeof a.name === 'string' && a.name.trim()) m.name = a.name.trim().slice(0, 200);
+    if (typeof a.serviceDate === 'string' && (!a.serviceDate || /^\d{4}-\d{2}-\d{2}$/.test(a.serviceDate))) m.serviceDate = a.serviceDate;
+    if (typeof a.memo === 'string') m.memo = a.memo.slice(0, 1000);
+    if (typeof a.pinned === 'boolean') m.pinned = a.pinned;
+    if (typeof a.template === 'boolean') m.template = a.template;
+    this.store.updateCueMeta(c.id, m);
+    this.emit('cues', { id: c.id });
+    return this.store.getCue(c.id);
+  },
+  /** 휴지통으로 (여러 개) — 30일 뒤 저절로 비움 */
+  trashCues(a) {
+    const ids = (Array.isArray(a.ids) ? a.ids : [a.id]).map(String).filter(Boolean);
+    const at = new Date().toISOString();
+    ids.forEach(id => this.store.updateCueMeta(id, { deletedAt: at, pinned: false }));
+    if (ids.includes(this.settings.get().activeCueId)) this.settings.update(d => { d.activeCueId = ''; });
+    this.emit('cues', { id: '' });
+    return { count: ids.length };
+  },
+  restoreCues(a) {
+    const ids = (Array.isArray(a.ids) ? a.ids : [a.id]).map(String).filter(Boolean);
+    ids.forEach(id => this.store.updateCueMeta(id, { deletedAt: '' }));
+    this.emit('cues', { id: ids[0] || '' });
+    return { count: ids.length };
+  },
+  /** 휴지통에서 아주 지우기 */
+  purgeCues(a) {
+    const ids = (Array.isArray(a.ids) ? a.ids : [a.id]).map(String).filter(Boolean);
+    for (const id of ids) { const c = this.store.getCue(id); if (c && c.deletedAt) this.store.deleteCue(id); }
+    this.emit('cues', { id: '' });
+    return { count: ids.length };
+  },
+  /** 여러 큐시트를 파일 하나로 */
+  exportCues(a) {
+    const ids = (Array.isArray(a.ids) ? a.ids : []).map(String);
+    const cues = ids.map(id => this.store.getCue(id)).filter(Boolean).map(c => ({ name: c.name, serviceDate: c.serviceDate, startTime: c.startTime, memo: c.memo, items: c.items }));
+    return { worshipcue: 2, exportedAt: new Date().toISOString(), cues };
+  },
+  /** 파일에서 가져오기: 큐시트 하나({ name, items }) 또는 여러 개({ cues: [...] }) */
+  importCues(a) {
+    const d = a.data || {};
+    const list = Array.isArray(d.cues) ? d.cues : Array.isArray(d.items) ? [d] : [];
+    if (!list.length) throw new Error('WorshipCue 큐시트 파일이 아닙니다.');
+    const ids = [];
+    for (const c of list.slice(0, 500)) {
+      const cue = normalizeCue({ name: c.name || '가져온 큐시트', serviceDate: c.serviceDate || '', startTime: c.startTime || '', memo: c.memo || '', items: (c.items || []).map(x => ({ ...x, id: '' })) });
+      ids.push(this.store.saveCue(cue).id);
+    }
+    this.emit('cues', { id: ids[0] });
+    return { ids, count: ids.length };
+  },
+  /** 순서지 (글): 큐시트를 읽기 좋은 글로 — 단톡방·문서에 붙이기 */
+  cueText(a) {
+    const c = this.store.getCue(String(a.id));
+    if (!c) throw new Error('큐시트를 찾을 수 없습니다.');
+    const lines = [`■ ${c.name}${c.serviceDate ? ` (${c.serviceDate}${c.startTime ? ' ' + c.startTime : ''})` : ''}`];
+    c.items.forEach((it, i) => {
+      const sub = it.type === 'bible' ? it.ref : it.type === 'hymn' ? '' : it.subtitle || '';
+      lines.push(`${i + 1}. ${it.title}${sub ? ' — ' + sub : ''}${it.note ? `  (${it.note})` : ''}`);
+    });
+    if (c.memo) lines.push('', '※ ' + c.memo);
+    return { text: lines.join('\n'), name: c.name };
+  },
   getCue(a) {
     const c = this.store.getCue(String(a.id));
     if (!c) throw new Error('큐시트를 찾을 수 없습니다.');
@@ -888,14 +957,24 @@ WorshipCueCore.prototype.commands = {
     const c = normalizeCue({ name: a.name || `${today} 예배`, serviceDate: a.serviceDate || today, items: a.empty ? [] : sampleItems() });
     return this.commands.saveCue.call(this, { cue: c });
   },
+  /** 복제: nextWeek 면 예배 날짜를 7일 뒤로 (이름 속 날짜도) — 서식에서 만들 때도 이것 */
   duplicateCue(a) {
     const src = this.store.getCue(String(a.id));
     if (!src) throw new Error('큐시트를 찾을 수 없습니다.');
-    const c = normalizeCue({ name: a.name || src.name + ' 복사본', serviceDate: src.serviceDate, startTime: src.startTime, items: src.items.map(it => ({ ...it, id: newId() })) });
+    let date = typeof a.serviceDate === 'string' ? a.serviceDate : src.serviceDate;
+    let name = a.name || '';
+    if (a.nextWeek) {
+      const base = /^\d{4}-\d{2}-\d{2}$/.test(src.serviceDate) ? new Date(src.serviceDate + 'T00:00:00') : new Date();
+      base.setDate(base.getDate() + 7);
+      date = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`;
+      if (!name) name = src.serviceDate && src.name.includes(src.serviceDate) ? src.name.replace(src.serviceDate, date) : `${src.name} (${date})`;
+    }
+    const c = normalizeCue({ name: name || src.name + ' 복사본', serviceDate: date, startTime: src.startTime, memo: a.keepMemo ? src.memo : '', items: src.items.map(it => ({ ...it, id: newId() })) });
     return this.commands.saveCue.call(this, { cue: c });
   },
+  /** 지우기 = 휴지통으로 (되살릴 수 있음) */
   deleteCue(a) {
-    this.store.deleteCue(String(a.id));
+    this.store.updateCueMeta(String(a.id), { deletedAt: new Date().toISOString(), pinned: false });
     if (this.settings.get().activeCueId === a.id) this.settings.update(d => { d.activeCueId = ''; });
     this.emit('cues', { id: '' });
     return {};

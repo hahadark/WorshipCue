@@ -108,13 +108,38 @@
     const list = sources();
     const own = k => !!(it.edits && it.edits[k]);
     $('#seList').innerHTML = `<div class="se-slide ${S.key === '*' ? 'on' : ''}" data-key="*"><div class="screen se-thumb"></div><div class="se-cap"><b>공통</b> 모든 슬라이드${own('*') ? ' <span class="se-dot" title="꾸민 것 있음">●</span>' : ''}</div></div>`
-      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div></div>`).join('');
+      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div>`
+        + (canOps() ? `<span class="se-ops"><button data-op="up" title="위로">▲</button><button data-op="down" title="아래로">▼</button><button data-op="dup" title="복제 (꾸민 것도)">⧉</button><button data-op="del" title="지우기">✕</button></span>` : '') + '</div>').join('')
+      + (canOps() ? '<button type="button" class="se-addslide" data-op="add" title="고른 슬라이드 다음에 새 슬라이드 (Ctrl+Shift+N)">＋ 슬라이드</button>' : '');
     const t = tpl();
     $('#seList').querySelectorAll('.se-slide').forEach(c => {
       const k = c.dataset.key;
       const src = k === '*' ? list[0] : list.find(x => x.key === k);
       if (src) R.renderInto(c.querySelector('.se-thumb'), effSlide(src, k), t, { checker: true });
     });
+  }
+
+  // ---------------- 슬라이드 넣기·복제·지우기·옮기기 (FreeShow 방식) ----------------
+  const canOps = () => { const it = item(); return it && (it.type === 'song' || it.type === 'text'); };
+  function slideOp(op, key) {
+    const it = item();
+    if (!canOps()) return;
+    const list = sources();
+    const k = key == null || key === '*' ? (S.key === '*' ? list.length - 1 : Number(S.key)) : Number(key);
+    if (op !== 'add' && !(k >= 0)) return;
+    if (op === 'del' && list.length <= 1) return app.showMsg('마지막 슬라이드는 지울 수 없습니다. 순서 자체를 지우세요.', 'info', 2500);
+    if (op === 'del' && !confirm(`${k + 1}번 슬라이드를 지울까요? (가사·내용에서도 지워집니다)`)) return;
+    begin();
+    const field = it.type === 'song' ? 'lyrics' : 'body';
+    it[field] = SL.slideOp(it.type, it[field], op, k);
+    const e = SL.slideOpEdits(it.edits, op, k);
+    if (e) it.edits = e; else delete it.edits;
+    const after = sources();
+    const pick = op === 'add' || op === 'dup' ? k + 1 : op === 'up' ? k - 1 : op === 'down' ? k + 1 : Math.min(k, after.length - 1);
+    S.key = String(Math.max(0, Math.min(after.length - 1, pick)));
+    S.sel = 'main';
+    commit({ lyrics: true });
+    if (op === 'add') setTimeout(() => inlineEdit('main'), 80); // 새 슬라이드는 바로 글 쓰기
   }
 
   /** 본문 글상자 위치 (화면 %) */
@@ -503,6 +528,8 @@
       if (t.dataset.p) { S.dirty = false; commit({ list: t.dataset.p === 'bgcolor' }); }
     });
     $('#seList').addEventListener('click', ev => {
+      const opb = ev.target.closest('[data-op]');
+      if (opb) { ev.stopPropagation(); const c0 = opb.closest('.se-slide'); slideOp(opb.dataset.op, c0 ? c0.dataset.key : null); return; }
       const c = ev.target.closest('.se-slide');
       if (!c) return;
       S.key = c.dataset.key; S.sel = 'main';
@@ -517,6 +544,7 @@
       if (ctrl && ev.key.toLowerCase() === 'z' && !typing) { ev.preventDefault(); if (ev.shiftKey) redo(); else undo(); return; }
       if (ctrl && ev.key.toLowerCase() === 'y' && !typing) { ev.preventDefault(); redo(); return; }
       if (typing) return;
+      if (ctrl && ev.shiftKey && ev.key.toLowerCase() === 'n') { ev.preventDefault(); slideOp('add'); return; }
       if (ctrl && ev.key.toLowerCase() === 'd') { ev.preventDefault(); dupSelected(); return; }
       if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); delSelected(); return; }
       if (ev.key === 'Enter' || ev.key === 'F2') { ev.preventDefault(); inlineEdit(S.sel); return; }
@@ -572,7 +600,13 @@
     const slide = t.closest('#seList .se-slide');
     if (slide) {
       S.key = slide.dataset.key; S.sel = 'main'; draw();
-      return [{ head: S.key === '*' ? '공통 (모든 슬라이드)' : '슬라이드' },
+      const ops = canOps() && S.key !== '*' ? [
+        { label: '＋ 다음에 새 슬라이드', key: 'Ctrl+Shift+N', run: () => slideOp('add') },
+        { label: '⧉ 이 슬라이드 복제', run: () => slideOp('dup') },
+        { label: '▲ 위로', run: () => slideOp('up'), disabled: S.key === '0' },
+        { label: '▼ 아래로', run: () => slideOp('down'), disabled: Number(S.key) >= sources().length - 1 },
+        { label: '✕ 이 슬라이드 지우기', run: () => slideOp('del'), danger: true }, '-'] : [];
+      return [{ head: S.key === '*' ? '공통 (모든 슬라이드)' : '슬라이드' }, ...ops,
         { label: '이 꾸미기를 모든 슬라이드에', run: btn('tocommon'), disabled: S.key === '*' || !raw(false).box && !raw(false).style },
         { label: S.key === '*' ? '공통 꾸미기 지우기' : '이 슬라이드 초기화', run: btn('reset'), danger: true }];
     }

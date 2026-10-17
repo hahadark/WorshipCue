@@ -160,6 +160,54 @@
     return out.join('\n\n');
   }
 
+  /**
+   * 슬라이드 단위로 글 고치기 (FreeShow 의 슬라이드 넣기·복제·지우기·옮기기)
+   * kind: 'song' (빈 줄로 나눔, [1절] 이름표 줄) | 'text' ('---' 줄로 나눔)
+   * op: 'add' (k 다음에 새 슬라이드) | 'dup' (k 복제) | 'del' (k 지우기) | 'up' | 'down'
+   * → 바뀐 글. k 는 슬라이드(덩어리) 번호 (lyricsChunks·textChunks 의 src)
+   */
+  function slideOp(kind, text, op, k, newText = '새 슬라이드') {
+    const song = kind === 'song';
+    const parts = String(text || '').replace(/\r/g, '').split(song ? /\n\s*\n/ : /\n\s*-{3,}\s*\n/);
+    const isLabel = l => song && /^\[(.{1,20})\]$/.test(l.trim()) && !(global.BCGroup && global.BCGroup.isChordOnly(l));
+    const content = b => b.split('\n').some(l => l.trim() && !isLabel(l));
+    const idx = parts.map((b, i) => (content(b) ? i : -1)).filter(i => i >= 0); // 슬라이드 k → parts 의 자리
+    const at = idx[k];
+    const labelsOf = b => b.split('\n').filter(isLabel);
+    const bodyOf = b => b.split('\n').filter(l => !isLabel(l)).join('\n').trim();
+    if (op === 'add' || op === 'dup') {
+      const pos = at === undefined ? parts.length : at + 1;
+      parts.splice(pos, 0, op === 'dup' && at !== undefined ? bodyOf(parts[at]) : newText);
+    } else if (op === 'del') {
+      if (at === undefined) return text;
+      const labels = labelsOf(parts[at]);
+      const next = idx[k + 1];
+      // 이름표가 붙은 슬라이드를 지우면, 바로 뒤 같은 묶음 슬라이드에 이름표를 넘긴다
+      if (labels.length && next === at + 1 && !labelsOf(parts[next]).length) parts[next] = [...labels, parts[next]].join('\n');
+      parts.splice(at, 1);
+    } else if (op === 'up' || op === 'down') {
+      const other = idx[k + (op === 'up' ? -1 : 1)];
+      if (at === undefined || other === undefined) return text;
+      [parts[at], parts[other]] = [parts[other], parts[at]];
+    }
+    return parts.map(p => p.trim()).filter(p => p !== '').join(song ? '\n\n' : '\n---\n');
+  }
+  /** 슬라이드 편집(edits) 의 번호를 같이 옮긴다 ('*' 공통은 그대로) */
+  function slideOpEdits(edits, op, k) {
+    if (!edits) return edits;
+    const out = {};
+    for (const [key, v] of Object.entries(edits)) {
+      if (key === '*') { out[key] = v; continue; }
+      const n = Number(key);
+      if (op === 'add' || op === 'dup') out[n > k ? n + 1 : n] = v;
+      else if (op === 'del') { if (n === k) continue; out[n > k ? n - 1 : n] = v; }
+      else if (op === 'up' || op === 'down') { const o = op === 'up' ? k - 1 : k + 1; out[n === k ? o : n === o ? k : n] = v; }
+      else out[n] = v;
+    }
+    if (op === 'dup' && edits[k]) out[k + 1] = JSON.parse(JSON.stringify(edits[k])); // 복제는 꾸민 것도 함께
+    return Object.keys(out).length ? out : undefined;
+  }
+
   /** 공지 글의 k 번째 장 글을 바꾼다 */
   function setTextChunk(body, k, text) {
     const parts = String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/);
@@ -227,5 +275,5 @@
     return String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/).map(t => ({ label: '', text: t.trim() })).filter(c => c.text).map((c, k) => ({ ...c, src: k }));
   }
 
-  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, lyricGroups, arrange, setLyricsChunk, setTextChunk, mergeEdit };
+  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, lyricGroups, arrange, setLyricsChunk, setTextChunk, mergeEdit, slideOp, slideOpEdits };
 })(window);
