@@ -1031,11 +1031,21 @@
   $('#bLogo').onclick = () => cmd('toggleLogoScreen');
   $('#bAudio').onclick = () => { if (window.BCLib) window.BCLib.audio.fadeOut(2500); };
   $('#bAll').onclick = () => { cmd('clearAll'); if (window.BCLib) window.BCLib.audio.fadeOut(2000); };
+  // 지우기 ▾ : 자주 안 쓰는 지우기 단추를 메뉴로
+  $('#bMore').onclick = e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const b = id => ({ label: ($('#' + id).classList.contains('active') ? '■ ' : '') + $('#' + id).textContent, run: () => $('#' + id).click() });
+    window.BCCtx.show(r.left, r.top - 4, [{ head: '화면 지우기' }, b('bBg'), b('bOvOff'), b('bLogo'), b('bAudio'),
+      ...(app.state && app.state.layers && app.state.layers.media ? ['-', { label: `송출 배경 끄기 (${app.state.layers.media.label || '미디어'})`, run: () => window.BCLib && window.BCLib.liveMedia(null) }] : [])]);
+  };
   function renderLayerButtons() {
     const L = app.state.layers || {};
     $('#bBg').classList.toggle('active', !!L.hideBg); $('#bBg').textContent = L.hideBg ? '배경 보이기' : '배경 지우기';
     $('#bOvOff').classList.toggle('active', !!L.overlaysOff); $('#bOvOff').textContent = L.overlaysOff ? '오버레이 다시 켜기' : '오버레이 끄기';
     $('#bLogo').classList.toggle('active', !!L.logo); $('#bLogo').textContent = L.logo ? '로고 화면 끄기' : '로고 화면';
+    const more = [L.hideBg && '배경 숨김', L.overlaysOff && '오버레이 꺼짐', L.logo && '로고 화면'].filter(Boolean);
+    $('#bMore').classList.toggle('active', more.length > 0);
+    $('#bMore').textContent = more.length ? `${more.join(' · ')} ▾` : '지우기 ▾';
   }
   $('#btnSettings').onclick = () => window.BCSettings.open();
   $('#mode').onchange = e => cmd('updateSettings', { patch: { searchMode: e.target.value } });

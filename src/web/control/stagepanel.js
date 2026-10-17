@@ -24,7 +24,7 @@
       <div class="stg-row">${QUICK_MSG.map(m => `<button data-msg="${esc(m)}">${esc(m)}</button>`).join('')}</div>
       <div class="stg-prev"><iframe id="stFrame" title="무대 화면 미리보기" src="/outputs/stage"></iframe></div>
       <h4>📱 휴대폰 리모컨</h4>
-      <div class="stg-row"><button id="rmOpen">📱 리모컨 열기 (QR · 주소 · PIN)…</button><span class="muted">메뉴바 '리모컨' 에서도 열 수 있습니다</span></div>
+      <div class="stg-row"><button id="rmOpen">📱 리모컨 열기 (QR · 주소 · PIN)…</button><span class="muted">메뉴 도구 → 📱 휴대폰 리모컨 에서도 열 수 있습니다</span></div>
     </div>`;
     $('#stOpen').onclick = () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720');
     $('#stCopy').onclick = () => { navigator.clipboard.writeText(url).then(() => app.showMsg('무대 화면 주소를 복사했습니다.', 'ok', 1500)); };

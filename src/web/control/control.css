@@ -794,3 +794,11 @@ button.on { border-color: var(--accent); }
 .cm-l1 b { min-width: 0; }
 .cm-open { flex: none; }
 .se-slide.skipped .se-thumb { opacity: .35; filter: grayscale(1); }
+
+/* 메뉴바 하위 메뉴 (▸) */
+.mb-item.mb-hassub.on { background: var(--sel); }
+.mb-arrow { font-style: normal; color: var(--muted); font-size: 11px; }
+.mb-sub { min-width: 220px; z-index: 2; }
+/* 아래 송출 줄: 지우기 ▾ · 순서 넣기: 더보기 ▾ (자주 안 쓰는 단추는 숨겨 두고 메뉴로) */
+.ft-hidden { display: none !important; }
+#bMore.active, .cue-add .cue-more.active { border-color: var(--accent); color: var(--accent); }

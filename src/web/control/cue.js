@@ -843,6 +843,13 @@
 
   $('#cueSel').onchange = e => openCue(e.target.value);
   $('#cueAdd').addEventListener('click', e => {
+    const more = e.target.closest('.cue-more');
+    if (more) { // 더보기 ▾ : 자주 안 쓰는 순서 종류
+      const r = more.getBoundingClientRect();
+      const kinds = [...$('#cueAdd .ft-hidden').querySelectorAll('button[data-add]')];
+      window.BCCtx.show(r.left, r.top - 4, [{ head: '순서 넣기' }, ...kinds.map(k => ({ label: k.textContent, run: () => k.click() }))]);
+      return;
+    }
     const b = e.target.closest('button[data-add]');
     if (!b) return;
     if (b.dataset.add === 'hymn') openHymnPicker({});
