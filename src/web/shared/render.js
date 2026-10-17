@@ -296,7 +296,7 @@
   function backgroundCss(t) {
     const bg = t.background;
     if (bg.type === 'transparent') return 'background:transparent;';
-    if (bg.type === 'video') return `background:${bg.color || '#000'};`;
+    if (bg.type === 'video' || bg.type === 'camera') return `background:${bg.color || '#000'};`;
     if (bg.type === 'gradient' && bg.gradient) return `background:${bg.gradient};`;
     if (bg.type === 'image' && bg.image) {
       return `background:${bg.color || '#000'} url("${safeUrl(bg.image)}") center/${bg.imageFit || 'cover'} no-repeat;`;
@@ -316,7 +316,16 @@
     if (t.background.type === 'video' && t.background.video) {
       bg.innerHTML = videoTag(t.background.video, 'bc-bgvid', 'position:absolute;inset:0;width:100%;height:100%', t.background.imageFit || 'cover');
     }
-    if ((t.background.type === 'image' || t.background.type === 'video') && t.background.dim > 0) {
+    if (t.background.type === 'camera') {
+      // 카메라 (웹캠·캡처보드): 같은 화면 안에서는 한 번 연 것을 같이 쓴다
+      const v = document.createElement('video');
+      v.className = 'bc-cam';
+      v.muted = true; v.autoplay = true; v.playsInline = true;
+      v.style.cssText = `position:absolute;inset:0;width:100%;height:100%;object-fit:${t.background.imageFit || 'cover'}`;
+      bg.appendChild(v);
+      attachCamera(v, (t.background.camera || {}).deviceId || '');
+    }
+    if ((t.background.type === 'image' || t.background.type === 'video' || t.background.type === 'camera') && t.background.dim > 0) {
       bg.insertAdjacentHTML('beforeend', `<div class="bc-dim" style="background:rgba(0,0,0,${t.background.dim})"></div>`);
     }
     // 로고: 배경층에 함께 둬서 본문이 바뀌어도 그대로 보인다
@@ -331,6 +340,26 @@
     }
     stage.appendChild(bg);
     return stage;
+  }
+
+  // ---------- 카메라 배경 ----------
+  const cams = new Map(); // deviceId → Promise<MediaStream>
+  function cameraStream(deviceId) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.reject(new Error('카메라를 쓸 수 없는 화면입니다.'));
+    if (!cams.has(deviceId)) {
+      const video = { width: { ideal: 1920 }, height: { ideal: 1080 }, ...(deviceId ? { deviceId: { exact: deviceId } } : {}) };
+      const p = navigator.mediaDevices.getUserMedia({ video, audio: false });
+      p.catch(() => cams.delete(deviceId));
+      cams.set(deviceId, p);
+    }
+    return cams.get(deviceId);
+  }
+  function attachCamera(v, deviceId) {
+    // 크기 재기용 숨은 무대에는 붙이지 않는다
+    setTimeout(() => {
+      if (!v.isConnected || v.closest('.bc-measure')) return;
+      cameraStream(deviceId).then(s => { v.srcObject = s; v.play().catch(() => {}); }).catch(() => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'bc-cam-off', textContent: '📷 카메라 없음' })); });
+    }, 0);
   }
 
   /** 컨테이너 크기에 맞춰 stage 를 축소/확대 */
@@ -515,5 +544,5 @@
     svg.innerHTML = spot + lines;
   }
 
-  global.BCRender = { paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { cameraStream, paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

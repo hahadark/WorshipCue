@@ -248,8 +248,11 @@ if (!app.requestSingleInstanceLock()) {
     core.on('settings', what => { if (what === 'shortcuts' || what === 'settings') applyGlobalShortcuts(); });
 
     // 글꼴 목록(Local Font Access) 권한 허용
-    session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => cb(permission === 'local-fonts' || permission === 'clipboard-sanitized-write'));
-    session.defaultSession.setPermissionCheckHandler((wc, permission) => permission === 'local-fonts' || permission === 'clipboard-sanitized-write');
+    // 카메라(배경용 '📷 카메라'): WorshipCue 자기 화면(127.0.0.1)에만, 소리 없이 영상만
+    const localPage = u => /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//i.test(String(u || ''));
+    session.defaultSession.setPermissionRequestHandler((wc, permission, cb, details) => cb(permission === 'local-fonts' || permission === 'clipboard-sanitized-write'
+      || (permission === 'media' && localPage(details && details.requestingUrl) && !(details.mediaTypes || []).includes('audio'))));
+    session.defaultSession.setPermissionCheckHandler((wc, permission, origin) => permission === 'local-fonts' || permission === 'clipboard-sanitized-write' || (permission === 'media' && localPage(origin + '/')));
 
     controlWin = new BrowserWindow({
       width: 1500, height: 920, minWidth: 1100, minHeight: 700, backgroundColor: '#14171c', title: 'WorshipCue',

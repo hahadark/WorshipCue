@@ -75,3 +75,6 @@
 .bc-par { display: block; font-size: .72em; opacity: .86; margin-top: .12em; font-weight: inherit; }
 .bc-line { display: block; }
 .bc-tr { display: block; font-size: .7em; opacity: .85; margin: .05em 0 .25em; }
+
+/* 카메라 배경 */
+.bc-cam-off { position: absolute; inset: 0; display: grid; place-items: center; color: #666; font-size: 40px; }

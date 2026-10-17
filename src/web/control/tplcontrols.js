@@ -94,9 +94,11 @@
       ? `<button type="button" class="tc-sw tc-sw-grad ${isGrad ? 'on' : ''}" data-bgmode="gradient" title="테마 배경 (그라데이션)" style="background:${esc(t.background.gradient)}"></button>` : '';
     const isVid = t.background.type === 'video' && t.background.video;
     const vidBtn = `<button type="button" class="tc-imgbtn ${isVid ? 'on' : ''}" data-pickvid title="라이브러리의 영상을 배경으로 (소리 없이 반복 재생)">🎞 ${isVid ? '영상 바꾸기' : '영상'}</button>`;
-    const imgBtn = vidBtn + `<button type="button" class="tc-imgbtn ${isImg ? 'on' : ''}" data-pickimg="background" title="배경 이미지 올리기 (png · jpg · webp)">${isImg ? `<img src="${esc(t.background.image)}" alt="">` : '🖼'} ${isImg ? '이미지 바꾸기' : '이미지'}</button>`;
+    const isCam = t.background.type === 'camera';
+    const camBtn = `<button type="button" class="tc-imgbtn ${isCam ? 'on' : ''}" data-pickcam title="웹캠·캡처보드 화면을 배경으로 (예배당 화면 · 이 PC 의 출력에서만, OBS 는 OBS 의 카메라 소스를 쓰세요)">📷 ${isCam ? esc((t.background.camera || {}).label || '카메라') : '카메라'}</button>`;
+    const imgBtn = camBtn + vidBtn + `<button type="button" class="tc-imgbtn ${isImg ? 'on' : ''}" data-pickimg="background" title="배경 이미지 올리기 (png · jpg · webp)">${isImg ? `<img src="${esc(t.background.image)}" alt="">` : '🖼'} ${isImg ? '이미지 바꾸기' : '이미지'}</button>`;
     const bgBlock = `<div class="tc-row"><span class="tc-label">배경</span>${gradBtn}${swatches('background', BG_COLORS, bg, true)}${imgBtn}</div>`
-      + (isImg || isVid ? slider('background.dim', isVid ? '영상 어둡게' : '이미지 어둡게', t.background.dim || 0, 0, 0.85, 0.05, '')
+      + (isImg || isVid || isCam ? slider('background.dim', isCam ? '카메라 어둡게' : isVid ? '영상 어둡게' : '이미지 어둡게', t.background.dim || 0, 0, 0.85, 0.05, '')
         + `<div class="tc-row"><span class="tc-label">이미지 맞춤</span><div class="tc-seg tc-seg-sm" data-seg="background.imageFit">${[['cover', '화면 채우기'], ['contain', '전체 보이기']].map(([v, l]) => `<button type="button" data-v="${v}" class="${(t.background.imageFit || 'cover') === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>` : '');
 
     // 로고: 없음 · 레드 쉴드 · 크레스트 · 내 로고 올리기 (+ 위치·크기)
@@ -289,6 +291,15 @@
       if (!b) return;
       if (b.dataset.c) { applyColor(b.closest('[data-sw]').dataset.sw, b.dataset.c, true); return; }
       if (b.dataset.pickimg) { pickImage(b.dataset.pickimg); return; }
+      if (b.dataset.pickcam !== undefined) {
+        pickCamera(dev => {
+          t.background.type = 'camera'; t.background.camera = { deviceId: dev.deviceId, label: dev.label };
+          if (t.background.dim == null) t.background.dim = 0;
+          emit(true);
+          render(container, t, onChange, opts);
+        });
+        return;
+      }
       if (b.dataset.pickvid !== undefined) {
         if (!window.BCLib) return;
         window.BCLib.pickVideo(url => {
@@ -343,4 +354,21 @@
   }
 
   window.BCTplControls = { render, loadFonts, fontName, fontFamily };
+  /** 카메라 고르기: 연결된 카메라 목록 + 미리보기 */
+  async function pickCamera(done) {
+    const app = window.BC;
+    let devs = [];
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); // 이름을 보려면 한 번 허락이 필요
+      s.getTracks().forEach(x => x.stop());
+      devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    } catch (e) { return app.showMsg('카메라를 찾지 못했습니다: ' + e.message, 'error', 5000); }
+    if (!devs.length) return app.showMsg('연결된 카메라(웹캠·캡처보드)가 없습니다.', 'error', 4000);
+    app.openModal('📷 배경으로 쓸 카메라', `<div class="cam-pick">
+      <div class="note">웹캠이나 캡처보드(찬양팀 카메라 등)의 화면을 배경으로 깔고 그 위에 가사를 띄웁니다. 예배당 화면(이 PC 의 출력)에서만 보이고, OBS 에서는 OBS 의 카메라 소스 위에 'OBS 자막'을 겹치세요.</div>
+      <div class="cam-list">${devs.map((d, k) => `<button type="button" class="cam-item" data-k="${k}"><video muted autoplay playsinline data-dev="${d.deviceId}"></video><span>${(d.label || '카메라 ' + (k + 1)).replace(/[<>&]/g, '')}</span></button>`).join('')}</div></div>`);
+    const streams = [];
+    document.querySelectorAll('.cam-item video').forEach(v => window.BCRender.cameraStream(v.dataset.dev).then(s => { v.srcObject = s; streams.push(s); }).catch(() => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'cam-err', textContent: '열 수 없음' })); }));
+    document.querySelectorAll('.cam-item').forEach(b => b.onclick = () => { const d = devs[+b.dataset.k]; app.closeModal(); done({ deviceId: d.deviceId, label: d.label || '카메라' }); });
+  }
 })();
