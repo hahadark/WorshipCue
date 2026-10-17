@@ -438,7 +438,7 @@
       <h4>큐시트</h4>
       <label>순서의 끝에서</label>
       <label class="tc-toggle"><input type="checkbox" id="bCueAdv" ${s.cueAdvance !== false ? 'checked' : ''}> F6 을 누르면 다음 순서로 넘어가 바로 송출 (F5 는 이전 순서의 마지막 슬라이드)</label>
-      <label class="tc-toggle"><input type="checkbox" id="bCueTimes" ${s.cueTimes !== false ? 'checked' : ''}> ⏰ 예배 진행 시계 쓰기 (예배 시작 시각 · 순서별 예정 시간 · 몇 분 늦음)</label>
+      <label class="tc-toggle"><input type="checkbox" id="bCueTimes" ${s.cueTimes === true ? 'checked' : ''}> ⏰ 예배 진행 시계 쓰기 (예배 시작 시각 · 순서별 예정 시간 · 몇 분 늦음)</label>
     </div>`;
     $('#bMode').value = s.searchMode;
     $('#bSplit').value = s.split.mode;

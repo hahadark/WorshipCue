@@ -127,7 +127,7 @@
     const a = actuals();
     if (!a[idx]) { a[idx] = Date.now(); try { localStorage.setItem(actualKey(), JSON.stringify(a)); } catch { /* 무시 */ } }
   }
-  const timesOn = () => app.state && app.state.settings.cueTimes !== false;
+  const timesOn = () => !!(app.state && app.state.settings.cueTimes === true);
   function renderClock() {
     const el = $('#cueClock');
     if (!el || !st.cue) return;
@@ -457,6 +457,12 @@
     if (r && app.preview) { app.setPreviewIndex(+r.dataset.k); app.sendPreview(); }
   });
 
+  /** 큐시트 목록에서 고르기: 미리보기만 하고 예배당·OBS 화면에는 내보내지 않는다 ('미리보기 끄기' 모드여도) */
+  async function quietPreview(i) {
+    app.holdDirect = (app.holdDirect || 0) + 1;
+    try { return await previewItem(i); } finally { app.holdDirect--; }
+  }
+
   async function sendItem(i) {
     const it = st.cue && st.cue.items[i];
     if (it && it.type === 'audio') { st.sel = i; render(); renderEditor(); playAudio(it); return; }
@@ -721,12 +727,12 @@
     if (!row) return;
     const i = +row.dataset.i;
     if (ed) { st.sel = i; render(); setEditor(true); focusTitle(); return; }
-    previewItem(i);
+    quietPreview(i);
   });
   list.addEventListener('dblclick', e => {
     if (e.target.closest('[data-edit]')) return;
     const row = e.target.closest('.cue-item');
-    if (row) { window.getSelection()?.removeAllRanges(); sendItem(+row.dataset.i); }
+    if (row) { window.getSelection()?.removeAllRanges(); quietPreview(+row.dataset.i); } // 더블클릭도 송출하지 않는다
   });
   list.addEventListener('keydown', e => {
     if (!st.cue || e.ctrlKey || e.metaKey) return;
@@ -738,7 +744,7 @@
     }
     if (e.key === 'ArrowDown') { st.sel = Math.min(n - 1, st.sel + 1); render(); forceEditor(); e.preventDefault(); }
     else if (e.key === 'ArrowUp') { st.sel = Math.max(0, st.sel - 1); render(); forceEditor(); e.preventDefault(); }
-    else if (e.key === 'Enter') { previewItem(st.sel); e.preventDefault(); }
+    else if (e.key === 'Enter') { quietPreview(st.sel); e.preventDefault(); }
     else if (e.key === 'Delete' && st.sel >= 0) { removeItem(st.sel); e.preventDefault(); }
   });
   // 끌어서 순서 바꾸기

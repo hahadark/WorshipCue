@@ -360,7 +360,7 @@
   ['pointerdown', 'keydown'].forEach(t => window.addEventListener(t, () => { lastUserAct = Date.now(); }, true));
   const directMode = () => !!(app.state && app.state.settings.previewMode === false);
   async function directSend() {
-    if (directMode() && Date.now() - lastUserAct < 2500) await sendPreview();
+    if (directMode() && !app.holdDirect && Date.now() - lastUserAct < 2500) await sendPreview(); // 큐시트 목록에서 고른 것은 송출하지 않음
   }
   /** 슬라이드 단추 글: '3. 후렴' (이름이 번호와 같으면 번호만) */
   const chipLabel = (i, t) => (t && String(t) !== String(i + 1) ? `${i + 1}. ${t}` : String(i + 1));

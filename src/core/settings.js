@@ -74,7 +74,8 @@ function defaults() {
     imageFolders: [],    // [{ name, path }] 라이브러리 이미지 폴더
     ui: { theme: 'dark', scale: 100 }, // 조작 화면 테마·글자 크기 (송출 디자인과 별개)
     droppedFiles: [],
-    cueTimes: true,      // 예배 진행 시계 (⏰ 시작 시각 · 순서별 예정 시간) 쓰기
+    cueTimes: false,     // 예배 진행 시계 (⏰ 시작 시각 · 순서별 예정 시간) 쓰기 — 기본 끔 (큐시트 메뉴에서 켬)
+    cueTimesV2: true,    // 예전 기본값(켬)을 한 번 끈 표시
     triggerKey: '',      // 스트림덱·외부 단추용 주소의 열쇠 (처음 쓸 때 만든다)
     parallelVersionId: '', // 병행 번역본 (두 번역 함께 송출, '' = 안 함)    // 바깥에서 끌어다 놓은 파일 (등록 폴더 밖이어도 열 수 있게, 최근 500개)
     audioFolders: [],    // [{ name, path }] 라이브러리 음악 폴더
@@ -117,6 +118,7 @@ class Settings {
         const raw = JSON.parse(fs.readFileSync(f, 'utf8'));
         const data = deepMergeDefaults(defaults(), raw);
         data.shortcuts = { ...DEFAULT_SHORTCUTS, ...(raw.shortcuts || {}) };
+        if (!raw.cueTimesV2) { data.cueTimes = false; data.cueTimesV2 = true; } // 시계는 기본 끔으로 바뀜: 예전 설정도 한 번 끈다
         data.templates = (Array.isArray(raw.templates) && raw.templates.length ? raw.templates : defaultTemplates()).map(normalizeTemplate);
         if (f === this.file) {
           try { fs.copyFileSync(f, this.backup); } catch { /* 백업 실패는 무시 */ }
