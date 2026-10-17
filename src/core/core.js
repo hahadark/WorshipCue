@@ -489,6 +489,7 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  logClientError(a) { this.logger.error('조작 화면: ' + String(a.message || '').slice(0, 2000)); return {}; },
   // ---- AI 주보 → 큐시트 ----
   /** 안내 페이지를 기본 브라우저로 (https 만) */
   openLink(a) {

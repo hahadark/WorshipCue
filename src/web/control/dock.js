@@ -164,8 +164,35 @@
     setLocked(!!app.state.settings.dockLocked);
     api.onDidRemovePanel(p => park(p.id));
     api.onDidLayoutChange(() => { save(); requestAnimationFrame(fitScreens); });
-    new ResizeObserver(() => requestAnimationFrame(fitScreens)).observe(el);
+    // 창 크기·표시가 바뀌면 배치를 다시 계산 (숨긴 채 시작하거나 최대화가 늦을 때도)
+    const relayout = () => { if (el.clientWidth && el.clientHeight) { try { api.layout(el.clientWidth, el.clientHeight, true); } catch { /* 무시 */ } } requestAnimationFrame(fitScreens); };
+    new ResizeObserver(relayout).observe(el);
+    window.addEventListener('resize', relayout);
+    document.addEventListener('visibilitychange', relayout);
+    [50, 400, 1500].forEach(ms => setTimeout(relayout, ms));
+    // 안전장치: 시작 뒤 패널이 하나도 안 보이면 다시 그리고, 그래도 안 되면 기본 배치로
+    setTimeout(() => {
+      if (visibleTabs()) return;
+      relayout();
+      setTimeout(() => {
+        if (visibleTabs()) return;
+        app.logError && app.logError('독 배치가 보이지 않아 기본 배치로 되돌림: ' + JSON.stringify({ panels: api.panels.length, w: el.clientWidth, h: el.clientHeight }));
+        resetLayout();
+        app.showMsg('화면 배치가 보이지 않아 기본 배치로 되돌렸습니다.', 'info', 4000);
+      }, 800);
+    }, 2500);
     // 패널 노드 크기가 바뀌면 미리보기·LIVE 다시 그림 (control.js 의 ResizeObserver 가 처리)
+  }
+
+  /** 화면에 실제로 보이는 탭이 있는가 */
+  function visibleTabs() {
+    return [...document.querySelectorAll('#dock .dv-tab')].some(t => { const r = t.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+  }
+  function resetLayout() {
+    restoring = true;
+    try { defaultLayout(); } finally { restoring = false; }
+    save();
+    requestAnimationFrame(fitScreens);
   }
 
   /** 화면 배치 메뉴 */
@@ -186,8 +213,8 @@
       if (c.checked) show(c.dataset.panel); else hide(c.dataset.panel);
     });
     $('#dkLock').onchange = e => { setLocked(e.target.checked); app.cmd('updateSettings', { patch: { dockLocked: e.target.checked } }); };
-    $('#dkReset').onclick = () => { restoring = true; defaultLayout(); restoring = false; save(); app.closeModal(); app.showMsg('기본 배치로 되돌렸습니다.', 'ok', 1500); };
+    $('#dkReset').onclick = () => { resetLayout(); app.closeModal(); app.showMsg('기본 배치로 되돌렸습니다.', 'ok', 1500); };
   }
 
-  window.BCDock = { init, show, hide, isOpen, openMenu, fitScreens, panels: PANELS };
+  window.BCDock = { init, show, hide, isOpen, openMenu, fitScreens, resetLayout, panels: PANELS };
 })();

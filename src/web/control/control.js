@@ -37,6 +37,10 @@
     }
   }
   app.cmd = cmd;
+  // 조작 화면에서 난 오류는 로그 파일에도 남긴다 (문제 원인 찾기용)
+  app.logError = msg => { try { fetch('/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WorshipCue': '1' }, body: JSON.stringify({ cmd: 'logClientError', args: { message: String(msg).slice(0, 2000) } }) }); } catch { /* 무시 */ } };
+  window.addEventListener('error', e => app.logError(`${e.message} @ ${(e.filename || '').split('/').pop()}:${e.lineno}`));
+  window.addEventListener('unhandledrejection', e => app.logError('Promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)));
 
   const settings = () => app.state.settings;
   const tplById = id => settings().templates.find(t => t.id === id) || settings().templates[0];

@@ -52,6 +52,7 @@
       '-',
       { label: '슬라이드 목록 / 격자 바꾸기', run: () => { const on = window.BCGrid && window.BCGrid.isOn(); const b = $(`#slideView [data-sv="${on ? 'list' : 'grid'}"]`); if (b) b.click(); } },
       { label: '화면 배치 (잠그기·기본 배치)…', run: () => window.BCDock && window.BCDock.openMenu() },
+      { label: '기본 배치로 되돌리기', run: () => { if (window.BCDock) { window.BCDock.resetLayout(); app.showMsg('기본 배치로 되돌렸습니다.', 'ok', 1500); } } },
       { label: '🖥 무대 화면 창 열기', run: () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720') },
     ]],
     ['도구', [

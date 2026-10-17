@@ -218,7 +218,12 @@ if (!app.requestSingleInstanceLock()) {
       setTimeout(() => controlWin && !controlWin.isDestroyed() && controlWin.reload(), 500);
     });
     // 외부 링크·새 창 차단
-    controlWin.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    controlWin.webContents.setWindowOpenHandler(({ url }) => {
+      if (url.startsWith(`http://127.0.0.1:${port}/outputs/stage`)) {
+        return { action: 'allow', overrideBrowserWindowOptions: { width: 1280, height: 720, title: 'WorshipCue 무대 화면', backgroundColor: '#000000', autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } } };
+      }
+      return { action: 'deny' };
+    });
     controlWin.webContents.on('will-navigate', (e, url) => { if (!url.startsWith(`http://127.0.0.1:${port}/`)) e.preventDefault(); });
     // 송출 중에 닫으려 하면 한 번 확인한다 (예배 중 실수로 닫아 화면이 사라지는 것 방지)
     controlWin.on('close', e => {
