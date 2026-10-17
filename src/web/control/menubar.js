@@ -61,7 +61,15 @@
       { label: '오버레이 (로고·시계·카운트다운·배너)', run: lib('overlays') }, { label: '템플릿', run: lib('templates') },
       '-',
       { label: '무대 화면·설교 타이머', run: () => window.BCDock && window.BCDock.show('stage') },
-      { label: '📱 휴대폰 리모컨', run: () => { if (window.BCDock) window.BCDock.show('stage'); setTimeout(() => $('#rmOn')?.scrollIntoView(), 200); } },
+      { label: '📱 휴대폰 리모컨', run: () => { if (window.BCDock) window.BCDock.show('stage'); setTimeout(() => {
+        // 무대 패널 안쪽만 스크롤 (스크롤 되는 칸: .dock-body 또는 .stg)
+        const row = $('#rmOn') && $('#rmOn').closest('.stg-row');
+        if (!row) return;
+        for (const sc of [row.closest('.stg'), row.closest('.dock-body')]) {
+          if (sc && sc.scrollHeight > sc.clientHeight) { sc.scrollTop += row.getBoundingClientRect().top - sc.getBoundingClientRect().top - 40; break; }
+        }
+        $('#rmOn').focus({ preventScroll: true });
+      }, 250); } },
     ]],
     ['설정', [
       { label: '테마', run: settings('themes') }, { label: '출력 (모니터·OBS)', run: settings('output') },

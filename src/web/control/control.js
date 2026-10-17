@@ -147,6 +147,8 @@
     if (window.BCStage) window.BCStage.init();
     if (window.BCGrid) window.BCGrid.init();
     if (window.BCMenu) window.BCMenu.init();
+    // 로딩 화면 닫기: 배치가 자리 잡은 뒤 (숨긴 창에서는 화면 그리기 신호가 없으므로 시간으로)
+    setTimeout(() => cmd('uiReady'), 150);
     if (!app.state.versions.length) showWelcome();
     // 개역한글만 있으면(또는 아무것도 없으면) 베들레헴 설치 안내를 한 번 보여 준다
     else if (app.state.versions.length <= 1 && !(settings().guide && settings().guide.bethlehemDone)) showBethlehemGuide();

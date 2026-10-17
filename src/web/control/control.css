@@ -477,3 +477,6 @@ video.ce-thumb { background: #000; }
 .mb-item:hover { background: var(--sel, #2a3550); }
 .mb-item kbd { color: var(--muted); font-size: 11px; }
 .mb-sep { height: 1px; background: var(--line); margin: 4px 2px; }
+
+/* 페이지 전체는 스크롤되지 않음 (배치 틀어짐 방지) */
+html { overflow: hidden; }

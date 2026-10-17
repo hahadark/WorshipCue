@@ -162,6 +162,12 @@
     // 미리보기 끔(바로 송출)이면 미리보기 패널은 닫는다
     if (app.state.settings.previewMode === false) hide('preview');
     setLocked(!!app.state.settings.dockLocked);
+    // 페이지 전체·독 틀은 절대 스크롤되지 않게 (scrollIntoView 등이 바깥까지 밀어 배치가 틀어지는 것 방지)
+    document.addEventListener('scroll', e => {
+      const t = e.target;
+      if (t === document || t === document.documentElement || t === document.body) { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); return; }
+      if (t instanceof Element && (t.id === 'dock' || /(^|\s)dv-/.test(t.className || '')) && !t.classList.contains('dock-body')) { t.scrollTop = 0; t.scrollLeft = 0; }
+    }, true);
     api.onDidRemovePanel(p => park(p.id));
     api.onDidLayoutChange(() => { save(); requestAnimationFrame(fitScreens); });
     // 창 크기·표시가 바뀌면 배치를 다시 계산 (숨긴 채 시작하거나 최대화가 늦을 때도)

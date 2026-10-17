@@ -138,9 +138,50 @@ if (!app.requestSingleInstanceLock()) {
     core.command(GLOBAL_ACTIONS[action]);
   }
 
+  // ---------- 로딩 화면 ----------
+  let splash = null;
+  function createSplash() {
+    splash = new BrowserWindow({
+      width: 560, height: 330, frame: false, transparent: true, resizable: false, movable: true, center: true,
+      skipTaskbar: false, alwaysOnTop: true, show: false, title: 'WorshipCue', backgroundColor: '#00000000',
+      webPreferences: { contextIsolation: true, sandbox: true },
+    });
+    splash.loadFile(path.join(WEB_DIR, 'splash', 'index.html'));
+    return new Promise(resolve => {
+      splash.once('ready-to-show', () => { splash.show(); setTimeout(resolve, 120); }); // 그려질 시간
+      setTimeout(resolve, 2500);
+    });
+  }
+  function splashCall(js) {
+    if (splash && !splash.isDestroyed()) splash.webContents.executeJavaScript(js).catch(() => {});
+  }
+  const splashStatus = t => splashCall(`setStatus(${JSON.stringify(t)})`);
+  /** 다음 단계 전에 로딩 화면이 그려지게 잠깐 양보 */
+  const paint = () => new Promise(r => setTimeout(r, 40));
+  function closeSplash() {
+    if (!splash || splash.isDestroyed()) return;
+    const s = splash; splash = null;
+    s.webContents.executeJavaScript('finish()').catch(() => {});
+    setTimeout(() => { if (!s.isDestroyed()) s.destroy(); }, 450);
+  }
+  let controlShown = false;
+  /** 조작 화면 준비가 끝나면(또는 오래 걸리면) 보여 주고 로딩 화면을 닫는다 */
+  function showControl() {
+    if (controlShown || !controlWin || controlWin.isDestroyed()) return;
+    controlShown = true;
+    controlWin.maximize();
+    controlWin.show();
+    controlWin.focus();
+    closeSplash();
+  }
+
   // ---------- 시작 ----------
   app.whenReady().then(async () => {
     Menu.setApplicationMenu(null);
+    await createSplash();
+    splashCall(`setVersion(${JSON.stringify(app.getVersion())})`);
+    splashStatus('성경 데이터를 준비하는 중…');
+    await paint();
     // 데이터 폴더: --data <폴더> 또는 BIBLECAST_DATA 로 바꿀 수 있다 (테스트·휴대용 실행)
     const argi = process.argv.indexOf('--data');
     const dataDir = argi > 0 ? path.resolve(process.argv[argi + 1]) : process.env.BIBLECAST_DATA || path.join(app.getPath('appData'), 'WorshipCue', 'data');
@@ -149,11 +190,14 @@ if (!app.requestSingleInstanceLock()) {
       const seedDb = app.isPackaged ? path.join(process.resourcesPath, 'bible.db') : path.join(__dirname, '..', '..', 'data', 'bible.db');
       core = new WorshipCueCore({ dataDir, seedDb });
     } catch (e) {
+      closeSplash();
       dialog.showErrorBox('WorshipCue', '데이터를 열 수 없습니다: ' + e.message);
       app.exit(1);
       return;
     }
     // 설정한 포트가 사용 중이면 다음 포트로 시작하고 알린다 (OBS 주소가 달라지므로 경고)
+    splashStatus('로컬 서버를 시작하는 중…');
+    await paint();
     const wanted = core.settings.get().port;
     let lastErr = null;
     for (let p = wanted; p < wanted + 10 && !port; p++) {
@@ -163,6 +207,7 @@ if (!app.requestSingleInstanceLock()) {
       } catch (e) { lastErr = e; }
     }
     if (!port) {
+      closeSplash();
       dialog.showErrorBox('WorshipCue', `로컬 서버를 시작할 수 없습니다 (포트 ${wanted}~${wanted + 9}).\n\n${lastErr && lastErr.message}`);
       app.exit(1);
       return;
@@ -211,8 +256,15 @@ if (!app.requestSingleInstanceLock()) {
       show: false,
       webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false },
     });
+    try {
+      const vs = core.store.listVersions();
+      splashCall(`setInfo(${JSON.stringify(`성경 ${vs.length}종 · 큐시트 ${core.store.listCues().length}개`)})`);
+    } catch { /* 표시만 */ }
+    splashStatus('조작 화면을 불러오는 중…');
     controlWin.loadURL(`http://127.0.0.1:${port}/control/`);
-    controlWin.once('ready-to-show', () => { controlWin.maximize(); controlWin.show(); });
+    // 조작 화면이 다 그려지면(ui-ready) 보여 준다. 늦어도 12초 뒤에는 보여 준다
+    core.once('ui-ready', showControl);
+    controlWin.once('ready-to-show', () => { splashStatus('화면 배치를 준비하는 중…'); setTimeout(showControl, 12000); });
     controlWin.webContents.on('render-process-gone', () => {
       core.logger.error('조작 화면 렌더러가 종료되어 다시 불러옵니다. (Live 출력은 유지됨)');
       setTimeout(() => controlWin && !controlWin.isDestroyed() && controlWin.reload(), 500);

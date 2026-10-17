@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:">
+<title>WorshipCue</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; font-family: 'Malgun Gothic', 'Noto Sans KR', sans-serif; user-select: none; }
+  .card {
+    position: fixed; inset: 0; border-radius: 16px; overflow: hidden; color: #eef1f6;
+    background: radial-gradient(ellipse at 20% 0%, #2a3f7a 0%, #141c38 45%, #0b0f1e 100%);
+    border: 1px solid rgba(255,255,255,.10); box-shadow: inset 0 0 0 1px rgba(0,0,0,.4);
+    display: flex; flex-direction: column; padding: 34px 38px 26px; box-sizing: border-box;
+    animation: in .45s ease both;
+  }
+  @keyframes in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+  .card.out { animation: out .3s ease both; }
+  @keyframes out { to { opacity: 0; transform: scale(.98); } }
+  .glow { position: absolute; right: -80px; bottom: -120px; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(242,179,27,.18), transparent 65%); pointer-events: none; }
+  .head { display: flex; align-items: center; gap: 18px; }
+  .mark { width: 64px; height: 64px; flex: none; }
+  h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: .5px; }
+  h1 span { color: #f2b31b; }
+  .sub { margin-top: 4px; color: #aeb8cf; font-size: 14px; }
+  .ver { position: absolute; top: 18px; right: 22px; font-size: 12px; color: #7f8aa3; }
+  .grow { flex: 1; }
+  .status { font-size: 14px; color: #d6dcea; min-height: 20px; display: flex; align-items: center; gap: 8px; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: #f2b31b; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .bar { margin-top: 12px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.10); overflow: hidden; position: relative; }
+  .bar i { position: absolute; top: 0; bottom: 0; width: 34%; border-radius: 2px; background: linear-gradient(90deg, #3d7bff, #f2b31b); animation: slide 1.15s ease-in-out infinite; }
+  .bar.done i { animation: none; left: 0; width: 100%; transition: width .3s; }
+  @keyframes slide { 0% { left: -34%; } 100% { left: 100%; } }
+  .foot { margin-top: 14px; display: flex; justify-content: space-between; font-size: 11px; color: #6f7a93; }
+  .err { color: #ff9b9e; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="glow"></div>
+  <div class="ver" id="ver"></div>
+  <div class="head">
+    <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4d86ff"/><stop offset="1" stop-color="#2346b8"/></linearGradient></defs>
+      <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#g)"/>
+      <rect x="14" y="17" width="26" height="5" rx="2.5" fill="#fff" opacity=".95"/>
+      <rect x="14" y="29.5" width="26" height="5" rx="2.5" fill="#fff" opacity=".7"/>
+      <rect x="14" y="42" width="26" height="5" rx="2.5" fill="#fff" opacity=".45"/>
+      <path d="M45 26 L54 32 L45 38 Z" fill="#f2b31b"/>
+    </svg>
+    <div>
+      <h1>Worship<span>Cue</span></h1>
+      <div class="sub">예배 순서 통합 송출 — 성경 · 찬양 · 찬송가 · 광고 · 영상</div>
+    </div>
+  </div>
+  <div class="grow"></div>
+  <div class="status"><span class="dot"></span><span id="msg">시작하는 중…</span></div>
+  <div class="bar" id="bar"><i></i></div>
+  <div class="foot"><span id="info">예배당 화면 · OBS · 무대 화면</span><span>잠시만 기다려 주세요</span></div>
+</div>
+<script>
+  // 메인 프로세스가 executeJavaScript 로 부른다
+  window.setStatus = t => { document.getElementById('msg').textContent = t; };
+  window.setVersion = v => { document.getElementById('ver').textContent = 'v' + v; };
+  window.setInfo = t => { document.getElementById('info').textContent = t; };
+  window.setError = t => { const m = document.getElementById('msg'); m.textContent = t; m.className = 'err'; };
+  window.finish = () => { document.getElementById('bar').classList.add('done'); setTimeout(() => document.getElementById('card').classList.add('out'), 150); };
+</script>
+</body>
+</html>

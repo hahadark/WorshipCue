@@ -489,6 +489,8 @@ WorshipCueCore.prototype.commands = {
   },
   songInboxStatus() { return this.songInbox.status(); },
   hymnLyricsStatus() { return this.hymnLyrics.status(); },
+  /** 조작 화면 준비 끝 (로딩 화면을 닫는 신호) */
+  uiReady() { this.emit('ui-ready'); return {}; },
   logClientError(a) { this.logger.error('조작 화면: ' + String(a.message || '').slice(0, 2000)); return {}; },
   // ---- AI 주보 → 큐시트 ----
   /** 안내 페이지를 기본 브라우저로 (https 만) */
