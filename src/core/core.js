@@ -94,6 +94,12 @@ class WorshipCueCore extends EventEmitter {
     if (input.text !== undefined && !String(input.text).trim()) throw new Error('주보 내용이 비었습니다.');
     const ai = this.settings.get().ai || {};
     const { plan, usage, model } = await askAI({ apiKey: this.aiKey(), model: ai.model || DEFAULT_MODEL, input, extra, endpoint: ai.endpoint || undefined, fetchImpl: fetchImpl || this.aiFetch || fetch });
+    return { ...this.planToSavedCue(plan), usage, model };
+  }
+
+  /** AI 가 만든 순서 → 찬송가 PPT 연결·장절 확인 → 큐시트 저장 (API · 채팅 AI 공통) */
+  planToSavedCue(plan) {
+    const { planToCue } = require('./bulletin');
     const resolveHymn = (n, book) => {
       const hits = this.hymns.search(String(n)).filter(h => h.number === n);
       if (!hits.length) return null;
@@ -103,7 +109,7 @@ class WorshipCueCore extends EventEmitter {
     const checkRef = ref => { const r = this.commands.searchReference.call(this, { query: ref }); return r && r.passage ? r.passage.title : null; };
     const { cue, warnings } = planToCue(plan, { resolveHymn, checkRef: ref => { try { return checkRef(ref); } catch { return null; } } });
     const saved = this.commands.saveCue.call(this, { cue });
-    return { cue: saved, warnings, usage, model };
+    return { cue: saved, warnings };
   }
 
   // ---------------- 무대 화면 (설교자·찬양팀 모니터) ----------------
@@ -567,6 +573,18 @@ WorshipCueCore.prototype.commands = {
   },
   /** 붙여 넣은 주보 글로 큐시트 만들기 */
   aiMakeCue(a) { return this.aiBulletin({ input: { text: String(a.text || '') }, extra: a.extra }); },
+  /** 채팅 AI (키 없이): 붙여 넣을 프롬프트와 샘플 파일 */
+  chatAiPrompt(a) {
+    const { chatPrompt, SAMPLE, SAMPLE_NAME } = require('./bulletin');
+    return { prompt: chatPrompt(String((a && a.extra) || '').slice(0, 500)), sample: JSON.stringify(SAMPLE, null, 2), sampleName: SAMPLE_NAME };
+  },
+  /** 채팅 AI 가 쓴 답(글·파일 내용) → 큐시트 */
+  chatAiImport(a) {
+    const { parseChatAnswer } = require('./bulletin');
+    const { plan, isSample } = parseChatAnswer(String((a && a.text) || '').slice(0, 300000));
+    if (isSample) throw new Error('샘플 파일 내용 그대로입니다. 채팅 AI 가 주보로 새로 만든 답을 붙여 넣으세요.');
+    return { ...this.planToSavedCue(plan), model: '채팅 AI' };
+  },
   // ---- 휴대폰 리모컨 ----
   remoteStatus() { return this.remote ? this.remote.status() : { enabled: false, running: false, urls: [], error: '리모컨을 쓸 수 없습니다.' }; },
   async setRemote(a) {

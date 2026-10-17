@@ -734,6 +734,42 @@ test('슬라이드 편집: 정리·합치기·큐시트 저장·송출 슬라이
   assert.equal(live.edit.style.size, 90);
 });
 
+test('채팅 AI (키 없이): 프롬프트·샘플, 붙여 넣은 답 → 큐시트', () => {
+  const core = newCore('chatai');
+  const p = core.command('chatAiPrompt', { extra: '오후 예배로' }).result;
+  assert.match(p.prompt, /WorshipCue-큐시트-샘플\.json/);
+  assert.match(p.prompt, /규칙:/);
+  assert.match(p.prompt, /추가 요청: 오후 예배로/);
+  const sample = JSON.parse(p.sample);
+  assert.ok(sample.items.length > 5);
+  // 샘플 그대로는 거절
+  const same = core.command('chatAiImport', { text: p.sample });
+  assert.equal(same.ok, false);
+  assert.match(same.error, /샘플/);
+  // 설명 + 코드 블록이 섞인 채팅 답
+  const plan = { name: '2026-10-25 주일 예배', serviceDate: '2026-10-25', startTime: '11:00', items: [
+    { type: 'title', title: '묵도' },
+    { type: 'hymn', title: '찬송', hymnNumber: 21, hymnbook: '새찬송가' },
+    { type: 'bible', title: '성경봉독', ref: '요 3:16' },
+    { type: 'text', title: '광고', body: '첫째\n---\n둘째' },
+    { type: 'blank', title: '예배 후' },
+  ] };
+  const answer = '주보를 읽고 큐시트를 만들었습니다.\n\n```json\n' + JSON.stringify(plan, null, 2) + '\n```\n\n확인할 부분: 찬송 번호';
+  const r = core.command('chatAiImport', { text: answer });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.result.cue.name, '2026-10-25 주일 예배');
+  assert.equal(r.result.cue.items.length, 5);
+  assert.equal(r.result.cue.items[2].type, 'bible');
+  assert.ok(r.result.warnings.some(w => /21장/.test(w))); // 찬송가 폴더가 없으니 확인할 것
+  assert.equal(core.command('getCue', { id: r.result.cue.id }).ok, true);
+  // 파일 내용(JSON 그대로)도 된다
+  assert.equal(core.command('chatAiImport', { text: JSON.stringify(plan) }).ok, true);
+  // JSON 이 없으면 안내
+  const bad = core.command('chatAiImport', { text: '죄송하지만 파일을 읽을 수 없습니다.' });
+  assert.equal(bad.ok, false);
+  assert.match(bad.error, /JSON/);
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

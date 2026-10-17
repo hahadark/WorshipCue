@@ -89,9 +89,8 @@ function readBulletin(buf, name) {
 }
 
 // ---------------- AI 요청 ----------------
-const SYSTEM = `너는 한국 교회 예배 방송실을 돕는 도우미다. 주보에서 '예배 순서'(주일 낮/오전 예배를 우선)를 찾아 송출 큐시트 JSON 으로 만든다.
-반드시 아래 JSON 하나만 출력한다 (설명·코드블록 없이).
-{
+// 큐시트 JSON 형식과 규칙 (API 요청과 '채팅 AI' 프롬프트가 함께 쓴다)
+const FORMAT = `{
   "name": "큐시트 이름 (예: 2026-10-11 주일성결예배)",
   "serviceDate": "YYYY-MM-DD 또는 빈 문자열",
   "startTime": "HH:MM (예배 시작 시각, 모르면 빈 문자열)",
@@ -105,8 +104,8 @@ const SYSTEM = `너는 한국 교회 예배 방송실을 돕는 도우미다. �
       "note": "조작자 메모 (일어서기 *, 담당자 등)",
       "duration": 0 }
   ]
-}
-규칙:
+}`;
+const RULES = `규칙:
 - 찬송(가) 순서는 type "hymn" 과 hymnNumber. '예배로의 부름'처럼 찬송가를 부르는 순서도 hymn (title 은 '예배로의 부름').
 - 성경봉독·본문은 type "bible" 과 ref (책 이름은 한국어 약칭 가능).
 - 찬양팀·찬양대처럼 곡이 정해지지 않은 찬양은 type "title" (subtitle 에 찬양팀 이름).
@@ -116,6 +115,69 @@ const SYSTEM = `너는 한국 교회 예배 방송실을 돕는 도우미다. �
 - 기도·봉헌·축도 등 나머지는 type "title" 과 담당자 subtitle.
 - 마지막에 { "type": "blank", "title": "예배 후" } 를 넣는다.
 - 주보에 없는 내용은 지어내지 않는다.`;
+const SYSTEM = `너는 한국 교회 예배 방송실을 돕는 도우미다. 주보에서 '예배 순서'(주일 낮/오전 예배를 우선)를 찾아 송출 큐시트 JSON 으로 만든다.
+반드시 아래 JSON 하나만 출력한다 (설명·코드블록 없이).
+${FORMAT}
+${RULES}`;
+
+// ---------------- 채팅 AI (키 없이): 프롬프트 · 샘플 파일 ----------------
+const SAMPLE_NAME = 'WorshipCue-큐시트-샘플.json';
+/** 샘플 큐시트 (가상 이름·예시) — 채팅 AI 에 형식을 보여 주는 용도 */
+const SAMPLE = {
+  _안내: 'WorshipCue 큐시트 형식 예시입니다. 주보의 예배 순서로 이 형식 그대로 새로 만들어 주세요. (이 파일의 내용은 예시일 뿐입니다)',
+  name: '2026-10-18 주일 예배',
+  serviceDate: '2026-10-18',
+  startTime: '11:00',
+  items: [
+    { type: 'title', title: '예배로 부름', subtitle: '인도: 홍길동 목사', note: '' },
+    { type: 'hymn', title: '찬송', hymnNumber: 8, hymnbook: '새찬송가', note: '*일어서서' },
+    { type: 'title', title: '신앙고백', subtitle: '사도신경', note: '*일어서서' },
+    { type: 'title', title: '대표기도', subtitle: '김철수 장로' },
+    { type: 'bible', title: '성경봉독', ref: '시 23:1-6' },
+    { type: 'title', title: '찬양', subtitle: '찬양대' },
+    { type: 'title', title: '설교', subtitle: '“선한 목자” · 홍길동 목사', duration: 30 },
+    { type: 'hymn', title: '찬송', hymnNumber: 310, hymnbook: '새찬송가' },
+    { type: 'text', title: '교회 소식', body: '다음 주일은 추수감사주일로 지킵니다\n---\n수요예배: 저녁 7시 30분 본당\n---\n새가족 환영회: 예배 후 2층 교육관' },
+    { type: 'title', title: '축도', subtitle: '홍길동 목사', note: '*일어서서' },
+    { type: 'blank', title: '예배 후' },
+  ],
+};
+
+/** 채팅 AI(ChatGPT·Claude·Gemini 등) 에 붙여 넣을 프롬프트 */
+function chatPrompt(extra = '') {
+  return `[WorshipCue 큐시트 만들기]
+너는 한국 교회 예배 방송실을 돕는 도우미다. 첨부한 주보에서 '예배 순서'(주일 낮/오전 예배를 우선)를 찾아, 송출 프로그램 WorshipCue 가 불러올 큐시트 JSON 을 만들어 줘.
+첨부한 샘플 파일(${SAMPLE_NAME})과 똑같은 형식으로 만든다. 샘플의 내용(이름·장절·찬송 번호)은 예시일 뿐이니 쓰지 말고, 주보 내용으로만 채운다.
+
+형식:
+${FORMAT}
+${RULES}
+- "_안내" 항목은 넣지 않는다.
+
+답하는 법:
+- JSON 하나만 \`\`\`json 코드 블록으로 답한다. 앞뒤 설명은 짧게.
+- 파일을 만들 수 있으면 'WorshipCue-큐시트.json' 파일로 줘도 된다.
+- 주보에서 읽기 어려운 부분은 지어내지 말고 note 에 "확인 필요" 라고 적는다.${extra ? `\n\n추가 요청: ${extra}` : ''}`;
+}
+
+/** 채팅 AI 가 쓴 답(글 전체 또는 파일 내용) → 큐시트 계획 */
+function parseChatAnswer(text) {
+  const t = String(text || '').replace(/^\ufeff/, '').trim();
+  if (!t) throw new Error('AI 답을 붙여 넣거나 결과 파일을 불러오세요.');
+  // 코드 블록이 있으면 그 안에서 (여러 개면 items 가 있는 것)
+  const blocks = [...t.matchAll(/```(?:json|JSON)?\s*([\s\S]*?)```/g)].map(m => m[1]);
+  let plan = null;
+  for (const b of [...blocks, t]) {
+    try { const p = parseJson(b); if (p && (Array.isArray(p.items) || Array.isArray(p) || (p.cue && Array.isArray(p.cue.items)))) { plan = p; break; } } catch { /* 다음 */ }
+  }
+  if (!plan) throw new Error('AI 답에서 큐시트 JSON 을 찾지 못했습니다. AI 에게 "JSON 코드 블록 하나로 다시 답해 줘" 라고 해 보세요.');
+  if (Array.isArray(plan)) plan = { items: plan };
+  if (plan.cue && Array.isArray(plan.cue.items)) plan = plan.cue;
+  delete plan._안내;
+  if (!plan.items.length) throw new Error('예배 순서(items)가 비어 있습니다.');
+  const isSample = JSON.stringify(plan.items) === JSON.stringify(SAMPLE.items);
+  return { plan, isSample };
+}
 
 /** 응답 글에서 JSON 꺼내기 (코드블록·앞뒤 설명이 붙어도) */
 function parseJson(text) {
@@ -188,4 +250,4 @@ function planToCue(plan, { resolveHymn, checkRef }) {
   };
 }
 
-module.exports = { DEFAULT_ENDPOINT, readBulletin, hwpText, askAI, planToCue, parseJson, RECOMMENDED, DEFAULT_MODEL, SYSTEM };
+module.exports = { DEFAULT_ENDPOINT, readBulletin, hwpText, askAI, planToCue, parseJson, RECOMMENDED, DEFAULT_MODEL, SYSTEM, SAMPLE, SAMPLE_NAME, chatPrompt, parseChatAnswer };
