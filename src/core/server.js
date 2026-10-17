@@ -47,6 +47,8 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   }
 
   core.on('live', broadcastLive);
+  // 그리기·강조: 슬라이드를 다시 그리지 않고 그 층만
+  core.on('draw', d => { for (const c of clients.values()) if (c.client !== 'stage') send(c.res, 'draw', d); });
   core.on('settings', what => broadcastControl('settings', { what, state: core.getState() }));
   core.on('preview', () => broadcastControl('preview', core.getState().preview));
   core.on('extend-request', d => broadcastControl('extend-request', d));
@@ -152,6 +154,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
         if (client === 'control') send(res, 'state', core.getState());
         else if (client === 'stage') send(res, 'render', core.stagePayload());
         else send(res, 'render', core.outputPayload(client));
+        if (client !== 'stage' && core.draw && (core.draw.strokes.length || core.draw.spot)) send(res, 'draw', core.draw);
         core.emit('outputs');
         req.on('close', () => {
           clients.delete(id);

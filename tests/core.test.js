@@ -806,6 +806,28 @@ test('슬라이드쇼·자동 넘김·자동 동작: 저장 정리, 코어가 N�
   clearTimeout(core.autoTimer);
 });
 
+test('화면에 그리기·강조: 선 넣기·이어 그리기·되돌리기, 슬라이드가 바뀌면 지움', () => {
+  const core = newCore('draw');
+  const got = [];
+  core.on('draw', d => got.push(JSON.parse(JSON.stringify(d))));
+  core.command('sendLive', { passage: { title: '본문' }, slides: [{ kind: 'text', ref: '', parts: [{ text: '가' }] }, { kind: 'text', ref: '', parts: [{ text: '나' }] }] });
+  core.command('drawStroke', { stroke: { id: 's1', pts: [[0.1, 0.1]], color: '#ff0000', width: 0.01 } });
+  core.command('drawStroke', { stroke: { id: 's1', pts: [[0.1, 0.1], [0.5, 0.5], [9, -9]], color: 'javascript:x' } }); // 같은 id = 이어 그리기
+  assert.equal(core.draw.strokes.length, 1);
+  assert.deepEqual(core.draw.strokes[0].pts[2], [1.1, -0.1]); // 화면 밖 좌표는 잘라냄
+  assert.equal(core.draw.strokes[0].color, '#ff3b30'); // 이상한 색은 기본색
+  assert.equal(core.command('drawStroke', { stroke: { pts: [[0, 0]] } }).ok, false); // id 없음
+  core.command('drawStroke', { stroke: { id: 's2', pts: [[0.2, 0.2]] } });
+  core.command('drawUndo');
+  assert.equal(core.draw.strokes.length, 1);
+  core.command('drawSpot', { on: true, x: 0.5, y: 0.4, r: 9 });
+  assert.equal(core.draw.spot.r, 0.6);
+  core.command('nextSlide');
+  assert.equal(core.draw.strokes.length, 0); // 슬라이드가 바뀌면 지움
+  assert.equal(core.draw.spot, null);
+  assert.ok(got.length >= 5);
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

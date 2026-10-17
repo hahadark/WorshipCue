@@ -18,6 +18,7 @@
   let current = null; // 현재 보이는 본문층
   let lastKey = '';
   let lastPayload = null;
+  let drawState = null; // 화면에 그리기·강조
 
   function setupStage(t) {
     const key = JSON.stringify(t);
@@ -156,6 +157,7 @@
   }
 
   function render(p) {
+    queueMicrotask(() => { if (stage && tpl && drawState) R.paintDraw(stage, drawState, tpl); }); // 그리기 층은 늘 맨 위
     lastPayload = p;
     document.body.classList.toggle('nocursor', p.cursorHidden !== false);
     const stageChanged = setupStage(p.template);
@@ -224,6 +226,9 @@
     const es = new EventSource(`/events?client=${output}${isWindow ? '&window=1' : ''}`);
     es.addEventListener('render', e => {
       try { render(JSON.parse(e.data)); } catch (err) { console.error(err); }
+    });
+    es.addEventListener('draw', e => {
+      try { drawState = JSON.parse(e.data); if (stage && tpl) R.paintDraw(stage, drawState, tpl); } catch (err) { console.error(err); }
     });
     es.addEventListener('hello', e => {
       clientId = JSON.parse(e.data).id;

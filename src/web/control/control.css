@@ -708,3 +708,13 @@ html { overflow: hidden; }
 .act-grid { display: grid; grid-template-columns: 90px 1fr; gap: 6px 8px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); }
 .act-grid > label { font-size: 12px; color: var(--muted); }
 button.on { border-color: var(--accent); }
+
+/* 화면에 그리기 */
+.draw-cap { position: absolute; inset: 0; z-index: 20; touch-action: none; background: transparent; outline: 2px dashed var(--warn); outline-offset: -2px; }
+.draw-bar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 6px 8px; margin: 4px 0; border: 1px solid var(--warn); border-radius: 6px; background: var(--warn-bg); }
+.draw-bar .sep { height: 20px; margin: 0 2px; }
+.draw-bar button { padding: 3px 8px; font-size: 12px; }
+.draw-bar button.on { background: var(--sel); border-color: var(--accent); }
+.dw-col { width: 22px; height: 22px; padding: 0 !important; border-radius: 50%; background: var(--c) !important; border: 2px solid var(--line2); }
+.dw-col.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+#drawBtn.on { background: var(--warn-bg); border-color: var(--warn); }

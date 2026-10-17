@@ -55,7 +55,12 @@ class WorshipCueCore extends EventEmitter {
       const first = all.find(v => v.id === 'nkrv') || all.find(v => v.id === 'krv') || all[0];
       this.settings.update(d => { d.versionId = first ? first.id : ''; });
     }
-    this.presentation.on('live', () => { this.syncVideo(); this.scheduleAuto(); this.emit('live'); });
+    this.draw = { strokes: [], spot: null }; // 화면에 그리기·강조 (슬라이드가 바뀌면 지움)
+    this.presentation.on('live', () => {
+      this.syncVideo(); this.scheduleAuto();
+      if (this.draw.strokes.length || this.draw.spot) { this.draw = { strokes: [], spot: null }; this.emit('draw', this.draw); }
+      this.emit('live');
+    });
     this.presentation.on('preview', () => this.emit('preview'));
     this.presentation.on('edge', ({ edge, live }) => {
       // 큐시트 항목을 송출 중이면 다음(이전) 순서로 넘어간다
@@ -260,6 +265,29 @@ class WorshipCueCore extends EventEmitter {
 
 WorshipCueCore.prototype.commands = {
   // ---- 검색 (Live 에 영향 없음) ----
+  // ---- 화면에 그리기 · 강조 (설교 중 밑줄·동그라미, 한 곳만 밝게) ----
+  /** 선 하나 넣기·이어 그리기 (같은 id 면 바꿈). 좌표는 화면 비율 0~1 */
+  drawStroke(a) {
+    const s = a.stroke || {};
+    const id = String(s.id || '').slice(0, 40);
+    if (!id) throw new Error('선 id 가 없습니다.');
+    const pts = (Array.isArray(s.pts) ? s.pts : []).slice(0, 4000).map(p => [Math.max(-0.1, Math.min(1.1, Number(p[0]) || 0)), Math.max(-0.1, Math.min(1.1, Number(p[1]) || 0))]);
+    const st = { id, pts, color: /^#[0-9a-f]{3,8}$/i.test(s.color || '') ? s.color : '#ff3b30', width: Math.max(0.001, Math.min(0.08, Number(s.width) || 0.006)), alpha: Math.max(0.1, Math.min(1, Number(s.alpha) || 1)) };
+    const list = this.draw.strokes;
+    const k = list.findIndex(x => x.id === id);
+    if (k >= 0) list[k] = st; else list.push(st);
+    if (list.length > 300) list.splice(0, list.length - 300);
+    this.emit('draw', this.draw);
+    return { count: list.length };
+  },
+  drawUndo() { this.draw.strokes.pop(); this.emit('draw', this.draw); return { count: this.draw.strokes.length }; },
+  drawClear() { this.draw = { strokes: [], spot: null }; this.emit('draw', this.draw); return {}; },
+  /** 강조: 원 하나만 밝게 (나머지 어둡게) */
+  drawSpot(a) {
+    this.draw.spot = a && a.on ? { x: Math.max(0, Math.min(1, Number(a.x) || 0.5)), y: Math.max(0, Math.min(1, Number(a.y) || 0.5)), r: Math.max(0.03, Math.min(0.6, Number(a.r) || 0.18)) } : null;
+    this.emit('draw', this.draw);
+    return { spot: this.draw.spot };
+  },
   /** 병행 번역본: 같은 범위의 다른 번역 본문 */
   parallelVerses(a) {
     const v = this.store.getVersion(String(a.versionId || ''));

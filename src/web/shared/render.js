@@ -462,7 +462,7 @@
 
   /** 미리보기/모니터용: 컨테이너에 슬라이드를 즉시 그린다 */
   function renderInto(container, slide, t, opts = {}) {
-    const prev = [...container.children];
+    const prev = [...container.children].filter(n => !n.classList.contains('bc-keep')); // 그리기 받는 층 등은 그대로
     const stage = buildStage(t);
     if (opts.checker && t.background.type === 'transparent') stage.classList.add('bc-checker');
     if (opts.hidden && t.clearHidesBackground) stage.firstChild.style.opacity = '0';
@@ -489,5 +489,31 @@
     return { stage, ...result };
   }
 
-  global.BCRender = { editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  /** 그리기·강조 층 (stage 맨 위). d = { strokes: [{pts:[[x,y]], color, width, alpha}], spot: {x,y,r} } */
+  function paintDraw(stage, d, t) {
+    if (!stage) return;
+    let svg = stage.querySelector(':scope > .bc-draw');
+    const has = d && ((d.strokes && d.strokes.length) || d.spot);
+    if (!has) { if (svg) svg.remove(); return; }
+    const W = t.width, H = t.height;
+    if (!svg) {
+      svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'bc-draw');
+      stage.appendChild(svg);
+    }
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;pointer-events:none;z-index:50`;
+    const sp = d.spot;
+    const spot = sp ? `<defs><mask id="bcSpot"><rect width="${W}" height="${H}" fill="#fff"/><circle cx="${sp.x * W}" cy="${sp.y * H}" r="${sp.r * H}" fill="#000"/></mask></defs><rect width="${W}" height="${H}" fill="rgba(0,0,0,.66)" mask="url(#bcSpot)"/>` : '';
+    const lines = (d.strokes || []).filter(s => s.pts && s.pts.length).map(s => {
+      const pts = s.pts.map(p => `${(p[0] * W).toFixed(1)},${(p[1] * H).toFixed(1)}`);
+      const w = s.width * H;
+      return s.pts.length === 1
+        ? `<circle cx="${s.pts[0][0] * W}" cy="${s.pts[0][1] * H}" r="${w / 2}" fill="${esc(s.color)}" fill-opacity="${s.alpha}"/>`
+        : `<polyline points="${pts.join(' ')}" fill="none" stroke="${esc(s.color)}" stroke-opacity="${s.alpha}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }).join('');
+    svg.innerHTML = spot + lines;
+  }
+
+  global.BCRender = { paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

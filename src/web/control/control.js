@@ -85,6 +85,7 @@
   // ---------------- 실시간 연결 ----------------
   function connect() {
     const es = new EventSource('/events?client=control');
+    es.addEventListener('draw', e => { try { window.BCDraw && window.BCDraw.onDraw(JSON.parse(e.data)); } catch { /* 무시 */ } });
     es.addEventListener('state', e => {
       const first = !app.state;
       app.state = JSON.parse(e.data);
@@ -152,6 +153,7 @@
     if (window.BCSlideEdit) window.BCSlideEdit.init();
     if (window.BCDrop) window.BCDrop.init();
     if (window.BCCtx) window.BCCtx.init();
+    if (window.BCDraw) window.BCDraw.init();
     // 로딩 화면 닫기: 배치가 자리 잡은 뒤 (숨긴 창에서는 화면 그리기 신호가 없으므로 시간으로)
     setTimeout(() => cmd('uiReady'), 150);
     if (!app.state.versions.length) showWelcome();
@@ -293,7 +295,7 @@
   function passageMeta(p, query) {
     const v = p.verses || [];
     const cue = app.preview && app.preview.passage === p ? app.preview.cue : null;
-    const cueMeta = cue ? { cueId: cue.id, cueIndex: cue.index, itemTitle: cue.title, note: cue.note || '' } : {};
+    const cueMeta = cue ? { cueId: cue.id, cueIndex: cue.index, itemTitle: cue.title, note: cue.note || '', ...(cue.auto ? { auto: cue.auto } : {}) } : {};
     const tpl = app.preview && app.preview.passage === p && app.preview.tpl ? { tpl: app.preview.tpl } : {};
     if (!v.length) return { title: p.title, versionId: '', versionName: p.versionName || '', book: null, query: query || p.title, first: null, last: null, ...cueMeta, ...tpl };
     return {
@@ -485,6 +487,8 @@
       return;
     }
     R.renderInto($('#lvScreen'), live.slide, tpl, { checker: true, hidden: !live.visible, versionName: live.passage.versionName, overlays: overlaysFor(app.view.lv), layers: app.state.layers });
+    app.lvTpl = tpl;
+    if (window.BCDraw) window.BCDraw.paintLive(); // 화면에 그린 것
     $('#lvInfo').textContent = [live.passage.cueIndex >= 0 && live.slide.kind !== 'bible' ? live.passage.itemTitle || live.slide.ref : live.slide.ref, live.passage.versionName].filter(Boolean).join(' · ');
     $('#lvCount').textContent = `${live.index + 1} / ${live.count}`;
     const nx = live.nextSlide;
@@ -1322,6 +1326,7 @@
     if (combo === 'Escape') {
       if (!$('#modal').hidden) { closeModal(); e.preventDefault(); return; }
       if (editing) return; // 편집기가 닫음
+      if (window.BCDraw && window.BCDraw.isOn()) { window.BCDraw.off(); e.preventDefault(); return; } // 그리기 끝 (보조 화면은 그대로)
       if (!$('#suggest').hidden) return; // 검색창 처리기가 후보 목록을 닫음
     }
     const sc = settings().shortcuts;
