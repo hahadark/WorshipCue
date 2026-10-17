@@ -828,6 +828,46 @@ test('화면에 그리기·강조: 선 넣기·이어 그리기·되돌리기, �
   assert.ok(got.length >= 5);
 });
 
+test('찬양 가져오기: OpenLyrics · ChordPro · ProPresenter 6 · txt → 라이브러리', () => {
+  const core = newCore('songimport');
+  const dir = path.join(tmp, 'songs-in');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'grace.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+<song xmlns="http://openlyrics.info/namespace/2009/song" version="0.8"><properties><titles><title>놀라운 은혜 (예시)</title></titles>
+<authors><author>홍길동</author></authors><copyright>예시 2026</copyright><ccliNo>1234</ccliNo><verseOrder>v1 c v2 c</verseOrder></properties>
+<lyrics><verse name="v1"><lines>첫째 줄<br/>둘째 줄</lines></verse><verse name="c"><lines><chord name="G"/>은혜 &amp; 사랑<br/>놀라워</lines><lines>후렴 둘째 장</lines></verse><verse name="v2"><lines>2절 가사</lines></verse></lyrics></song>`);
+  fs.writeFileSync(path.join(dir, 'morning.cho'), `{title: 아침 찬양}\n{artist: 김철수}\n{ccli: 777}\n{key: G}\n{start_of_verse}\n[G]새벽빛 [D]비추는\n{end_of_verse}\n\n{start_of_chorus}\n[C]은혜 은혜\n{end_of_chorus}\n# 주석`);
+  const plain = Buffer.from('목자 되신 주\n나를 부르시네', 'utf8').toString('base64');
+  fs.writeFileSync(path.join(dir, 'shepherd.pro6'), `<RVPresentationDocument CCLISongTitle="목자 되신 주" CCLIAuthor="박영희"><groups><RVSlideGrouping name="Verse 1"><slides><RVDisplaySlide><displayElements><RVTextElement PlainText="${plain}"></RVTextElement></displayElements></RVDisplaySlide></slides></RVSlideGrouping><RVSlideGrouping name="Chorus"><slides><RVDisplaySlide><displayElements><RVTextElement RTFData="${Buffer.from('{\\rtf1\\ansi{\\fonttbl\\f0 Arial;}\\f0 Amazing\\par grace}', 'latin1').toString('base64')}"></RVTextElement></displayElements></RVDisplaySlide></slides></RVSlideGrouping></groups></RVPresentationDocument>`);
+  fs.writeFileSync(path.join(dir, '작은 기도.txt'), '[1절]\n작은 손 모아\n\n[후렴]\n감사해요');
+  fs.writeFileSync(path.join(dir, 'broken.xml'), '<html>아님</html>');
+  const r = core.command('importSongs', { paths: [dir] });
+  assert.equal(r.ok, true, r.error);
+  const by = Object.fromEntries(r.result.songs.map(s => [s.title, s]));
+  const g = by['놀라운 은혜 (예시)'];
+  assert.match(g.lyrics, /^\[1절\]\n첫째 줄\n둘째 줄\n\n\[후렴\]\n\[G\]은혜 & 사랑\n놀라워\n\n후렴 둘째 장\n\n\[2절\]\n2절 가사$/);
+  assert.equal(g.arrangement, '1절 후렴 2절 후렴');
+  assert.equal(g.credit, '홍길동 · 예시 2026 · CCLI 1234');
+  const c = by['아침 찬양'];
+  assert.match(c.lyrics, /\[1절\]\n\[G\]새벽빛 \[D\]비추는/);
+  assert.match(c.lyrics, /\[후렴\]\n\[C\]은혜 은혜/);
+  assert.doesNotMatch(c.lyrics, /주석|key/);
+  assert.equal(c.credit, '김철수 · CCLI 777');
+  const p = by['목자 되신 주'];
+  assert.match(p.lyrics, /\[1절\]\n목자 되신 주\n나를 부르시네/);
+  assert.match(p.lyrics, /\[후렴\]\nAmazing\ngrace/);
+  assert.ok(by['작은 기도']);
+  assert.ok(r.result.errors.some(e => e.file === 'broken.xml'));
+  // 저장 · 같은 제목 건너뛰기
+  const s1 = core.command('saveImportedSongs', { songs: r.result.songs }).result;
+  assert.equal(s1.saved, 4);
+  const again = core.command('importSongs', { paths: [path.join(dir, 'morning.cho')] }).result;
+  assert.equal(again.songs[0].dup, true);
+  assert.deepEqual(core.command('saveImportedSongs', { songs: again.songs }).result, { saved: 0, skipped: 1 });
+  assert.equal(core.command('saveImportedSongs', { songs: again.songs, dup: 'replace' }).result.saved, 1);
+  assert.equal(core.command('listSongs', { query: '' }).result.filter(s => s.title === '아침 찬양').length, 1);
+});
+
 test('찬양 PPT 온라인: 검색 주소, 다운로드 폴더 지켜보기 → 찬양 폴더로 옮기고 알림', async () => {
   const { onlineSearchUrl } = require('../src/core/songinbox');
   assert.equal(onlineSearchUrl('https://example.org/search/{q}', '은혜 아니면'), 'https://example.org/search/%EC%9D%80%ED%98%9C%20%EC%95%84%EB%8B%88%EB%A9%B4');

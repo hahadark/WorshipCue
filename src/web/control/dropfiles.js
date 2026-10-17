@@ -18,7 +18,7 @@
   function hint(e) {
     const t = e.target;
     if (window.BCSlideEdit && window.BCSlideEdit.isOpen()) return '슬라이드에 그림·영상 덧붙이기';
-    if (t.closest && t.closest('#panelLibrary')) return '폴더 → 라이브러리에 등록 · 파일 → 큐시트에 넣기';
+    if (t.closest && t.closest('#panelLibrary')) return window.BCLib && window.BCLib.tab && window.BCLib.tab() === 'songs' ? '찬양 파일·폴더 가져오기 (OpenLP · ChordPro · ProPresenter · PPT · txt)' : '폴더 → 라이브러리에 등록 · 파일 → 큐시트에 넣기';
     if (t.closest && t.closest('#cueEditor .ce-form')) return '그림·영상 → 이 순서 배경 · 그 밖의 파일 → 큐시트에 넣기';
     return 'PPT·그림·영상·음악·가사(txt) → 큐시트에 넣기';
   }
@@ -56,6 +56,11 @@
       const media = list.filter(x => x.kind === 'image' || x.kind === 'video');
       if (!media.length) return app.showMsg('슬라이드 편집기에는 그림·영상을 놓을 수 있습니다.', 'info', 2500);
       media.forEach((m, k) => window.BCSlideEdit.dropImage(m.url, e.clientX + k * 20, e.clientY + k * 20));
+      return;
+    }
+    // 라이브러리 '찬양' 탭: 찬양 파일·폴더 가져오기 (OpenLP · ChordPro · ProPresenter · PPT · txt)
+    if (t.closest('#panelLibrary') && window.BCLib && window.BCLib.tab && window.BCLib.tab() === 'songs') {
+      window.BCLib.importSongs(list.filter(x => x.kind !== 'missing').map(x => x.path));
       return;
     }
     // 라이브러리: 폴더 등록

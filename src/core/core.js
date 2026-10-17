@@ -730,6 +730,47 @@ WorshipCueCore.prototype.commands = {
   },
   // ---- 라이브러리: 찬양 ----
   listSongs(a) { return this.library.listSongs(a.query); },
+  /** 찬양 가져오기: 파일·폴더 → 미리 보기 목록 (저장은 saveImportedSongs) */
+  importSongs(a) {
+    const path = require('path');
+    const fs = require('fs');
+    const { parseSongFile, SONG_EXT } = require('./songimport');
+    const files = [];
+    for (const raw of (Array.isArray(a.paths) ? a.paths : []).slice(0, 200)) {
+      const p = path.resolve(String(raw || ''));
+      let st; try { st = fs.statSync(p); } catch { continue; }
+      if (st.isDirectory()) { for (const f of fs.readdirSync(p)) if (SONG_EXT.test(f) && files.length < 1000) files.push(path.join(p, f)); }
+      else files.push(p);
+    }
+    const have = new Set(this.library.listSongs('').map(s => s.title.replace(/\s+/g, '').toLowerCase()));
+    const songs = [], errors = [];
+    for (const f of files) {
+      try {
+        for (const s of parseSongFile(f)) {
+          if (!String(s.lyrics || '').trim()) { errors.push({ file: path.basename(f), error: '가사가 없습니다.' }); continue; }
+          songs.push({ ...s, source: path.basename(f), dup: have.has(String(s.title).replace(/\s+/g, '').toLowerCase()) });
+        }
+      } catch (e) { errors.push({ file: path.basename(f), error: e.message }); }
+    }
+    return { songs, errors };
+  },
+  /** 가져온 찬양 저장 (같은 제목: skip = 건너뛰기 · new = 새로 하나 더 · replace = 덮어쓰기) */
+  saveImportedSongs(a) {
+    const list = (Array.isArray(a.songs) ? a.songs : []).slice(0, 1000);
+    const mode = ['skip', 'new', 'replace'].includes(a.dup) ? a.dup : 'skip';
+    const byTitle = new Map(this.library.listSongs('').map(s => [s.title.replace(/\s+/g, '').toLowerCase(), s.id]));
+    let saved = 0, skipped = 0;
+    for (const s of list) {
+      const key = String(s.title || '').replace(/\s+/g, '').toLowerCase();
+      const old = byTitle.get(key);
+      if (old && mode === 'skip') { skipped++; continue; }
+      const r = this.library.saveSong({ ...(old && mode === 'replace' ? { id: old } : {}), title: s.title, lyrics: s.lyrics, credit: s.credit || '', arrangement: s.arrangement || '' });
+      byTitle.set(key, r.id);
+      saved++;
+    }
+    this.emit('songs', {});
+    return { saved, skipped };
+  },
   getSong(a) { const s = this.library.getSong(a.id); if (!s) throw new Error('찬양을 찾을 수 없습니다.'); return s; },
   saveSong(a) { const s = this.library.saveSong(a.song || {}); this.emit('songs', { id: s.id }); return s; },
   deleteSong(a) { this.library.deleteSong(a.id); this.emit('songs', { id: a.id }); return {}; },

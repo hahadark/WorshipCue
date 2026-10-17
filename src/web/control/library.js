@@ -87,8 +87,9 @@
 
   // ---------------- 찬양 ----------------
   async function drawSongs() {
-    bar(`<input type="text" data-q style="flex:1"><button data-new title="새 찬양 가사 입력">＋ 새 찬양</button>`);
+    bar(`<input type="text" data-q style="flex:1"><button data-new title="새 찬양 가사 입력">＋ 새 찬양</button><button data-import title="OpenLP · ChordPro · ProPresenter 6 · PPT · txt 파일에서 찬양 가져오기 (파일·폴더를 이 탭에 끌어다 놓아도 됩니다)">📥 가져오기…</button>`);
     root().querySelector('[data-new]').onclick = () => editSong(null);
+    root().querySelector('[data-import]').onclick = () => pickImport();
     searchInput('찬양 제목·가사로 찾기', drawSongs);
     const r = await cmd('listSongs', { query: st.q.songs || '' });
     st.rows = r.ok ? r.result : [];
@@ -99,6 +100,45 @@
     bindRows(b, pick, k => ({ type: 'song', extra: { songId: st.rows[k].id, title: st.rows[k].title } }));
     b.querySelectorAll('[data-edit]').forEach(x => x.onclick = e => { e.stopPropagation(); editSong(st.rows[+x.dataset.edit].id); });
   }
+  // ---------------- 찬양 가져오기 (다른 프로그램 · PPT · txt) ----------------
+  function pickImport() {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.multiple = true;
+    inp.accept = '.xml,.cho,.chordpro,.chopro,.crd,.pro6,.pro,.pptx,.ppsx,.ppt,.pps,.txt';
+    inp.onchange = () => {
+      const pathOf = window.wcDesktop && window.wcDesktop.pathOf;
+      const paths = pathOf ? [...inp.files].map(f => pathOf(f)).filter(Boolean) : [];
+      if (!paths.length) return app.showMsg('가져오기는 WorshipCue 데스크톱 프로그램에서 됩니다.', 'info');
+      importSongs(paths);
+    };
+    inp.click();
+  }
+  /** 파일·폴더 경로 → 미리 보기 → 저장 */
+  async function importSongs(paths) {
+    app.showMsg('찬양 파일을 읽는 중…', 'info', 1500);
+    const r = await cmd('importSongs', { paths });
+    if (!r.ok) return app.showMsg(r.error, 'error');
+    const { songs, errors } = r.result;
+    if (!songs.length) return app.showMsg(`가져올 찬양이 없습니다. ${errors.map(e => `${e.file}: ${e.error}`).join(' / ')}`, 'error', 7000);
+    const dups = songs.filter(s => s.dup).length;
+    app.openModal(`📥 찬양 가져오기 — ${songs.length}곡`, `<div class="imp">
+      <div class="note">고른 곡을 찬양 라이브러리에 저장합니다. 가사는 미리 보고 저장한 뒤에도 고칠 수 있습니다.</div>
+      <div class="imp-list">${songs.map((s, k) => `<label class="imp-row"><input type="checkbox" data-k="${k}" ${s.dup ? '' : 'checked'}><span class="imp-t"><b>${esc(s.title)}</b>${s.dup ? ' <span class="warn-text">· 같은 제목 있음</span>' : ''}<span class="muted">${esc(s.source)}${s.credit ? ' · ' + esc(s.credit) : ''}${s.arrangement ? ' · 순서: ' + esc(s.arrangement) : ''}</span></span><span class="imp-first muted">${esc(s.lyrics.split('\n').find(l => l.trim() && !/^\[.*\]$/.test(l.trim())) || '')}</span></label>`).join('')}</div>
+      ${errors.length ? `<div class="err-text">못 읽은 파일 ${errors.length}개: ${errors.slice(0, 8).map(e => esc(`${e.file} (${e.error})`)).join(' · ')}</div>` : ''}
+      <div class="row-flex" style="margin-top:10px">${dups ? `같은 제목: <select id="impDup"><option value="skip">건너뛰기</option><option value="replace">덮어쓰기</option><option value="new">새로 하나 더</option></select>` : ''}
+        <span class="grow"></span><button id="impAll">모두 고르기</button><button id="impGo" class="primary">✓ 고른 곡 저장</button></div></div>`);
+    $('#impAll').onclick = () => document.querySelectorAll('.imp-row input').forEach(c => { c.checked = true; });
+    $('#impGo').onclick = async () => {
+      const pick = [...document.querySelectorAll('.imp-row input:checked')].map(c => songs[+c.dataset.k]);
+      if (!pick.length) return app.showMsg('저장할 곡을 고르세요.', 'info');
+      const s = await cmd('saveImportedSongs', { songs: pick, dup: $('#impDup') ? $('#impDup').value : 'skip' });
+      if (!s.ok) return app.showMsg(s.error, 'error');
+      app.closeModal();
+      app.showMsg(`찬양 ${s.result.saved}곡을 라이브러리에 저장했습니다${s.result.skipped ? ` (같은 제목 ${s.result.skipped}곡 건너뜀)` : ''}.`, 'ok', 4000);
+      show('songs');
+    };
+  }
+
   async function addSong(id) {
     const r = await cmd('getSong', { id });
     if (!r.ok) return app.showMsg(r.error, 'error');
@@ -427,7 +467,7 @@
   }
 
   window.BCLib = {
-    init, show, audio, tab: () => st.tab,
+    init, show, audio, tab: () => st.tab, importSongs: paths => importSongs(paths),
     pickImage: done => pickFile('image', f => done(f.url)),
     pickVideo: done => pickFile('image', f => done(f.url), { video: 'only' }),
     pickAudio: done => pickFile('audio', done),

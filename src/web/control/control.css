@@ -718,3 +718,12 @@ button.on { border-color: var(--accent); }
 .dw-col { width: 22px; height: 22px; padding: 0 !important; border-radius: 50%; background: var(--c) !important; border: 2px solid var(--line2); }
 .dw-col.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 #drawBtn.on { background: var(--warn-bg); border-color: var(--warn); }
+
+/* 찬양 가져오기 */
+.imp-list { display: flex; flex-direction: column; gap: 2px; max-height: 55vh; overflow: auto; margin-top: 8px; border: 1px solid var(--line); border-radius: 6px; }
+.imp-row { display: grid; grid-template-columns: 24px minmax(200px, 1fr) 1fr; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+.imp-row:hover { background: var(--hover); }
+.imp-t { display: flex; flex-direction: column; min-width: 0; }
+.imp-t .muted { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imp-first { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modal-box:has(.imp) { height: auto; max-height: 90vh; }
