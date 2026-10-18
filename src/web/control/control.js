@@ -89,6 +89,7 @@
     es.addEventListener('state', e => {
       const first = !app.state;
       app.state = JSON.parse(e.data);
+      R.setCameraPrefs(app.state.settings.cameras);
       if (window.BCI18n) window.BCI18n.sync(app.state.settings.uiLang); else if (app.state.settings.uiLang === 'en') location.reload();
       if (!first) keepLocalTemplate();
       app.connected = true;
@@ -102,6 +103,8 @@
     es.addEventListener('settings', e => {
       const d = JSON.parse(e.data);
       app.state = d.state;
+      R.setCameraPrefs(app.state.settings.cameras);
+      if (d.what === 'cameras' && window.BCLib) window.BCLib.onCameraPrefs();
       if (window.BCI18n) window.BCI18n.sync(app.state.settings.uiLang); else if (app.state.settings.uiLang === 'en') location.reload();
       keepLocalTemplate();
       if (d.what === 'versions') { fillVersions(); loadStructure(); }

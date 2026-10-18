@@ -246,9 +246,11 @@
     const cur = app.state && app.state.layers && app.state.layers.media;
     const on = d => cur && cur.type === 'camera' && cur.deviceId === d.deviceId;
     const b = body(devs.length ? `<div class="lib-grid">${devs.map((d, k) => `<div class="lib-cell cam-cell ${on(d) ? 'live' : ''}" data-k="${k}" title="${esc(d.label)}"><video muted autoplay playsinline data-cam="${esc(d.deviceId)}"></video><span>📷 ${esc(d.label || '카메라 ' + (k + 1))}${on(d) ? ' · <b class="live-dot">LIVE 배경</b>' : ''}</span>
-        <div class="lib-cell-act"><button data-live="${k}" class="primary">${on(d) ? '■ 배경 끄기' : '▶ 송출 배경'}</button><button data-add="${k}" title="카메라 화면 가득 나오는 순서로 큐시트에 넣기">순서로</button><button data-bg="${k}" title="고른 순서(찬양·공지 등)의 배경으로">순서 배경</button><button data-tb="${k}" title="예배당 화면 템플릿 배경으로 (모든 화면)">전체 배경</button></div></div>`).join('')}</div>`
+        <div class="lib-cell-act"><button data-live="${k}" class="primary">${on(d) ? '■ 배경 끄기' : '▶ 송출 배경'}</button><button data-add="${k}" title="카메라 화면 가득 나오는 순서로 큐시트에 넣기">순서로</button><button data-bg="${k}" title="고른 순서(찬양·공지 등)의 배경으로">순서 배경</button><button data-tb="${k}" title="예배당 화면 템플릿 배경으로 (모든 화면)">전체 배경</button><button data-camset="${k}" title="해상도 · 프레임 · 밝기 · 좌우 반전">⚙ 화질</button></div><span class="cam-q muted" data-q="${k}"></span></div>`).join('')}</div>`
       : '<div class="empty">연결된 카메라가 없습니다.<br><span class="muted">USB 웹캠을 꽂거나, HDMI 카메라는 캡처보드로 연결하세요. OBS 의 \'가상 카메라 시작\' 도 여기 나옵니다.</span></div>');
     b.querySelectorAll('video[data-cam]').forEach(v => window.BCRender.cameraStream(v.dataset.cam).then(s => { v.srcObject = s; }).catch(() => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'cam-err', textContent: '열 수 없음 (다른 프로그램이 쓰는 중?)' })); }));
+    showCamQuality(b, devs);
+    b.querySelectorAll('[data-camset]').forEach(x => x.onclick = e => { e.stopPropagation(); camSettings(dev(x.dataset.camset)); });
     const dev = k => devs[+k];
     const camItem = k => ({ type: 'camera', extra: { deviceId: dev(k).deviceId, label: dev(k).label, title: '📷 ' + (dev(k).label || '카메라') } });
     bindRows(b, k => liveMedia({ type: 'camera', deviceId: dev(k).deviceId, label: dev(k).label }), camItem);
@@ -265,6 +267,69 @@
       app.showMsg(r.ok ? `예배당 화면 템플릿 배경을 '${d.label}' 카메라로 바꿨습니다.` : r.error, r.ok ? 'ok' : 'error', 2500);
     });
   }
+  /** 카메라 칸 아래: 지금 받는 화질 */
+  function showCamQuality(b, devs) {
+    devs.forEach((d, k) => {
+      const el = b.querySelector(`[data-q="${k}"]`);
+      if (!el) return;
+      window.BCRender.cameraInfo(d.deviceId).then(i => { el.textContent = qualityText(i); }).catch(() => {});
+    });
+  }
+  const qualityText = i => `${i.width || '?'}×${i.height || '?'} · ${i.fps ? Math.round(i.fps) : '?'}fps`;
+
+  /** 카메라 세부 설정: 해상도 · 프레임 · 꼭 맞추기 · 좌우 반전 · 밝기 · 대비 · 채도 */
+  function camSettings(d) {
+    const cur = (app.state.settings.cameras || {})[d.deviceId] || {};
+    const p = { label: d.label, res: 'auto', fps: 0, exact: false, mirror: false, brightness: 100, contrast: 100, saturation: 100, ...cur };
+    const opt = (v, l, c) => `<option value="${v}" ${String(c) === String(v) ? 'selected' : ''}>${l}</option>`;
+    const slider = (k, lo, hi, l) => `<label>${l}</label><div class="row-flex"><input type="range" data-p="${k}" min="${lo}" max="${hi}" step="1" value="${p[k]}" style="flex:1"><span data-v="${k}" style="width:48px;text-align:right">${p[k]}%</span></div>`;
+    app.openModal(`⚙ 카메라 화질 — ${d.label || '카메라'}`, `<div class="camset">
+      <div class="camset-prev"><video muted autoplay playsinline data-cam="${esc(d.deviceId)}"></video></div>
+      <div class="camset-info" id="csInfo">화질 확인 중…</div>
+      <div class="form">
+        <label>해상도</label><select data-p="res">${opt('auto', '자동 (1080p 우선)', p.res)}${opt('720', '720p (1280×720)', p.res)}${opt('1080', '1080p (1920×1080)', p.res)}${opt('1440', '1440p (2560×1440)', p.res)}${opt('2160', '4K (3840×2160)', p.res)}</select>
+        <label>프레임</label><select data-p="fps">${opt(0, '자동 (30fps 우선)', p.fps)}${opt(24, '24fps', p.fps)}${opt(25, '25fps', p.fps)}${opt(30, '30fps', p.fps)}${opt(50, '50fps', p.fps)}${opt(60, '60fps', p.fps)}</select>
+        <span></span><label class="tc-toggle"><input type="checkbox" data-p="exact" ${p.exact ? 'checked' : ''}> 고른 해상도·프레임을 꼭 맞추기 (카메라가 못 내면 가장 가까운 화질)</label>
+        <span></span><label class="tc-toggle"><input type="checkbox" data-p="mirror" ${p.mirror ? 'checked' : ''}> 좌우 반전 (거울)</label>
+        ${slider('brightness', 50, 200, '밝기')}${slider('contrast', 50, 200, '대비')}${slider('saturation', 0, 200, '채도')}
+      </div>
+      <div class="note">조작 화면 · 예배당 화면 창에 같이 적용됩니다. 화질이 낮으면: 캡처보드는 USB 3.0(파란 단자)에 꽂고, 1080p · 30fps 를 먼저 맞춰 보세요. 카메라 앱·OBS 가 같은 카메라를 쓰고 있으면 화질이 떨어지거나 열리지 않을 수 있습니다.</div>
+      <div class="row-flex" style="justify-content:flex-end;margin-top:10px"><button data-reset>기본값으로</button><button data-close class="primary">완료</button></div>
+    </div>`);
+    const box = document.querySelector('#modalBody .camset');
+    const v = box.querySelector('video');
+    const info = () => window.BCRender.cameraInfo(d.deviceId).then(i => {
+      box.querySelector('#csInfo').innerHTML = `지금 받는 화질: <b>${qualityText(i)}</b>${i.maxWidth ? ` <span class="muted">· 이 카메라 최대 ${i.maxWidth}×${i.maxHeight}${i.maxFps ? ' · ' + Math.round(i.maxFps) + 'fps' : ''}</span>` : ''}`;
+    }).catch(e => { box.querySelector('#csInfo').textContent = '카메라를 열 수 없습니다: ' + (e && e.message || e); });
+    const attach = () => window.BCRender.cameraStream(d.deviceId).then(s => { v.srcObject = s; v.play().catch(() => {}); info(); }).catch(() => info());
+    attach();
+    let t = 0;
+    const save = (reopen) => {
+      clearTimeout(t);
+      t = setTimeout(async () => {
+        await app.cmd('setCameraPrefs', { deviceId: d.deviceId, prefs: p });
+        if (reopen) setTimeout(attach, 600); // 새 화질로 다시 연 뒤
+      }, reopen ? 50 : 250);
+    };
+    box.addEventListener('input', e => {
+      const k = e.target.dataset.p;
+      if (!k || e.target.type !== 'range') return;
+      p[k] = +e.target.value;
+      box.querySelector(`[data-v="${k}"]`).textContent = p[k] + '%';
+      // 바로 보이게 (저장은 조금 뒤)
+      window.BCRender.setCameraPrefs({ ...(app.state.settings.cameras || {}), [d.deviceId]: p });
+      save(false);
+    });
+    box.addEventListener('change', e => {
+      const k = e.target.dataset.p;
+      if (!k || e.target.type === 'range') return;
+      p[k] = e.target.type === 'checkbox' ? e.target.checked : k === 'fps' ? +e.target.value : e.target.value;
+      save(k === 'res' || k === 'fps' || k === 'exact');
+    });
+    box.querySelector('[data-reset]').onclick = async () => { await app.cmd('setCameraPrefs', { deviceId: d.deviceId, prefs: null }); app.closeModal(); camSettings(d); };
+    box.querySelector('[data-close]').onclick = () => app.closeModal();
+  }
+
   /** 송출 배경이 바뀌면 카메라 탭 표시 갱신 */
   function onLayers() { if (st.tab === 'cameras' && root()) { const cur = JSON.stringify((app.state.layers || {}).media || null); if (cur !== st.lastMedia) { st.lastMedia = cur; drawCameras(); } } }
 
@@ -525,5 +590,6 @@
     onOverlays: () => { if (st.tab === 'overlays') drawOverlays(); },
     onSettings: what => { if (what === 'templates' && st.tab === 'templates') drawTemplates(); if (what === 'settings' && (st.tab === 'images' || st.tab === 'audio' || st.tab === 'hymns')) show(st.tab); },
     onSongs: () => { if (st.tab === 'songs') drawSongs(); },
+    onCameraPrefs: () => { if (st.tab === 'cameras' && root()) setTimeout(() => showCamQuality(root(), st.cams || []), 800); },
   };
 })();

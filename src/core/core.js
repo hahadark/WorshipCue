@@ -234,6 +234,7 @@ class WorshipCueCore extends EventEmitter {
       layers: this.layersPayload(output),
       video: this.videoPayload(),
       cursorHidden: this.settings.get().output.cursorHidden,
+      cameras: this.settings.get().cameras || {},
     };
   }
 
@@ -464,6 +465,31 @@ WorshipCueCore.prototype.commands = {
   },
 
   // ---- 설정 ----
+  /** 카메라 세부 설정 (해상도·프레임·밝기 등). prefs = null 이면 기본값으로 */
+  setCameraPrefs(a) {
+    const id = String(a.deviceId || '').slice(0, 300);
+    const p = a.prefs;
+    const num = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
+    this.settings.update(d => {
+      d.cameras = d.cameras && typeof d.cameras === 'object' ? d.cameras : {};
+      if (!p) { delete d.cameras[id]; return; }
+      d.cameras[id] = {
+        label: String(p.label || '').slice(0, 200),
+        res: ['auto', '720', '1080', '1440', '2160'].includes(p.res) ? p.res : 'auto',
+        fps: [0, 24, 25, 30, 50, 60].includes(Number(p.fps)) ? Number(p.fps) : 0,
+        exact: !!p.exact,
+        mirror: !!p.mirror,
+        brightness: num(p.brightness, 50, 200, 100),
+        contrast: num(p.contrast, 50, 200, 100),
+        saturation: num(p.saturation, 0, 200, 100),
+      };
+      const keys = Object.keys(d.cameras);
+      if (keys.length > 30) delete d.cameras[keys[0]];
+    });
+    this.emit('settings', 'cameras');
+    this.emit('live');
+    return this.settings.get().cameras;
+  },
   updateSettings(a) {
     const p = a.patch || {};
     this.settings.update(d => {

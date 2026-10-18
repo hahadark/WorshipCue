@@ -819,3 +819,10 @@ button.on { border-color: var(--accent); }
 html[lang="en"] .ce-form { grid-template-columns: 88px 1fr; }
 html[lang="en"] .se-form { grid-template-columns: 92px 1fr; }
 html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
+
+/* 카메라 화질 설정 */
+.camset { min-width: 520px; }
+.camset-prev { background: #000; border-radius: 6px; overflow: hidden; aspect-ratio: 16 / 9; margin-bottom: 8px; }
+.camset-prev video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.camset-info { margin-bottom: 10px; font-size: 13px; }
+.cam-q { display: block; font-size: 11px; padding: 0 6px 4px; }

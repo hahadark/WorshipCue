@@ -77,6 +77,7 @@ function defaults() {
     uiLang: 'ko',        // 화면 언어 ('ko' 한국어 · 'en' English)
     cueTimes: false,     // 예배 진행 시계 (⏰ 시작 시각 · 순서별 예정 시간) 쓰기 — 기본 끔 (큐시트 메뉴에서 켬)
     cueTimesV2: true,    // 예전 기본값(켬)을 한 번 끈 표시
+    cameras: {},         // 카메라마다 세부 설정 { deviceId: { res, fps, exact, mirror, brightness, contrast, saturation } }
     triggerKey: '',      // 스트림덱·외부 단추용 주소의 열쇠 (처음 쓸 때 만든다)
     parallelVersionId: '', // 병행 번역본 (두 번역 함께 송출, '' = 안 함)    // 바깥에서 끌어다 놓은 파일 (등록 폴더 밖이어도 열 수 있게, 최근 500개)
     audioFolders: [],    // [{ name, path }] 라이브러리 음악 폴더

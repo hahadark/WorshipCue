@@ -173,6 +173,7 @@
   }
 
   function render(p) {
+    if (p.cameras) R.setCameraPrefs(p.cameras); // 카메라 해상도·프레임·밝기 (조작 화면과 같게)
     queueMicrotask(() => { if (stage && tpl && drawState) R.paintDraw(stage, drawState, tpl); }); // 그리기 층은 늘 맨 위
     lastPayload = p;
     document.body.classList.toggle('nocursor', p.cursorHidden !== false);

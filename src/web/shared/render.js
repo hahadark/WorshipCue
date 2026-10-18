@@ -368,15 +368,66 @@
 
   // ---------- 카메라 배경 ----------
   const cams = new Map(); // deviceId → Promise<MediaStream>
+  // 카메라 세부 설정 (설정 → cameras): 해상도·프레임은 열 때, 밝기·대비·채도·좌우 반전은 화면에서
+  let camPrefs = {};
+  const RES = { 720: [1280, 720], 1080: [1920, 1080], 1440: [2560, 1440], 2160: [3840, 2160] };
+  const camKey = id => { const p = camPrefs[id] || {}; return JSON.stringify([p.res || 'auto', p.fps || 0, !!p.exact]); };
+  const opened = new Map(); // deviceId → 열 때 쓴 설정 키
+  function camConstraints(deviceId, strict) {
+    const p = camPrefs[deviceId] || {};
+    const [w, h] = RES[p.res] || RES[1080];
+    const want = (v, exact) => (exact ? { ideal: v, min: v } : { ideal: v });
+    const strictOn = strict && p.exact && p.res && p.res !== 'auto';
+    return {
+      ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+      width: want(w, strictOn), height: want(h, strictOn),
+      ...(p.fps ? { frameRate: want(p.fps, strict && p.exact) } : { frameRate: { ideal: 30 } }),
+      resizeMode: 'none', // 브라우저가 줄여서 늘리지 않게: 카메라가 실제로 내보내는 화질 그대로
+    };
+  }
   function cameraStream(deviceId) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.reject(new Error('카메라를 쓸 수 없는 화면입니다.'));
     if (!cams.has(deviceId)) {
-      const video = { width: { ideal: 1920 }, height: { ideal: 1080 }, ...(deviceId ? { deviceId: { exact: deviceId } } : {}) };
-      const p = navigator.mediaDevices.getUserMedia({ video, audio: false });
+      // '꼭 맞추기' 가 안 되는 카메라면 가까운 화질로 다시
+      const p = navigator.mediaDevices.getUserMedia({ video: camConstraints(deviceId, true), audio: false })
+        .catch(e => (e && e.name === 'OverconstrainedError' ? navigator.mediaDevices.getUserMedia({ video: camConstraints(deviceId, false), audio: false }) : Promise.reject(e)));
       p.catch(() => cams.delete(deviceId));
       cams.set(deviceId, p);
+      opened.set(deviceId, camKey(deviceId));
     }
     return cams.get(deviceId);
+  }
+  /** 지금 받는 화질과 카메라가 낼 수 있는 최대 */
+  async function cameraInfo(deviceId) {
+    const s = await cameraStream(deviceId);
+    const tr = s.getVideoTracks()[0];
+    const st = tr.getSettings ? tr.getSettings() : {};
+    const cap = tr.getCapabilities ? tr.getCapabilities() : {};
+    return { width: st.width, height: st.height, fps: st.frameRate, maxWidth: cap.width && cap.width.max, maxHeight: cap.height && cap.height.max, maxFps: cap.frameRate && cap.frameRate.max };
+  }
+  /** 카메라 설정을 받는다 (조작 화면·출력 화면). 해상도·프레임이 바뀐 카메라는 다시 연다 */
+  function setCameraPrefs(prefs) {
+    camPrefs = prefs && typeof prefs === 'object' ? prefs : {};
+    // 밝기·대비·채도·좌우 반전: 화면의 모든 그 카메라 영상에
+    let css = '';
+    for (const [id, p] of Object.entries(camPrefs)) {
+      const f = [p.brightness !== 100 && p.brightness ? `brightness(${p.brightness / 100})` : '', p.contrast !== 100 && p.contrast ? `contrast(${p.contrast / 100})` : '', p.saturation !== 100 && p.saturation != null ? `saturate(${p.saturation / 100})` : ''].filter(Boolean).join(' ');
+      if (f || p.mirror) css += `video[data-cam="${CSS.escape(id)}"]{${f ? `filter:${f};` : ''}${p.mirror ? 'transform:scaleX(-1);' : ''}}\n`;
+    }
+    let st = document.getElementById('bc-cam-style');
+    if (!st) { st = document.createElement('style'); st.id = 'bc-cam-style'; document.head.appendChild(st); }
+    if (st.textContent !== css) st.textContent = css;
+    for (const [id, key] of [...opened]) {
+      if (camKey(id) === key) continue;
+      const old = cams.get(id);
+      // 예전 스트림을 완전히 닫은 뒤에 새 화질로 연다 (열려 있으면 카메라가 예전 화질을 그대로 준다)
+      const closed = (old || Promise.resolve(null)).then(s => { if (s) s.getTracks().forEach(t => t.stop()); }).catch(() => {}).then(() => new Promise(r => setTimeout(r, 250)));
+      const next = closed.then(() => { cams.delete(id); return cameraStream(id); });
+      next.catch(() => {});
+      cams.set(id, next); // 그 사이에 찾는 곳도 새 스트림을 기다린다
+      opened.set(id, camKey(id));
+      document.querySelectorAll('video[data-cam]').forEach(v => { if (v.dataset.cam === id) { v.srcObject = null; next.then(s => { v.srcObject = s; v.play().catch(() => {}); }).catch(() => {}); } });
+    }
   }
   function attachCamera(v, deviceId) {
     // 크기 재기용 숨은 무대에는 붙이지 않는다
@@ -582,5 +633,5 @@
     svg.innerHTML = spot + lines;
   }
 
-  global.BCRender = { buildMediaLayer, attachCameras, cameraStream, paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { buildMediaLayer, attachCameras, cameraStream, cameraInfo, setCameraPrefs, paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);
