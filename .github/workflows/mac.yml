@@ -10,6 +10,9 @@ on:
       tag:
         description: 'Release tag (e.g. v1.4.0)'
         required: true
+      ref:
+        description: 'Source branch/commit to build (empty = the tag)'
+        required: false
 
 permissions:
   contents: write
@@ -20,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ inputs.ref || inputs.tag }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22

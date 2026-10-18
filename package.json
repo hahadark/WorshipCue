@@ -76,7 +76,7 @@
         }
       ],
       "category": "public.app-category.productivity",
-      "identity": "-",
+      "identity": null,
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "extendInfo": {
@@ -86,6 +86,7 @@
     },
     "dmg": {
       "artifactName": "WorshipCue-${version}-mac-${arch}.${ext}"
-    }
+    },
+    "afterPack": "build/adhoc-sign.js"
   }
 }
