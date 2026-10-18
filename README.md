@@ -7,7 +7,7 @@
 예배 순서를 미리 만들어 두면 예배 중에는 **F6 하나로** 성경 · 찬양 가사 · 찬송가 악보 · 광고 · 영상이 차례대로 예배당 화면(보조 모니터)과 OBS 방송에 나갑니다.
 성경 송출 프로그램 [BibleCast](https://github.com/hahadark/BibleCast)를 바탕으로 만들었습니다.
 
-**⬇ 받기**: [최신판](https://github.com/hahadark/WorshipCue/releases/latest) — 윈도우 `…-Portable.exe` (설치 없이 실행) · 맥 `…-mac-arm64.dmg` / `…-mac-x64.dmg` ([맥 안내](#-맥macos에서-쓰기)) — 개역한글 포함 · 다른 번역본은 베들레헴 성경에서 가져오기
+**⬇ 받기**: [최신판](https://github.com/hahadark/WorshipCue/releases/latest) — 윈도우 `…-Portable.exe` (설치 없이 실행) · 맥 `…-mac-arm64.dmg` (애플 실리콘) ([맥 안내](#-맥macos에서-쓰기)) — 개역한글 포함 · 다른 번역본은 베들레헴 성경에서 가져오기
 **🌐 English**: 영어판(`…-English-Portable.exe`, WEB 성경 포함)도 있고, 어느 판이든 `보기 → 🌐 Language · 언어` 에서 화면 언어를 바꿀 수 있습니다.
 **📖 설명서**: [사용자 설명서](docs/사용자설명서.md) · [OBS 설정 가이드](docs/OBS설정가이드.md)
 
@@ -333,7 +333,7 @@ BibleCast 와 **동시에 실행할 수 있도록** 데이터 폴더(`%APPDATA%\
 
 ## 🍎 맥(macOS)에서 쓰기
 
-- [Releases](https://github.com/hahadark/WorshipCue/releases/latest) 에서 `WorshipCue-…-mac-arm64.dmg` (M1·M2·M3… 애플 실리콘) 또는 `…-mac-x64.dmg` (인텔 맥) 를 받아 열고, WorshipCue 를 `응용 프로그램` 폴더로 끌어다 놓습니다. 영어판은 `…-English-mac-….dmg`.
+- [Releases](https://github.com/hahadark/WorshipCue/releases/latest) 에서 `WorshipCue-…-mac-arm64.dmg` (M1·M2·M3… 애플 실리콘 맥 전용 — 인텔 맥은 지원하지 않음) 를 받아 열고, WorshipCue 를 `응용 프로그램` 폴더로 끌어다 놓습니다. 영어판은 `…-English-mac-….dmg`.
 - **처음 열 때**: 애플 개발자 인증서로 서명하지 않은 프로그램이라 "확인되지 않은 개발자" 경고가 나옵니다. `응용 프로그램` 에서 WorshipCue 를 **오른쪽 클릭(Control+클릭) → 열기 → 열기**. (macOS 15 이상: 한 번 열어 본 뒤 `시스템 설정 → 개인정보 보호 및 보안` 맨 아래 **그래도 열기**.) "손상되었기 때문에 열 수 없습니다" 가 나오면 터미널에서 `xattr -cr /Applications/WorshipCue.app` 을 한 번 실행하세요.
 - **단축키**: 윈도우의 Ctrl 은 맥에서 **⌘(Command)** 입니다 (예: ⌘K 검색 · ⌘E 슬라이드 편집 · ⌘B 굵게 · ⌘⇧F 보조 화면). 화면에도 ⌘ 로 보입니다. 맥북에서 F5·F6·F9·F10 은 **fn** 을 같이 누르거나, `시스템 설정 → 키보드 → 키보드 단축키 → 기능 키` 에서 'F1, F2 등의 키를 표준 기능 키로 사용' 을 켜세요. 단축키는 `설정 → 단축키` 에서 바꿀 수 있습니다.
 - **카메라**: 처음 쓸 때 카메라 허용 창이 뜹니다. 거절했다면 `시스템 설정 → 개인정보 보호 및 보안 → 카메라` 에서 WorshipCue 를 켜세요.

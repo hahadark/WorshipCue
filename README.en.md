@@ -6,7 +6,7 @@ A **worship presentation program for churches** (Windows).
 
 Build your order of service ahead of time, and during the service you just press **F6**: Bible passages, song lyrics, hymn scores, announcements and videos go out in order to the sanctuary screen (second monitor) and to OBS for streaming.
 
-**⬇ Download**: [Latest release](https://github.com/hahadark/WorshipCue/releases/latest) — Windows `WorshipCue-…-English-Portable.exe` (no install) · Mac `WorshipCue-…-English-mac-arm64.dmg` / `…-x64.dmg` ([macOS notes](#macos)) — includes the **World English Bible (WEB, public domain)** and starts in English.
+**⬇ Download**: [Latest release](https://github.com/hahadark/WorshipCue/releases/latest) — Windows `WorshipCue-…-English-Portable.exe` (no install) · Mac `WorshipCue-…-English-mac-arm64.dmg` (Apple Silicon) ([macOS notes](#macos)) — includes the **World English Bible (WEB, public domain)** and starts in English.
 The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Version. Both builds contain the same program; switch the language any time in `View → 🌐 Language`.
 
 ![WorshipCue control screen](docs/images/main-en.png)
@@ -97,7 +97,7 @@ It only works on this PC, so no PIN is needed. Turning off the second screen als
 
 ## macOS
 
-- Download `WorshipCue-…-English-mac-arm64.dmg` (Apple Silicon: M1/M2/M3…) or `…-English-mac-x64.dmg` (Intel) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest), open it and drag WorshipCue to `Applications`.
+- Download `WorshipCue-…-English-mac-arm64.dmg` (Apple Silicon M1/M2/M3… only — Intel Macs are not supported) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest), open it and drag WorshipCue to `Applications`.
 - **First launch**: the app isn't signed with an Apple Developer certificate, so macOS warns about an unidentified developer. Right-click (Control-click) WorshipCue in `Applications` → **Open** → **Open**. (macOS 15+: try opening once, then `System Settings → Privacy & Security` → **Open Anyway**.) If it says the app "is damaged", run `xattr -cr /Applications/WorshipCue.app` once in Terminal.
 - **Shortcuts**: Ctrl on Windows is **⌘ (Command)** on Mac (⌘K search · ⌘E slide editor · ⌘B bold · ⌘⇧F second screen), and the app shows ⌘. On MacBooks press **fn** with F5/F6/F9/F10, or turn on "Use F1, F2, etc. keys as standard function keys" in `System Settings → Keyboard → Keyboard Shortcuts → Function Keys`. All shortcuts can be changed in `Settings → Shortcuts`.
 - **Camera**: macOS asks for camera permission the first time. If you denied it, enable WorshipCue in `System Settings → Privacy & Security → Camera`.

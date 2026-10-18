@@ -1,6 +1,6 @@
 # 맥 빌드: 애플 서버(GitHub Actions macOS)에서 dmg 를 만들어 해당 버전 릴리스에 올린다
 #  - Actions 탭 → mac build → Run workflow → 태그(예: v1.4.0) 입력
-#  - 한국어판 · 영어판, Apple Silicon(arm64) · Intel(x64) 각각
+#  - 한국어판 · 영어판, Apple Silicon(arm64) 만 (인텔 맥은 지원하지 않음)
 #  - 애플 개발자 인증서가 없어 임시 서명(ad-hoc): 처음 열 때 오른쪽 클릭 → 열기 (README 참고)
 name: mac build
 
