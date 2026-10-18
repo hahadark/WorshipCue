@@ -479,6 +479,15 @@ WorshipCueCore.prototype.commands = {
   },
 
   // ---- 설정 ----
+  /** 자동 업데이트 상태 */
+  updateStatus() { return this.update || { state: 'idle', mode: 'none' }; },
+  /** 자동 업데이트: check (지금 확인) · open (받기 페이지) · installNow (다시 시작해서 설치) */
+  async updateAction(a) {
+    const f = this.updateActions && this.updateActions[a.action];
+    if (!f) throw new Error('데스크톱 프로그램에서만 됩니다.');
+    await f();
+    return this.updateStatus();
+  },
   /** 내부망 출력: 상태 · 주소 */
   lanOutputInfo() { return this.lanOutput ? this.lanOutput.status() : { running: false, urls: [] }; },
   /** 내부망 출력 열쇠 새로 (예전 주소는 더 이상 안 열림) */
@@ -526,6 +535,7 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.cueAdvance === 'boolean') d.cueAdvance = p.cueAdvance;
       if (typeof p.cueTimes === 'boolean') d.cueTimes = p.cueTimes;
       if (p.uiLang === 'ko' || p.uiLang === 'en') d.uiLang = p.uiLang;
+      if (typeof p.autoUpdate === 'boolean') d.autoUpdate = p.autoUpdate;
       if (typeof p.hymnBackground === 'string') d.hymnBackground = p.hymnBackground.slice(0, 300);
       if (typeof p.songSearchUrl === 'string') d.songSearchUrl = p.songSearchUrl.trim().slice(0, 500);
       if (typeof p.songDownloadDir === 'string') d.songDownloadDir = p.songDownloadDir.trim().slice(0, 500);

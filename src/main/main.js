@@ -6,6 +6,7 @@ const { app, BrowserWindow, screen, globalShortcut, dialog, Menu, powerSaveBlock
 const { WorshipCueCore } = require('../core/core');
 const { startServer } = require('../core/server');
 const i18n = require('../core/i18n');
+const { setupUpdater } = require('./updater');
 
 // 화면 언어: 설정에 있으면 그것, 처음 실행이면 이 빌드의 기본 언어 (영어판: package.json 의 worshipcueLang = 'en')
 const BUILD_LANG = (() => { try { return require('../../package.json').worshipcueLang === 'en' ? 'en' : 'ko'; } catch { return 'ko'; } })();
@@ -275,6 +276,7 @@ if (!app.requestSingleInstanceLock()) {
       core.portWarning = T(`설정한 포트 ${wanted}을(를) 다른 프로그램이 사용 중이어서 ${port} 포트로 실행했습니다. OBS 주소가 달라졌으니 설정 → 출력에서 확인하세요.`);
     }
 
+    setupUpdater(core); // 자동 업데이트 (설치판) · 새 버전 알림 (포터블·맥)
     core.desktop = {
       listDisplays, status, setOutput,
       globalShortcutStatus: () => globalStatus,

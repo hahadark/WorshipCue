@@ -13,6 +13,7 @@
   ],
   "win": {
     "target": [
+      "nsis",
       "portable"
     ]
   },
@@ -33,5 +34,13 @@
     "ko",
     "en-US"
   ],
-  "compression": "maximum"
+  "compression": "maximum",
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "hahadark",
+      "repo": "WorshipCue",
+      "releaseType": "release"
+    }
+  ]
 }

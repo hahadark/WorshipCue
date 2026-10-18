@@ -679,7 +679,9 @@
     const vs = app.state.versions;
     $('#setBody').innerHTML = `
       <h4 style="margin-top:0;color:var(--hl)">WorshipCue</h4>
-      <div class="note">교회 방송실용 성경구절 실시간 송출 프로그램 · 버전 1.0.0<br>데이터 폴더: <span class="url">${esc(app.state.dataDir)}</span> (설정·성경 DB·로그)</div>
+      <div class="note">교회 예배 순서 통합 송출 프로그램<br>데이터 폴더: <span class="url">${esc(app.state.dataDir)}</span> (설정·성경 DB·로그)</div>
+      <h4 style="color:var(--hl)">버전 · 업데이트</h4>
+      <div id="updBox"></div>
       <h4 style="color:var(--hl)">성경 데이터 출처 및 라이선스</h4>
       ${vs.length ? vs.map(v => `<div style="margin-bottom:10px"><b>${esc(v.name)}</b> (${esc(v.id)})<br>
         <span class="note">저작권: ${esc(v.copyright || '-')} · 사용 허가: ${esc(v.license || '-')} · 출처: ${esc(v.source || '-')} · 가져온 날짜: ${esc((v.imported_at || '').slice(0, 10))}</span></div>`).join('') : '<div class="note">설치된 번역본이 없습니다.</div>'}
@@ -688,7 +690,33 @@
         · 개역한글판은 대한성서공회 안내상 저작재산권 보호기간이 만료된 번역본입니다.<br>
         · 개역개정·새번역 등 보호 대상 번역본은 권리자의 사용 허가를 받은 뒤 사용하세요.<br>
         · 온라인 영상 송출, 프로그램 재배포 등 사용 범위는 각 번역본의 이용 조건을 별도로 확인하세요.</div>`;
+    drawUpdate();
+    cmd('updateStatus').then(r => { if (r.ok) { app.update = r.result; drawUpdate(); } });
+  }
+  /** 설정 → 정보: 지금 버전 · 업데이트 상태 · 지금 확인 */
+  function drawUpdate() {
+    const box = $('#updBox');
+    if (!box) return;
+    const u = app.update || {};
+    const s = S();
+    const state = {
+      idle: '', checking: '확인하는 중…', latest: '최신 버전입니다.',
+      downloading: u.version ? `새 버전 ${esc(u.version)} 을 받는 중${u.percent ? ' (' + u.percent + '%)' : ''}…` : '새 버전을 받는 중…',
+      ready: `새 버전 ${esc(u.version || '')} 을 받았습니다. 프로그램을 끌 때 설치됩니다.`,
+      available: `새 버전 ${esc(u.version || '')} 이 나왔습니다.`,
+      error: `확인하지 못했습니다: ${esc(u.error || '')}`,
+    }[u.state || 'idle'];
+    box.innerHTML = `<div class="form">
+      <label>지금 버전</label><div><b>${esc(u.current || '')}</b> <span class="muted">${u.mode === 'auto' ? '(설치판 — 자동 업데이트)' : u.mode === 'notify' ? '(포터블·맥 — 새 버전 알림)' : ''}</span></div>
+      <label>업데이트</label><div class="row-flex">${state ? `<span>${state}</span>` : ''}<button id="updCheck">지금 확인</button>${u.state === 'available' ? '<button id="updOpen" class="primary">받기…</button>' : ''}${u.state === 'ready' ? '<button id="updNow" class="primary">지금 다시 시작해서 설치</button>' : ''}</div>
+      <span></span><label class="tc-toggle"><input type="checkbox" id="updAuto" ${s.autoUpdate !== false ? 'checked' : ''}> 켤 때 새 버전 확인 (설치판은 끌 때 자동 설치)</label>
+      <span></span><div class="note">예배 중에는 저절로 다시 시작하지 않습니다. 설치판(Setup)은 새 버전을 미리 받아 두었다가 프로그램을 끌 때 설치하고, 포터블·맥은 새 버전이 있다고 알려 줍니다. 큐시트·성경 데이터·설정은 업데이트해도 그대로 남습니다.</div>
+    </div>`;
+    $('#updCheck').onclick = async () => { $('#updCheck').disabled = true; const r = await cmd('updateAction', { action: 'check' }); if (!r.ok) app.showMsg(r.error, 'error'); else { app.update = r.result; drawUpdate(); } };
+    if ($('#updOpen')) $('#updOpen').onclick = () => cmd('updateAction', { action: 'open' });
+    if ($('#updNow')) $('#updNow').onclick = () => { if (confirm('지금 프로그램을 끄고 새 버전을 설치한 뒤 다시 켭니다. 송출 중이면 화면이 잠시 꺼집니다. 진행할까요?')) cmd('updateAction', { action: 'installNow' }); };
+    $('#updAuto').onchange = e => cmd('updateSettings', { patch: { autoUpdate: e.target.checked } });
   }
 
-  window.BCSettings = { open, onState, closed };
+  window.BCSettings = { open, onState, closed, onUpdate: () => drawUpdate() };
 })();

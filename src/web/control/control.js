@@ -117,6 +117,15 @@
       renderQuick(false);
       if (window.BCSettings) window.BCSettings.onState(d.what);
     });
+    es.addEventListener('update', e => {
+      const u = JSON.parse(e.data);
+      const before = app.update && app.update.state;
+      app.update = u;
+      renderStatus();
+      if (u.state !== before && u.state === 'ready') showMsg(`새 버전 ${u.version} 을 받았습니다. 프로그램을 끌 때 설치됩니다.`, 'ok', 6000);
+      if (u.state !== before && u.state === 'available') showMsg(`새 버전 ${u.version} 이 나왔습니다. 아래 상태줄의 '새 버전' 을 누르면 받는 곳이 열립니다.`, 'info', 6000);
+      if (window.BCSettings && window.BCSettings.onUpdate) window.BCSettings.onUpdate();
+    });
     es.addEventListener('outputs', e => {
       if (!app.state) return;
       app.state.outputs = JSON.parse(e.data);
@@ -1242,8 +1251,20 @@
       const synced = win.every(c => c.ack && c.ack.version === live.version);
       parts.push(`<span class="st"><span class="dot ${synced ? 'ok' : 'warn'}"></span>출력 창 ${synced ? '반영됨' : '갱신 대기'}</span>`);
     }
+    // 업데이트: 새 버전이 있을 때만
+    const u = app.update;
+    if (u && (u.state === 'ready' || u.state === 'available' || (u.state === 'downloading' && u.version))) {
+      const txt = u.state === 'ready' ? `⬆ 새 버전 ${esc(u.version)} — 끌 때 설치` : u.state === 'available' ? `⬆ 새 버전 ${esc(u.version)} — 받기` : `⬆ 새 버전 ${esc(u.version)} 받는 중${u.percent ? ' ' + u.percent + '%' : ''}`;
+      parts.push(`<span class="st st-update" data-update="${u.state}" title="자동 업데이트 (설정 → 정보)"><span class="dot ok"></span>${txt}</span>`);
+    }
     $('#status').innerHTML = parts.join('');
   }
+  $('#status').addEventListener('click', e => {
+    const b = e.target.closest('[data-update]');
+    if (!b) return;
+    if (b.dataset.update === 'available') cmd('updateAction', { action: 'open' });
+    else if (window.BCSettings) window.BCSettings.open('about');
+  });
 
   // ---------------- 단축키 ----------------
   function comboOf(e) {

@@ -74,7 +74,8 @@ function defaults() {
     imageFolders: [],    // [{ name, path }] 라이브러리 이미지 폴더
     ui: { theme: 'dark', scale: 100 }, // 조작 화면 테마·글자 크기 (송출 디자인과 별개)
     droppedFiles: [],
-    uiLang: 'ko',        // 화면 언어 ('ko' 한국어 · 'en' English)
+    uiLang: 'ko',
+    autoUpdate: true,    // 자동 업데이트 (설치판: 끌 때 설치 · 포터블·맥: 알림)        // 화면 언어 ('ko' 한국어 · 'en' English)
     cueTimes: false,     // 예배 진행 시계 (⏰ 시작 시각 · 순서별 예정 시간) 쓰기 — 기본 끔 (큐시트 메뉴에서 켬)
     cueTimesV2: true,    // 예전 기본값(켬)을 한 번 끈 표시
     cameras: {},         // 카메라마다 세부 설정 { deviceId: { res, fps, exact, mirror, brightness, contrast, saturation } }

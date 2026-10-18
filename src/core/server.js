@@ -67,6 +67,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   core.on('song-downloaded', d => broadcastControl('song-downloaded', d));
   core.on('song-inbox', d => broadcastControl('song-inbox', d));
   core.on('outputs', () => broadcastControl('outputs', core.outputStatus()));
+  core.on('update', u => broadcastControl('update', u));
 
   const heartbeat = setInterval(() => {
     for (const c of clients.values()) c.res.write(': ping\n\n');

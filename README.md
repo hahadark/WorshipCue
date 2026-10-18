@@ -7,7 +7,7 @@
 예배 순서를 미리 만들어 두면 예배 중에는 **F6 하나로** 성경 · 찬양 가사 · 찬송가 악보 · 광고 · 영상이 차례대로 예배당 화면(보조 모니터)과 OBS 방송에 나갑니다.
 성경 송출 프로그램 [BibleCast](https://github.com/hahadark/BibleCast)를 바탕으로 만들었습니다.
 
-**⬇ 받기**: [최신판](https://github.com/hahadark/WorshipCue/releases/latest) — 윈도우 `…-Portable.exe` (설치 없이 실행) · 맥 `…-mac-arm64.dmg` (애플 실리콘) ([맥 안내](#-맥macos에서-쓰기)) — 개역한글 포함 · 다른 번역본은 베들레헴 성경에서 가져오기
+**⬇ 받기**: [최신판](https://github.com/hahadark/WorshipCue/releases/latest) — 윈도우 **`…-Setup.exe` (설치판, 자동 업데이트 — 추천)** 또는 `…-Portable.exe` (설치 없이 실행, 새 버전 알림만) · 맥 `…-mac-arm64.dmg` (애플 실리콘) ([맥 안내](#-맥macos에서-쓰기)) — 개역한글 포함 · 다른 번역본은 베들레헴 성경에서 가져오기
 **🌐 English**: 영어판(`…-English-Portable.exe`, WEB 성경 포함)도 있고, 어느 판이든 `보기 → 🌐 Language · 언어` 에서 화면 언어를 바꿀 수 있습니다.
 **📖 설명서**: [사용자 설명서](docs/사용자설명서.md) · [OBS 설정 가이드](docs/OBS설정가이드.md)
 
@@ -26,7 +26,7 @@
 
 ## 5분 만에 시작하기
 
-1. **받아서 실행**: [Releases](https://github.com/hahadark/WorshipCue/releases/latest) 의 `WorshipCue-…-Portable.exe` (설치 없음)
+1. **받아서 실행**: [Releases](https://github.com/hahadark/WorshipCue/releases/latest) 의 `WorshipCue-…-Setup.exe` (설치판 — 새 버전을 미리 받아 두었다가 **프로그램을 끌 때 자동 설치**, 예배 중에는 다시 시작하지 않음) 또는 `…-Portable.exe` (설치 없이 실행 · USB 용 — 새 버전이 나오면 알려 줌). 업데이트해도 큐시트·성경 데이터·설정은 그대로입니다. `설정 → 정보` 에서 지금 버전 확인·자동 업데이트 끄기
 2. **예배당 화면**: 보조 모니터를 연결하고 하단 `보조 화면` (Ctrl+Shift+F). 모니터는 `설정 → 출력`
 3. **OBS** (방송할 때): 브라우저 소스 `http://127.0.0.1:37528/outputs/main` (전체) · `/outputs/overlay` (하단 자막) → [OBS 설정 가이드](docs/OBS설정가이드.md)
    - **자막 PC 와 송출(OBS) PC 가 따로일 때**: `설정 → 출력 → 내부망 출력` 을 켜고, 나오는 주소(`http://192.168.x.x:37550/outputs/overlay?key=…`)를 송출 PC 의 OBS 브라우저 소스에 넣으세요. 출력 화면만 열리고 조작 화면은 열리지 않습니다.

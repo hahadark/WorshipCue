@@ -28,7 +28,7 @@ The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Ver
 
 ## Get started in 5 minutes
 
-1. **Download and run** `WorshipCue-…-English-Portable.exe` from [Releases](https://github.com/hahadark/WorshipCue/releases/latest) (no installation). If Windows SmartScreen warns you, click "More info → Run anyway".
+1. **Download and run** `WorshipCue-…-English-Setup.exe` (installer — downloads updates in the background and **installs them when you quit**, never restarting during a service) or `…-English-Portable.exe` (no install, USB — notifies you of new versions) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest). Updates keep your cue sheets, Bible data and settings; see `Settings → About`. If Windows SmartScreen warns you, click "More info → Run anyway".
 2. **Sanctuary screen**: connect a second monitor and click `Second screen` at the bottom (Ctrl+Shift+F). Choose the monitor in `File → ⚙ Settings → Output`.
 3. **OBS** (when streaming): add a Browser source with `http://127.0.0.1:37528/outputs/main` (full screen) or `/outputs/overlay` (transparent lower third), 1920×1080.
 4. **Make a cue sheet**: add items with the buttons at the bottom left (Hymn·PPT · Bible · Song · Announcement · Title · ＋ More).
