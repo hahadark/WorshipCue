@@ -124,10 +124,33 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
     req.on('end', () => cb(Buffer.concat(chunks)));
   }
 
-  const server = http.createServer((req, res) => {
-    if (!okHost(req)) { res.writeHead(421); return res.end('Misdirected'); }
+  // ---------- 내부망 출력 (송출 PC 의 OBS 등 다른 PC 에서 출력 화면만) ----------
+  // 같은 처리기를 쓰되, 열쇠(key)가 맞고 출력 화면에 필요한 주소만 허용한다. 조작 화면·명령은 열리지 않는다.
+  const crypto = require('crypto');
+  const LAN_COOKIE = 'wclan';
+  const safeEq = (a, b) => !!a && !!b && a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  function lanGate(req, res, url, p) {
+    const want = (core.settings.get().lanOutput || {}).key || '';
+    const fromUrl = String(url.searchParams.get('key') || '');
+    const m = /(?:^|;\s*)wclan=([^;]+)/.exec(req.headers.cookie || '');
+    const ok = safeEq(fromUrl, want) || safeEq(m ? decodeURIComponent(m[1]) : '', want);
+    if (!ok) return false;
+    // 주소에 열쇠가 있으면 기억해 두어, 화면이 부르는 그림·영상·연결도 열리게
+    if (fromUrl) res.setHeader('Set-Cookie', `${LAN_COOKIE}=${encodeURIComponent(want)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`);
+    if (req.method === 'GET') {
+      if (p === '/events') return ['main', 'overlay', 'stage'].includes(url.searchParams.get('client'));
+      return /^\/outputs\/(main|overlay|stage)$/.test(p) || /^\/outputs\/[\w.-]+\.(js|css)$/.test(p) || p.startsWith('/shared/') || p.startsWith('/media/') || p === '/lib/file' || p.startsWith('/hymn/');
+    }
+    return req.method === 'POST' && (p === '/api/ack' || p === '/api/command');
+  }
+
+  const handler = lan => (req, res) => {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
     const p = decodeURIComponent(url.pathname);
+    if (lan) {
+      if (!lanGate(req, res, url, p)) { res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('WorshipCue: key required (설정 → 출력 → 내부망 출력의 주소를 그대로 쓰세요)'); }
+    } else if (!okHost(req)) { res.writeHead(421); return res.end('Misdirected'); }
+    req.lan = lan;
 
     if (req.method === 'GET') {
       if (p === '/' || p === '/control') { res.writeHead(302, { Location: '/control/' }); return res.end(); }
@@ -247,6 +270,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
         let body;
         try { body = JSON.parse(buf.toString('utf8') || '{}'); } catch { return json(res, 400, { ok: false, error: 'JSON 형식 오류' }); }
         if (p === '/api/command') {
+          if (req.lan && body.cmd !== 'videoEnded') return json(res, 403, { ok: false }); // 내부망: 출력 화면이 알리는 '영상 끝남' 만
           const t0 = performance.now();
           return Promise.resolve(core.command(String(body.cmd || ''), body.args || {})).then(r => {
             r.ms = Math.round((performance.now() - t0) * 10) / 10;
@@ -265,7 +289,33 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
       });
     }
     res.writeHead(405); res.end();
-  });
+  };
+  const server = http.createServer(handler(false));
+
+  // 설정에 맞춰 내부망 서버를 켜고 끈다
+  let lanSrv = null, lanPort = 0, lanErr = '';
+  const { lanAddresses } = require('./remote');
+  core.lanOutput = {
+    status() {
+      const s = core.settings.get().lanOutput || {};
+      const key = encodeURIComponent(s.key || '');
+      const addrs = lanAddresses().map(a => a.address);
+      const mk = path2 => addrs.map(a => `http://${a}:${lanPort}${path2}?key=${key}`);
+      return { enabled: !!s.enabled, running: !!lanSrv, port: lanPort || s.port || 37550, error: lanErr, main: lanSrv ? mk('/outputs/main') : [], overlay: lanSrv ? mk('/outputs/overlay') : [], stage: lanSrv ? mk('/outputs/stage') : [] };
+    },
+  };
+  function syncLan() {
+    const s = core.settings.get().lanOutput || {};
+    const want = s.enabled ? (s.port || 37550) : 0;
+    if (lanSrv && (!want || want !== lanPort)) { lanSrv.close(); lanSrv.closeAllConnections?.(); lanSrv = null; lanPort = 0; core.emit('outputs'); }
+    if (want && !lanSrv) {
+      const srv = http.createServer(handler(true));
+      srv.once('error', e => { lanErr = e.code === 'EADDRINUSE' ? `포트 ${want} 를 다른 프로그램이 쓰고 있습니다.` : e.message; lanSrv = null; core.emit('outputs'); });
+      srv.listen(want, '0.0.0.0', () => { lanSrv = srv; lanPort = want; lanErr = ''; core.logger.info(`내부망 출력 서버 시작: ${want}`); core.emit('outputs'); });
+    }
+  }
+  syncLan();
+  core.on('settings', () => syncLan());
 
   return new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -275,7 +325,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
       core.logger.info(`로컬 서버 시작: http://${host}:${port}`);
       resolve({
         server, port,
-        close: () => new Promise(r => { clearInterval(heartbeat); if (core.remote) core.remote.stop(); for (const c of clients.values()) c.res.end(); server.close(() => r()); server.closeAllConnections(); }),
+        close: () => new Promise(r => { clearInterval(heartbeat); if (core.remote) core.remote.stop(); if (lanSrv) { lanSrv.close(); lanSrv.closeAllConnections?.(); } for (const c of clients.values()) c.res.end(); server.close(() => r()); server.closeAllConnections(); }),
       });
     });
   });

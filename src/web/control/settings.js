@@ -109,6 +109,10 @@
     const d = await cmd('getDisplays');
     if (tab !== 'output' || !$('#setBody')) return;
     const info = d.ok ? d.result : { available: false, displays: [] };
+    const lr = await cmd('lanOutputInfo');
+    const lan = lr.ok ? lr.result : { running: false, main: [], overlay: [], stage: [] };
+    if (tab !== 'output' || !$('#setBody')) return;
+    const lanRows = (label, list) => list.map((u, k) => `<label>${k ? '' : label}</label><div class="row-flex"><span class="url">${esc(u)}</span><button data-copy="${esc(u)}">복사</button></div>`).join('');
     const tplOpts = sel => s.templates.map(t => `<option value="${esc(t.id)}" ${t.id === sel ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
     const st = info.status || {};
     body.innerHTML = `
@@ -139,6 +143,12 @@
         <label>OBS 도킹 (조작판)</label><div class="row-flex"><span class="url">http://127.0.0.1:${port}/dock</span><button data-copy="http://127.0.0.1:${port}/dock">복사</button></div>
         <span></span><span class="note">OBS → 도킹 → 사용자 지정 브라우저 도킹 → 이름 WorshipCue, 주소 붙여넣기. OBS 화면 한쪽에서 지금·다음 슬라이드, 이전·다음·숨김, 큐시트 순서 송출, 무대 메시지를 쓸 수 있습니다.</span>
         <span></span><div class="note">OBS → 소스 추가 → 브라우저 → URL 입력, 너비/높이는 템플릿 해상도(기본 1920×1080). 본문이 바뀌면 자동으로 갱신되며 새로 고침이 필요 없습니다.</div>
+        <h4>내부망 출력 (다른 PC 의 OBS)</h4>
+        <span></span><label class="tc-toggle"><input type="checkbox" id="oLan" ${lan.enabled ? 'checked' : ''}> 같은 네트워크의 다른 PC(송출 PC)에서 출력 화면 열기</label>
+        <span></span><div class="note">자막 PC 와 송출(OBS) PC 가 따로일 때: 송출 PC 의 OBS 브라우저 소스에 아래 주소를 넣으세요. 출력 화면(전체 화면·투명 자막·무대 화면)만 열리고 조작 화면은 열리지 않습니다. 주소 끝의 열쇠(key)가 있어야 열립니다. 처음 켤 때 Windows 방화벽 창이 뜨면 '개인 네트워크' 를 허용하세요.</div>
+        ${lan.running ? lanRows('전체 화면', lan.main) + lanRows('투명 자막', lan.overlay) + lanRows('무대 화면', lan.stage) : lan.enabled ? `<span></span><div class="note err-text">${esc(lan.error || '시작하는 중…')}</div>` : ''}
+        ${lan.enabled && lan.running && !lan.main.length ? '<span></span><div class="note err-text">네트워크 주소를 찾지 못했습니다 (랜·Wi-Fi 연결 확인)</div>' : ''}
+        <label>내부망 포트</label><div class="row-flex"><input type="number" id="oLanPort" min="1024" max="65535" value="${lan.port}" style="width:110px"><button id="oLanPortSave">저장</button><button id="oLanKey" title="주소가 밖으로 새어 나갔을 때">🔑 열쇠 바꾸기</button></div>
         <label>로컬 서버 포트</label>
         <div class="row-flex"><input type="number" id="oPort" min="1024" max="65535" value="${s.port}" style="width:110px"><button id="oPortSave">저장</button>
           <span class="note">변경하면 프로그램을 다시 시작해야 하며, OBS 주소도 바꿔야 합니다.</span></div>
@@ -158,6 +168,9 @@
     $('#oCursor').onchange = e => cmd('updateSettings', { patch: { output: { cursorHidden: e.target.checked } } });
     $('#oAuto').onchange = e => cmd('updateSettings', { patch: { output: { autoOnSend: e.target.checked } } });
     $('#oLinkObs').onchange = e => cmd('updateSettings', { patch: { output: { linkObs: e.target.checked } } });
+    $('#oLan').onchange = async e => { await cmd('updateSettings', { patch: { lanOutput: { enabled: e.target.checked } } }); setTimeout(drawOutput, 500); };
+    $('#oLanPortSave').onclick = async () => { await cmd('updateSettings', { patch: { lanOutput: { port: +$('#oLanPort').value } } }); setTimeout(drawOutput, 500); };
+    $('#oLanKey').onclick = async () => { if (!confirm('열쇠를 바꾸면 송출 PC 의 OBS 에 넣은 주소를 모두 다시 넣어야 합니다. 바꿀까요?')) return; await cmd('newLanKey'); setTimeout(drawOutput, 300); };
     $('#oTplMain').onchange = e => cmd('setTemplate', { output: 'main', templateId: e.target.value });
     $('#oTplOverlay').onchange = e => cmd('setTemplate', { output: 'overlay', templateId: e.target.value });
     $('#oPortSave').onclick = async () => {

@@ -479,6 +479,14 @@ WorshipCueCore.prototype.commands = {
   },
 
   // ---- 설정 ----
+  /** 내부망 출력: 상태 · 주소 */
+  lanOutputInfo() { return this.lanOutput ? this.lanOutput.status() : { running: false, urls: [] }; },
+  /** 내부망 출력 열쇠 새로 (예전 주소는 더 이상 안 열림) */
+  newLanKey() {
+    this.settings.update(d => { d.lanOutput = { enabled: false, port: 37550, ...(d.lanOutput || {}), key: require('crypto').randomBytes(9).toString('base64url') }; });
+    this.settingsChanged('settings');
+    return this.lanOutputInfo();
+  },
   /** 카메라 세부 설정 (해상도·프레임·밝기 등). prefs = null 이면 기본값으로 */
   setCameraPrefs(a) {
     const id = String(a.deviceId || '').slice(0, 300);
@@ -537,6 +545,12 @@ WorshipCueCore.prototype.commands = {
       if (p.output && typeof p.output.cursorHidden === 'boolean') d.output.cursorHidden = p.output.cursorHidden;
       if (p.output && typeof p.output.autoOnSend === 'boolean') d.output.autoOnSend = p.output.autoOnSend;
       if (p.output && typeof p.output.linkObs === 'boolean') d.output.linkObs = p.output.linkObs;
+      if (p.lanOutput) {
+        d.lanOutput = { enabled: false, port: 37550, key: '', ...(d.lanOutput || {}) };
+        if (typeof p.lanOutput.enabled === 'boolean') d.lanOutput.enabled = p.lanOutput.enabled;
+        if (p.lanOutput.port != null) d.lanOutput.port = clampInt(p.lanOutput.port, 1024, 65535, 37550);
+        if (d.lanOutput.enabled && !d.lanOutput.key) d.lanOutput.key = require('crypto').randomBytes(9).toString('base64url');
+      }
       if (p.port != null) d.port = clampInt(p.port, 1024, 65535, 37528);
       if (p.guide && typeof p.guide.bethlehemDone === 'boolean') d.guide = { ...(d.guide || {}), bethlehemDone: p.guide.bethlehemDone };
     });

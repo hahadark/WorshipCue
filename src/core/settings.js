@@ -83,7 +83,8 @@ function defaults() {
     audioFolders: [],    // [{ name, path }] 라이브러리 음악 폴더
     overlays: [],
     ai: { model: '', keyEnc: '', key: '' }, // AI 주보 → 큐시트 (오픈라우터). 키는 Windows 보호 기능으로 암호화해 keyEnc 에
-    remote: { enabled: false, pin: '', port: 37540 }, // 휴대폰 리모컨 (같은 Wi-Fi, PIN)
+    remote: { enabled: false, pin: '', port: 37540 },
+    lanOutput: { enabled: false, port: 37550, key: '' }, // 내부망 출력: 다른 PC(송출 PC 의 OBS)에서 출력 화면만 열기 (열쇠 필요) // 휴대폰 리모컨 (같은 Wi-Fi, PIN)
     logoScreenImage: '',  // '로고 화면' 단추에 쓸 그림 (비우면 템플릿 로고 → 레드 쉴드)        // 출력 위에 겹치는 층 (로고·시계·카운트다운·배너·글자)
     previewMode: true,   // false = 미리보기 끔: 클릭한 본문·순서를 바로 송출 (OBS 스튜디오 모드 끄기)
     dockLayout: '',      // 조작 화면 독 배치 (dockview JSON)
