@@ -1,11 +1,14 @@
 # WorshipCue
 
+**한국어** | [English](README.en.md)
+
 교회 **예배 순서(큐시트) 통합 송출 프로그램** (Windows)
 
 예배 순서를 미리 만들어 두면 예배 중에는 **F6 하나로** 성경 · 찬양 가사 · 찬송가 악보 · 광고 · 영상이 차례대로 예배당 화면(보조 모니터)과 OBS 방송에 나갑니다.
 성경 송출 프로그램 [BibleCast](https://github.com/hahadark/BibleCast)를 바탕으로 만들었습니다.
 
 **⬇ 받기**: [최신 포터블 (설치 없이 실행)](https://github.com/hahadark/WorshipCue/releases/latest) — 개역한글 포함 · 다른 번역본은 베들레헴 성경에서 가져오기
+**🌐 English**: 영어판(`…-English-Portable.exe`, WEB 성경 포함)도 있고, 어느 판이든 `보기 → 🌐 Language · 언어` 에서 화면 언어를 바꿀 수 있습니다.
 **📖 설명서**: [사용자 설명서](docs/사용자설명서.md) · [OBS 설정 가이드](docs/OBS설정가이드.md)
 
 ![WorshipCue 조작 화면](docs/images/main.png)

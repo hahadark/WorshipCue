@@ -2,6 +2,7 @@
 node_modules/
 dist/
 dist-personal/
+dist-en/
 # 개인용 성경 데이터 (저작권 있는 번역본 포함) — 절대 올리지 않음
 data-personal/
 # 실행 중 생기는 파일
@@ -10,3 +11,6 @@ data-personal/
 *.db-shm
 *.tmp
 import-tmp/
+# 번역 점검용 목록 (tools/i18n-extract.js)
+tools/i18n-all.json
+tools/i18n-missing.json

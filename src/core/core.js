@@ -35,14 +35,14 @@ const TRIGGERS = [
 ].map(([id, name]) => ({ id, name }));
 
 class WorshipCueCore extends EventEmitter {
-  constructor({ dataDir, logEcho = false, seedDb = null }) {
+  constructor({ dataDir, logEcho = false, seedDb = null, uiLang = 'ko' }) {
     super();
     this.dataDir = dataDir;
     fs.mkdirSync(dataDir, { recursive: true });
     this.mediaDir = path.join(dataDir, 'media');
     fs.mkdirSync(this.mediaDir, { recursive: true });
     this.logger = new Logger(path.join(dataDir, 'logs'), { echo: logEcho });
-    this.settings = new Settings(dataDir, this.logger);
+    this.settings = new Settings(dataDir, this.logger, { uiLang });
     const dbFile = path.join(dataDir, 'bible.db');
     installSeedDb(dbFile, seedDb, this.logger);
     this.store = new BibleStore(dbFile);
@@ -477,6 +477,7 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.globalShortcuts === 'boolean') d.globalShortcuts = p.globalShortcuts;
       if (typeof p.cueAdvance === 'boolean') d.cueAdvance = p.cueAdvance;
       if (typeof p.cueTimes === 'boolean') d.cueTimes = p.cueTimes;
+      if (p.uiLang === 'ko' || p.uiLang === 'en') d.uiLang = p.uiLang;
       if (typeof p.hymnBackground === 'string') d.hymnBackground = p.hymnBackground.slice(0, 300);
       if (typeof p.songSearchUrl === 'string') d.songSearchUrl = p.songSearchUrl.trim().slice(0, 500);
       if (typeof p.songDownloadDir === 'string') d.songDownloadDir = p.songDownloadDir.trim().slice(0, 500);
@@ -954,7 +955,8 @@ WorshipCueCore.prototype.commands = {
   },
   newCue(a) {
     const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    const c = normalizeCue({ name: a.name || `${today} 예배`, serviceDate: a.serviceDate || today, items: a.empty ? [] : sampleItems() });
+    const en = this.settings.get().uiLang === 'en';
+    const c = normalizeCue({ name: a.name || `${today} ${en ? 'Service' : '예배'}`, serviceDate: a.serviceDate || today, items: a.empty ? [] : sampleItems(en ? 'en' : 'ko') });
     return this.commands.saveCue.call(this, { cue: c });
   },
   /** 복제: nextWeek 면 예배 날짜를 7일 뒤로 (이름 속 날짜도) — 서식에서 만들 때도 이것 */

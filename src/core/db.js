@@ -2,7 +2,7 @@
 // Bible Data Manager + Bible Search Engine 의 DB 부분 (SQLite, node:sqlite)
 
 const { DatabaseSync } = require('node:sqlite');
-const { BOOKS, getBook } = require('./books');
+const { BOOKS, getBook, bookNames } = require('./books');
 const { parseReference } = require('./parser');
 const { searchNormalize, compact } = require('./textnorm');
 
@@ -116,6 +116,7 @@ class BibleStore {
   }
 
   reloadStructure() {
+    this._langs = null;
     this.structure.clear();
     const rows = this.db.prepare('SELECT version_id, book_id, chapter, MAX(verse) AS maxv FROM BibleVerses GROUP BY version_id, book_id, chapter').all();
     for (const r of rows) {
@@ -136,11 +137,20 @@ class BibleStore {
   }
 
   /** 번역본에 존재하는 책·장 구조 */
+  /** 번역본 언어 ('ko' · 'en' …) */
+  langOf(versionId) {
+    if (!this._langs) this._langs = new Map();
+    if (!this._langs.has(versionId)) this._langs.set(versionId, (this.getVersion(versionId) || {}).language || 'ko');
+    return this._langs.get(versionId);
+  }
+  /** 이 번역본에서 보일 책 이름 */
+  bookOf(versionId, b) { return { id: b.id, ...bookNames(b, this.langOf(versionId)) }; }
+
   getStructure(versionId) {
     const vm = this.structure.get(versionId);
     if (!vm) return [];
     return BOOKS.filter(b => vm.has(b.id)).map(b => ({
-      id: b.id, name: b.name, short: b.short, testament: b.testament,
+      ...this.bookOf(versionId, b), testament: b.testament,
       chapters: vm.get(b.id).map(v => v || 0),
     }));
   }
@@ -178,17 +188,17 @@ class BibleStore {
     if (!p.ok) {
       return {
         ok: false, error: p.error, incomplete: !!p.incomplete, ambiguous: !!p.ambiguous, rest: p.rest,
-        book: p.book ? { id: p.book.id, name: p.book.name, short: p.book.short, chapters: this.chapterCount(versionId, p.book.id) } : null,
-        candidates: (p.candidates || []).map(b => ({ id: b.id, name: b.name, short: b.short })),
+        book: p.book ? { ...this.bookOf(versionId, p.book), chapters: this.chapterCount(versionId, p.book.id) } : null,
+        candidates: (p.candidates || []).map(b => this.bookOf(versionId, b)),
       };
     }
     const r = this.resolveRanges(versionId, p.book.id, p.ranges);
-    if (!r.ok) r.book = { id: p.book.id, name: p.book.name, short: p.book.short, chapters: this.chapterCount(versionId, p.book.id) };
+    if (!r.ok) r.book = { ...this.bookOf(versionId, p.book), chapters: this.chapterCount(versionId, p.book.id) };
     return r;
   }
 
   resolveRanges(versionId, bookId, ranges) {
-    const book = getBook(bookId);
+    const book = this.bookOf(versionId, getBook(bookId));
     const nCh = this.chapterCount(versionId, bookId);
     if (!nCh) return { ok: false, error: `이 번역본에는 ${book.name} 데이터가 없습니다.` };
     const verses = [];

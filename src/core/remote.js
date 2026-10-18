@@ -120,6 +120,7 @@ class RemoteServer {
     if (req.method === 'GET' && (p === '/' || p === '/index.html')) return this.file(res, 'index.html', 'text/html; charset=utf-8');
     if (req.method === 'GET' && p === '/remote.js') return this.file(res, 'remote.js', 'text/javascript; charset=utf-8');
     if (req.method === 'GET' && p === '/groups.js') return this.file(res, '../shared/groups.js', 'text/javascript; charset=utf-8');
+    if (req.method === 'GET' && (p === '/i18n.js' || p === '/i18n-en.js')) return this.file(res, '../shared' + p, 'text/javascript; charset=utf-8');
     if (req.method === 'GET' && p === '/r/state') {
       const c = this.checkPin(req, url.searchParams.get('pin'));
       if (!c.ok) return this.json(res, c.status, { ok: false, error: c.error });
@@ -144,7 +145,7 @@ class RemoteServer {
     fs.readFile(path.join(this.webDir, 'remote', name), (err, buf) => {
       if (err) { res.writeHead(404); return res.end(); }
       res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-cache' });
-      res.end(buf);
+      res.end(name.endsWith('.html') ? require('./server').withLang(buf, this.core.settings.get().uiLang, '/') : buf);
     });
   }
 

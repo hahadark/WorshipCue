@@ -98,6 +98,7 @@
         '-',
         { label: '🖥 무대 화면 창 열기 (설교자·찬양팀)', run: () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720') },
         { label: '🎨 조작 화면 테마 · 글자 크기…', key: 'Ctrl+Shift+= / -', run: () => window.BCUiTheme && window.BCUiTheme.open() },
+        { label: '🌐 Language · 언어', sub: () => [['ko', '한국어'], ['en', 'English']].map(([v, l]) => ({ label: on((app.state && app.state.settings.uiLang || 'ko') === v, l), run: () => app.cmd('updateSettings', { patch: { uiLang: v } }) })) },
       ];
     }],
     ['도구', [

@@ -89,6 +89,7 @@
     es.addEventListener('state', e => {
       const first = !app.state;
       app.state = JSON.parse(e.data);
+      if (window.BCI18n) window.BCI18n.sync(app.state.settings.uiLang); else if (app.state.settings.uiLang === 'en') location.reload();
       if (!first) keepLocalTemplate();
       app.connected = true;
       $('#conn').hidden = true;
@@ -101,6 +102,7 @@
     es.addEventListener('settings', e => {
       const d = JSON.parse(e.data);
       app.state = d.state;
+      if (window.BCI18n) window.BCI18n.sync(app.state.settings.uiLang); else if (app.state.settings.uiLang === 'en') location.reload();
       keepLocalTemplate();
       if (d.what === 'versions') { fillVersions(); loadStructure(); }
       if (d.what === 'commentaries') { cm.key = ''; updateCommentary(); }
@@ -158,7 +160,7 @@
     setTimeout(() => cmd('uiReady'), 150);
     if (!app.state.versions.length) showWelcome();
     // 개역한글만 있으면(또는 아무것도 없으면) 베들레헴 설치 안내를 한 번 보여 준다
-    else if (app.state.versions.length <= 1 && !(settings().guide && settings().guide.bethlehemDone)) showBethlehemGuide();
+    else if (app.state.versions.length <= 1 && settings().uiLang !== 'en' && !(settings().guide && settings().guide.bethlehemDone)) showBethlehemGuide(); // 영어 화면에서는 안 보임 (한국어 성경 프로그램)
     if (app.state.portWarning) showMsg(app.state.portWarning, 'error', 0);
     $('#q').focus();
   }

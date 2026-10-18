@@ -422,6 +422,9 @@
   function drawBehavior() {
     const s = S();
     $('#setBody').innerHTML = `<div class="form">
+      <h4 data-noi18n>화면 언어 · Language</h4>
+      <label data-noi18n>언어 · Language</label>
+      <select id="bLang" data-noi18n><option value="ko">한국어</option><option value="en">English</option></select>
       <h4>검색</h4>
       <label>기본 검색 방식</label>
       <select id="bMode"><option value="auto">자동 (숫자가 있으면 장절, 없으면 본문)</option><option value="reference">장절만</option><option value="text">본문 단어만</option></select>
@@ -441,6 +444,8 @@
       <label class="tc-toggle"><input type="checkbox" id="bCueTimes" ${s.cueTimes === true ? 'checked' : ''}> ⏰ 예배 진행 시계 쓰기 (예배 시작 시각 · 순서별 예정 시간 · 몇 분 늦음)</label>
     </div>`;
     $('#bMode').value = s.searchMode;
+    $('#bLang').value = s.uiLang === 'en' ? 'en' : 'ko';
+    $('#bLang').onchange = e => cmd('updateSettings', { patch: { uiLang: e.target.value } });
     $('#bSplit').value = s.split.mode;
     $('#bNav').value = s.navMode;
     $('#bMode').onchange = e => cmd('updateSettings', { patch: { searchMode: e.target.value } });

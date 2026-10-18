@@ -101,7 +101,19 @@ function normalizeCue(c) {
 }
 
 /** 새 큐시트 기본 순서 (구세군 성결예배 예시) */
-function sampleItems() {
+function sampleItems(lang = 'ko') {
+  if (lang === 'en') {
+    return [
+      { type: 'title', title: 'Call to Worship', subtitle: '' },
+      { type: 'song', title: 'Praise', lyrics: '' },
+      { type: 'title', title: 'Prayer', subtitle: '' },
+      { type: 'bible', title: 'Scripture Reading', ref: 'Ps 23' },
+      { type: 'title', title: 'Sermon', subtitle: '' },
+      { type: 'text', title: 'Announcements', body: '' },
+      { type: 'title', title: 'Benediction', subtitle: '' },
+      { type: 'blank', title: 'Blank', mode: 'background' },
+    ].map(x => ({ ...x, id: newId() }));
+  }
   return [
     { type: 'title', title: '예배로 부름', subtitle: '' },
     { type: 'song', title: '찬양', lyrics: '' },

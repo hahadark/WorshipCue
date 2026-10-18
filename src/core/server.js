@@ -21,6 +21,13 @@ const MIME = {
 };
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg']);
 
+/** 화면 언어: 영어면 <html data-lang="en"> 과 번역 스크립트를 넣는다 */
+function withLang(buf, lang, prefix = '/shared/') {
+  if (lang !== 'en') return buf;
+  return Buffer.from(String(buf).replace(/<html lang="ko">/, '<html lang="en" data-lang="en">')
+    .replace(/<head>/, `<head><script src="${prefix}i18n-en.js"></script><script src="${prefix}i18n.js"></script>`));
+}
+
 function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   // 휴대폰 리모컨 (켜져 있으면 같이 시작)
   if (!core.remote) {
@@ -77,12 +84,13 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   }
 
   function serveFile(res, file, base) {
+    const lang = core.settings.get().uiLang;
     const resolved = path.resolve(file);
     if (!resolved.startsWith(path.resolve(base) + path.sep)) { res.writeHead(403); return res.end(); }
     fs.readFile(resolved, (err, buf) => {
       if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Not found'); }
       res.writeHead(200, { 'Content-Type': MIME[path.extname(resolved).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
-      res.end(buf);
+      res.end(resolved.endsWith('.html') ? withLang(buf, lang) : buf);
     });
   }
 
@@ -259,4 +267,4 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
   });
 }
 
-module.exports = { startServer };
+module.exports = { withLang, startServer };

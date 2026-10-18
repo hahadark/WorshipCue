@@ -69,7 +69,7 @@
 
     // ---- 부분 조각 ----
     const fontRow = `<div class="tc-row"><span class="tc-label">글꼴</span>
-            <select class="tc-font" data-font><option value="${esc(fname)}" style="font-family:${esc(t.font.family)}">${esc(fname)}</option></select></div>`;
+            <select class="tc-font" data-font data-noi18n><option value="${esc(fname)}" style="font-family:${esc(t.font.family)}">${esc(fname)}</option></select></div>`;
     const posBlock = `<div class="tc-posrow">
             <div class="tc-pos" title="본문이 놓일 위치를 누르세요">
               ${VALIGNS.map(([v, vl]) => ALIGNS.map(([a, al]) => `<button type="button" data-pos="${v}|${a}" class="${t.valign === v && colAlign === a ? 'on' : ''}" title="${vl} · ${al}"><i class="tc-pos-${a}"></i></button>`).join('')).join('')}

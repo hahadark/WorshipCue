@@ -5,6 +5,12 @@ const path = require('path');
 const { app, BrowserWindow, screen, globalShortcut, dialog, Menu, powerSaveBlocker, session, shell, safeStorage } = require('electron');
 const { WorshipCueCore } = require('../core/core');
 const { startServer } = require('../core/server');
+const i18n = require('../core/i18n');
+
+// 화면 언어: 설정에 있으면 그것, 처음 실행이면 이 빌드의 기본 언어 (영어판: package.json 의 worshipcueLang = 'en')
+const BUILD_LANG = (() => { try { return require('../../package.json').worshipcueLang === 'en' ? 'en' : 'ko'; } catch { return 'ko'; } })();
+let uiLang = BUILD_LANG;
+const T = s => i18n.t(s, uiLang);
 
 const WEB_DIR = path.join(__dirname, '..', 'web');
 const GLOBAL_ACTIONS = { prevSlide: 'previousSlide', nextSlide: 'nextSlide', sendPreview: null, toggleClear: 'toggleLive' };
@@ -30,7 +36,8 @@ if (!app.requestSingleInstanceLock()) {
   // ---------- 모니터 ----------
   function displayLabel(d, i) {
     const primary = d.id === screen.getPrimaryDisplay().id;
-    return `디스플레이 ${i + 1} — ${d.size.width}×${d.size.height}${d.scaleFactor !== 1 ? ` (배율 ${Math.round(d.scaleFactor * 100)}%)` : ''}${primary ? ' · 주 모니터' : ''}${d.label ? ' · ' + d.label : ''}`;
+    const en = uiLang === 'en';
+    return `${en ? 'Display' : '디스플레이'} ${i + 1} — ${d.size.width}×${d.size.height}${d.scaleFactor !== 1 ? ` (${en ? 'scale' : '배율'} ${Math.round(d.scaleFactor * 100)}%)` : ''}${primary ? (en ? ' · primary' : ' · 주 모니터') : ''}${d.label ? ' · ' + d.label : ''}`;
   }
   function listDisplays() {
     return screen.getAllDisplays().map((d, i) => ({ id: d.id, label: displayLabel(d, i), bounds: d.bounds, primary: d.id === screen.getPrimaryDisplay().id }));
@@ -185,7 +192,7 @@ if (!app.requestSingleInstanceLock()) {
   function splashCall(js) {
     if (splash && !splash.isDestroyed()) splash.webContents.executeJavaScript(js).catch(() => {});
   }
-  const splashStatus = t => splashCall(`setStatus(${JSON.stringify(t)})`);
+  const splashStatus = t => splashCall(`setStatus(${JSON.stringify(T(t))})`);
   /** 다음 단계 전에 로딩 화면이 그려지게 잠깐 양보 */
   const paint = () => new Promise(r => setTimeout(r, 40));
   function closeSplash() {
@@ -208,7 +215,14 @@ if (!app.requestSingleInstanceLock()) {
   // ---------- 시작 ----------
   app.whenReady().then(async () => {
     Menu.setApplicationMenu(null);
+    // 로딩 화면 전에 설정 파일에서 언어만 먼저 읽는다
+    {
+      const argi = process.argv.indexOf('--data');
+      const dir = argi > 0 ? path.resolve(process.argv[argi + 1]) : process.env.BIBLECAST_DATA || path.join(app.getPath('appData'), 'WorshipCue', 'data');
+      try { const s = JSON.parse(require('fs').readFileSync(path.join(dir, 'settings.json'), 'utf8')); if (s.uiLang === 'en' || s.uiLang === 'ko') uiLang = s.uiLang; } catch { /* 처음 실행 */ }
+    }
     await createSplash();
+    if (uiLang === 'en') splashCall(`document.documentElement.lang='en';${[['.sub', '예배 순서 통합 송출 — 성경 · 찬양 · 찬송가 · 광고 · 영상'], ['#info', '예배당 화면 · OBS · 무대 화면'], ['.foot span:last-child', '잠시만 기다려 주세요'], ['#msg', '시작하는 중…']].map(([q, s]) => `document.querySelector(${JSON.stringify(q)}).textContent=${JSON.stringify(T(s))};`).join('')}`);
     splashCall(`setVersion(${JSON.stringify(app.getVersion())})`);
     splashStatus('성경 데이터를 준비하는 중…');
     await paint();
@@ -218,10 +232,12 @@ if (!app.requestSingleInstanceLock()) {
     try {
       // 기본 포함 성경 DB: 설치본은 resources/bible.db, 개발 실행은 data/bible.db
       const seedDb = app.isPackaged ? path.join(process.resourcesPath, 'bible.db') : path.join(__dirname, '..', '..', 'data', 'bible.db');
-      core = new WorshipCueCore({ dataDir, seedDb });
+      core = new WorshipCueCore({ dataDir, seedDb, uiLang: BUILD_LANG });
+      uiLang = core.settings.get().uiLang === 'en' ? 'en' : 'ko';
+      core.on('settings', () => { uiLang = core.settings.get().uiLang === 'en' ? 'en' : 'ko'; });
     } catch (e) {
       closeSplash();
-      dialog.showErrorBox('WorshipCue', '데이터를 열 수 없습니다: ' + e.message);
+      dialog.showErrorBox('WorshipCue', T('데이터를 열 수 없습니다:') + ' ' + e.message);
       app.exit(1);
       return;
     }
@@ -238,14 +254,14 @@ if (!app.requestSingleInstanceLock()) {
     }
     if (!port) {
       closeSplash();
-      dialog.showErrorBox('WorshipCue', `로컬 서버를 시작할 수 없습니다 (포트 ${wanted}~${wanted + 9}).\n\n${lastErr && lastErr.message}`);
+      dialog.showErrorBox('WorshipCue', T(`로컬 서버를 시작할 수 없습니다 (포트 ${wanted}~${wanted + 9}).\n\n${lastErr && lastErr.message}`));
       app.exit(1);
       return;
     }
     core.activePort = port;
     if (port !== wanted) {
       core.logger.warn(`포트 ${wanted} 사용 중 → ${port} 사용`);
-      core.portWarning = `설정한 포트 ${wanted}을(를) 다른 프로그램이 사용 중이어서 ${port} 포트로 실행했습니다. OBS 주소가 달라졌으니 설정 → 출력에서 확인하세요.`;
+      core.portWarning = T(`설정한 포트 ${wanted}을(를) 다른 프로그램이 사용 중이어서 ${port} 포트로 실행했습니다. OBS 주소가 달라졌으니 설정 → 출력에서 확인하세요.`);
     }
 
     core.desktop = {
@@ -293,13 +309,13 @@ if (!app.requestSingleInstanceLock()) {
     controlWin.webContents.on('context-menu', (e, p) => {
       if (!p.isEditable && !p.selectionText) return;
       const t = p.isEditable
-        ? [{ role: 'undo', label: '되돌리기' }, { role: 'redo', label: '다시 하기' }, { type: 'separator' }, { role: 'cut', label: '잘라내기' }, { role: 'copy', label: '복사' }, { role: 'paste', label: '붙여넣기' }, { type: 'separator' }, { role: 'selectAll', label: '모두 선택' }]
-        : [{ role: 'copy', label: '복사' }];
+        ? [{ role: 'undo', label: T('되돌리기') }, { role: 'redo', label: T('다시 하기') }, { type: 'separator' }, { role: 'cut', label: T('잘라내기') }, { role: 'copy', label: T('복사') }, { role: 'paste', label: T('붙여넣기') }, { type: 'separator' }, { role: 'selectAll', label: T('모두 선택') }]
+        : [{ role: 'copy', label: T('복사') }];
       Menu.buildFromTemplate(t).popup({ window: controlWin });
     });
     try {
       const vs = core.store.listVersions();
-      splashCall(`setInfo(${JSON.stringify(`성경 ${vs.length}종 · 큐시트 ${core.store.listCues().length}개`)})`);
+      splashCall(`setInfo(${JSON.stringify(T(`성경 ${vs.length}종 · 큐시트 ${core.store.listCues().length}개`))})`);
     } catch { /* 표시만 */ }
     splashStatus('조작 화면을 불러오는 중…');
     controlWin.loadURL(`http://127.0.0.1:${port}/control/`);
@@ -313,7 +329,7 @@ if (!app.requestSingleInstanceLock()) {
     // 외부 링크·새 창 차단
     controlWin.webContents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith(`http://127.0.0.1:${port}/outputs/stage`)) {
-        return { action: 'allow', overrideBrowserWindowOptions: { width: 1280, height: 720, title: 'WorshipCue 무대 화면', backgroundColor: '#000000', autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } } };
+        return { action: 'allow', overrideBrowserWindowOptions: { width: 1280, height: 720, title: T('WorshipCue 무대 화면'), backgroundColor: '#000000', autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } } };
       }
       return { action: 'deny' };
     });
@@ -322,7 +338,7 @@ if (!app.requestSingleInstanceLock()) {
     controlWin.on('close', e => {
       const live = core.presentation.getLiveState();
       if (live.hasLive && live.visible) {
-        const r = dialog.showMessageBoxSync(controlWin, { type: 'warning', buttons: ['종료', '취소'], defaultId: 1, cancelId: 1, title: 'WorshipCue', message: '본문을 송출 중입니다. 종료하면 예배당 화면과 OBS 출력이 사라집니다. 종료할까요?' });
+        const r = dialog.showMessageBoxSync(controlWin, { type: 'warning', buttons: [T('종료'), T('취소')], defaultId: 1, cancelId: 1, title: 'WorshipCue', message: T('본문을 송출 중입니다. 종료하면 예배당 화면과 OBS 출력이 사라집니다. 종료할까요?') });
         if (r !== 0) e.preventDefault();
       }
     });

@@ -77,6 +77,25 @@ const BOOKS = RAW.map(([id, name, short, aliases, osis, en, chapters]) => ({
   singleChapter: chapters === 1,
 }));
 
+// 영어 약어 (흔히 쓰는 짧은 이름 · 단수형)
+const EN_ALIASES = {
+  1: ['Gn'], 2: ['Ex'], 3: ['Lv'], 4: ['Nm'], 5: ['Dt'], 6: ['Jos'], 7: ['Jdg', 'Jg'], 8: ['Ru'], 9: ['1Sa'], 10: ['2Sa'],
+  11: ['1Ki', '1Kgs'], 12: ['2Ki', '2Kgs'], 13: ['1Ch'], 14: ['2Ch'], 16: ['Ne'], 17: ['Est'], 18: ['Jb'], 19: ['Psalm', 'Psa', 'Pss'],
+  20: ['Pr', 'Prv'], 21: ['Ecc', 'Qoh'], 22: ['Song of Solomon', 'SOS', 'Canticles'], 23: ['Is'], 24: ['Je'], 25: ['La'], 26: ['Eze', 'Ezk'],
+  27: ['Dn'], 28: ['Ho'], 29: ['Jl'], 30: ['Am'], 31: ['Ob'], 32: ['Jon'], 33: ['Mi'], 34: ['Na'], 35: ['Hb'], 36: ['Zep', 'Zp'],
+  37: ['Hg'], 38: ['Zec', 'Zc'], 39: ['Ml'], 40: ['Mt'], 41: ['Mk', 'Mr'], 42: ['Lk', 'Lu'], 43: ['Jn', 'Jhn'], 44: ['Ac'], 45: ['Ro', 'Rm'],
+  46: ['1Co'], 47: ['2Co'], 48: ['Ga'], 49: ['Ep'], 50: ['Php', 'Pp'], 51: ['Cl'], 52: ['1Th'], 53: ['2Th'], 54: ['1Ti', '1Tm'], 55: ['2Ti', '2Tm'],
+  56: ['Ti'], 57: ['Phm', 'Philem'], 58: ['He'], 59: ['Jas', 'Jm'], 60: ['1Pe', '1Pt'], 61: ['2Pe', '2Pt'], 62: ['1Jn', '1Jo'], 63: ['2Jn', '2Jo'],
+  64: ['3Jn', '3Jo'], 65: ['Jud', 'Jd'], 66: ['Re', 'Rv', 'Revelations', 'Apocalypse'],
+};
+for (const b of BOOKS) b.aliases = [...b.aliases, ...(EN_ALIASES[b.id] || [])];
+
+/** 번역본 언어에 맞는 책 이름: 영어 번역본은 'John' · 'John 3:16', 그 밖은 '요한복음' · '요3:16' */
+function bookNames(b, lang) {
+  if (/^en/i.test(lang || '')) return { name: b.en, short: b.en + ' ' };
+  return { name: b.name, short: b.short };
+}
+
 const byId = new Map(BOOKS.map(b => [b.id, b]));
 
 function key(s) {
@@ -118,4 +137,4 @@ function getBook(id) {
   return byId.get(Number(id)) || null;
 }
 
-module.exports = { BOOKS, resolveBook, getBook, bookKey: key };
+module.exports = { BOOKS, resolveBook, getBook, bookNames, bookKey: key };

@@ -814,3 +814,8 @@ button.on { border-color: var(--accent); }
 .fmt-bar select { font-size: 12px; padding: 1px 4px; }
 .fmt-bar .fmt-sw { width: 16px; height: 16px; padding: 0; border-radius: 50%; border: 1px solid var(--line); }
 .fmt-bar input[type=color] { width: 22px; height: 18px; padding: 0; border: 0; background: none; }
+
+/* 영어 화면: 이름 칸이 길어서 넓게 */
+html[lang="en"] .ce-form { grid-template-columns: 88px 1fr; }
+html[lang="en"] .se-form { grid-template-columns: 92px 1fr; }
+html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
