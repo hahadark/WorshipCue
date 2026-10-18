@@ -57,7 +57,7 @@ function defaults() {
     searchMode: 'auto', // auto | reference | text
     split: { mode: 'auto', count: 2 }, // auto | count (count=1 이면 한 절씩)
     navMode: 'range', // range: 선택 범위 안에서만 | continuous: 범위 끝에서 다음 절로 이어감(책 경계에서 멈춤)
-    output: { enabled: false, displayId: null, cursorHidden: true, autoOnSend: true },
+    output: { enabled: false, displayId: null, cursorHidden: true, autoOnSend: true, linkObs: true },
     templates: defaultTemplates(),
     activeTemplates: { main: 'worship', overlay: 'overlay' },
     shortcuts: { ...DEFAULT_SHORTCUTS },

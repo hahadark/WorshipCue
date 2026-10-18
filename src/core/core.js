@@ -57,6 +57,7 @@ class WorshipCueCore extends EventEmitter {
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
+    this.obsHold = false; // 보조 화면을 꺼서 OBS 화면도 숨긴 상태 (다시 켜거나 송출하면 풀림)
 
     const s = this.settings.get();
     if (!s.versionId || !this.store.getVersion(s.versionId)) {
@@ -220,13 +221,25 @@ class WorshipCueCore extends EventEmitter {
   }
 
   /** 출력 화면(전체화면 창·OBS)에 보낼 데이터 */
+  /** 보조 화면(예배당 모니터)을 끄면 OBS 화면도 같이 숨기고, 다시 켜면 다시 보인다 (설정: output.linkObs) */
+  outputToggled(before, after) {
+    if (before && !after && this.settings.get().output.linkObs !== false) this.holdObs(true);
+    else if (!before && after) this.holdObs(false);
+  }
+  holdObs(on) {
+    if (this.obsHold === !!on) return;
+    this.obsHold = !!on;
+    this.emit('live');
+  }
+
   outputPayload(output) {
     const live = this.presentation.getLiveState();
     return {
       output,
       version: live.version,
       hasLive: live.hasLive,
-      visible: live.visible,
+      visible: live.visible && !this.obsHold,
+      held: this.obsHold,
       slide: live.slide,
       versionName: live.passage ? live.passage.versionName : '',
       template: this.templateFor(output),
@@ -358,6 +371,7 @@ WorshipCueCore.prototype.commands = {
 
   // ---- Live ----
   sendLive(a) {
+    this.holdObs(false); // 새로 송출하면 OBS 도 다시 보인다
     const r = this.presentation.sendLive(a && a.slides ? a : null);
     this.addHistory();
     // 송출을 시작하면 보조 화면(예배당 모니터) 출력을 자동으로 켠다
@@ -522,6 +536,7 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.reservedKeys === 'string') d.reservedKeys = p.reservedKeys.slice(0, 1000);
       if (p.output && typeof p.output.cursorHidden === 'boolean') d.output.cursorHidden = p.output.cursorHidden;
       if (p.output && typeof p.output.autoOnSend === 'boolean') d.output.autoOnSend = p.output.autoOnSend;
+      if (p.output && typeof p.output.linkObs === 'boolean') d.output.linkObs = p.output.linkObs;
       if (p.port != null) d.port = clampInt(p.port, 1024, 65535, 37528);
       if (p.guide && typeof p.guide.bethlehemDone === 'boolean') d.guide = { ...(d.guide || {}), bethlehemDone: p.guide.bethlehemDone };
     });

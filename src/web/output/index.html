@@ -8,6 +8,8 @@
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
   body.opaque { background: #000; }
+  body.held { background: transparent !important; }
+  body.held > * { visibility: hidden; }
   body.nocursor, body.nocursor * { cursor: none !important; }
   #screen { position: fixed; inset: 0; }
 </style>

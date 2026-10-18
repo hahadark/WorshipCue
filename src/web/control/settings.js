@@ -126,6 +126,7 @@
         ` : `<span></span><div class="note">브라우저에서 실행 중이므로 모니터 출력 창을 직접 만들 수 없습니다.<br>출력 화면 주소를 다른 창에서 열어 전체 화면(F11)으로 사용할 수 있습니다.</div>`}
         <label><input type="checkbox" id="oCursor" ${s.output.cursorHidden ? 'checked' : ''}> 마우스 커서 숨김</label><span></span>
         <label><input type="checkbox" id="oAuto" ${s.output.autoOnSend !== false ? 'checked' : ''}> 송출하면 보조 화면 자동 켜기</label><span class="note">Esc 로 보조 화면을 끕니다 (단축키 설정에서 변경 가능)</span>
+        <span></span><label><input type="checkbox" id="oLinkObs" ${s.output.linkObs !== false ? 'checked' : ''}> 보조 화면을 끄면 OBS 화면도 숨기기 (다시 켜거나 송출하면 다시 보임)</label>
 
         <h4>출력별 템플릿</h4>
         <label>예배당 전체 화면 / OBS 전체</label><select id="oTplMain">${tplOpts(s.activeTemplates.main)}</select>
@@ -154,6 +155,7 @@
     }
     $('#oCursor').onchange = e => cmd('updateSettings', { patch: { output: { cursorHidden: e.target.checked } } });
     $('#oAuto').onchange = e => cmd('updateSettings', { patch: { output: { autoOnSend: e.target.checked } } });
+    $('#oLinkObs').onchange = e => cmd('updateSettings', { patch: { output: { linkObs: e.target.checked } } });
     $('#oTplMain').onchange = e => cmd('setTemplate', { output: 'main', templateId: e.target.value });
     $('#oTplOverlay').onchange = e => cmd('setTemplate', { output: 'overlay', templateId: e.target.value });
     $('#oPortSave').onclick = async () => {

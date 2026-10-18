@@ -134,6 +134,7 @@ if (!app.requestSingleInstanceLock()) {
   }
 
   function setOutput({ enabled, displayId }) {
+    const before = !!core.settings.get().output.enabled;
     core.settings.update(s => {
       if (typeof enabled === 'boolean') s.output.enabled = enabled;
       if (displayId != null && findDisplay(Number(displayId))) s.output.displayId = Number(displayId);
@@ -143,6 +144,7 @@ if (!app.requestSingleInstanceLock()) {
       }
     });
     syncOutputWindow();
+    core.outputToggled(before, !!core.settings.get().output.enabled); // 끄면 OBS 화면도 숨김
     return status();
   }
 

@@ -177,6 +177,7 @@
     queueMicrotask(() => { if (stage && tpl && drawState) R.paintDraw(stage, drawState, tpl); }); // 그리기 층은 늘 맨 위
     lastPayload = p;
     document.body.classList.toggle('nocursor', p.cursorHidden !== false);
+    document.body.classList.toggle('held', !!p.held); // 보조 화면을 꺼서 OBS 화면도 숨김
     const stageChanged = setupStage(p.template);
     const show = p.hasLive && p.visible && p.slide;
     const key = show ? JSON.stringify([p.slide, p.versionName]) : '';

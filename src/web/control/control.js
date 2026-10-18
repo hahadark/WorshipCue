@@ -1200,7 +1200,7 @@
     if (!r.ok) return showMsg(r.error, 'error');
     const st = r.result;
     if (st.enabled && !st.valid) showMsg('연결된 보조 모니터가 없습니다. 모니터를 연결하거나 설정 → 출력에서 모니터를 고르세요.', 'error', 6000);
-    else showMsg(st.enabled ? `보조 화면 출력을 켰습니다: ${st.displayLabel}` : '보조 화면 출력을 껐습니다.', st.enabled ? 'ok' : 'info', 2500);
+    else showMsg(st.enabled ? `보조 화면 출력을 켰습니다: ${st.displayLabel}` : (settings().output.linkObs !== false ? '보조 화면 출력을 껐습니다. OBS 화면도 숨겼습니다.' : '보조 화면 출력을 껐습니다.'), st.enabled ? 'ok' : 'info', 2500);
   }
   $('#bOutput').onclick = toggleOutputWindow;
 
