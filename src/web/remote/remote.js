@@ -3,8 +3,10 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const DOCK = location.pathname.startsWith('/dock'); // OBS 도킹 (이 PC): PIN 없음
   let pin = '';
-  try { pin = sessionStorage.getItem('wc-pin') || ''; } catch { /* 저장 안 됨 */ }
+  try { pin = DOCK ? 'dock' : sessionStorage.getItem('wc-pin') || ''; } catch { /* 저장 안 됨 */ }
+  if (DOCK) document.body.classList.add('dock');
   let timer = null;
   let lastCue = '';
 
@@ -17,7 +19,7 @@
 
   async function poll() {
     let r;
-    try { r = await fetch('/r/state?pin=' + encodeURIComponent(pin)).then(x => x.json()); } catch { $('title').textContent = '연결 끊김 — 같은 Wi-Fi 인지 확인하세요'; return; }
+    try { r = await fetch('/r/state?pin=' + encodeURIComponent(pin)).then(x => x.json()); } catch { $('title').textContent = DOCK ? '연결 끊김 — WorshipCue 가 켜져 있는지 확인하세요' : '연결 끊김 — 같은 Wi-Fi 인지 확인하세요'; return; }
     if (!r.ok) { try { sessionStorage.removeItem('wc-pin'); } catch { /* 무시 */ } return showLogin(r.error); }
     $('login').hidden = true; $('main').hidden = false; $('bar').hidden = false;
     const L = r.live;
@@ -28,6 +30,7 @@
     $('text').textContent = L.text || '';
     $('next').textContent = L.next ? '다음: ' + L.next : '';
     $('xHide').textContent = L.visible ? '숨김' : '보이기';
+    $('dHide').textContent = L.visible ? '글자 숨김' : '다시 보이기';
     $('noctl').hidden = r.control;
     // 이름표(1절·후렴…) 바로 가기
     const groups = [];
@@ -44,7 +47,7 @@
   }
 
   async function act(body) {
-    const r = await fetch('/r/do', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin, ...body }) }).then(x => x.json()).catch(() => ({ ok: false, error: '연결 끊김' }));
+    const r = await fetch('/r/do', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(DOCK ? { 'X-WorshipCue': '1' } : {}) }, body: JSON.stringify({ pin, ...body }) }).then(x => x.json()).catch(() => ({ ok: false, error: '연결 끊김' }));
     if (!r.ok) alert(r.error);
     setTimeout(poll, 150);
   }
@@ -60,7 +63,7 @@
   $('pin').onkeydown = e => { if (e.key === 'Enter') $('go').onclick(); };
   $('bNext').onclick = $('xNext').onclick = () => act({ action: 'next' });
   $('bPrev').onclick = $('xPrev').onclick = () => act({ action: 'prev' });
-  $('xHide').onclick = () => act({ action: 'toggle' });
+  $('xHide').onclick = $('dHide').onclick = () => act({ action: 'toggle' });
   $('labels').onclick = e => { const b = e.target.closest('[data-goto]'); if (b) act({ action: 'goto', index: +b.dataset.goto }); };
   $('cue').onclick = e => { const b = e.target.closest('[data-cue]'); if (b) act({ action: 'cue', index: +b.dataset.cue }); };
   $('msgSend').onclick = () => act({ action: 'message', text: $('msg').value });

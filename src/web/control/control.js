@@ -1254,10 +1254,11 @@
     else if (k.startsWith('Digit')) k = k.slice(5);
     else if (k === 'NumpadEnter') k = 'Enter';
     const mods = [];
-    if (e.ctrlKey) mods.push('Ctrl');
+    const mac = /Mac/.test(navigator.platform); // 맥은 ⌘ 를 Ctrl 로 (설정은 같고 화면에는 ⌘ 로 보임)
+    if (e.ctrlKey || (mac && e.metaKey)) mods.push('Ctrl');
     if (e.altKey) mods.push('Alt');
     if (e.shiftKey) mods.push('Shift');
-    if (e.metaKey) mods.push('Meta');
+    if (e.metaKey && !mac) mods.push('Meta');
     return [...mods, k].join('+');
   }
   app.comboOf = comboOf;

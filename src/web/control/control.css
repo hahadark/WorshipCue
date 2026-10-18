@@ -12,7 +12,7 @@
   --live-line: color-mix(in srgb, var(--live) 55%, var(--panel));
   --warn-bg: color-mix(in srgb, var(--warn) 24%, var(--panel));
   --accent-bg: color-mix(in srgb, var(--accent) 24%, var(--panel));
-  --ui-font: 'Malgun Gothic', '맑은 고딕', system-ui, sans-serif;
+  --ui-font: 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', system-ui, sans-serif;
   font-family: var(--ui-font);
   color-scheme: dark;
 }

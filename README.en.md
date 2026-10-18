@@ -6,7 +6,7 @@ A **worship presentation program for churches** (Windows).
 
 Build your order of service ahead of time, and during the service you just press **F6**: Bible passages, song lyrics, hymn scores, announcements and videos go out in order to the sanctuary screen (second monitor) and to OBS for streaming.
 
-**⬇ Download**: [Latest portable release (no install)](https://github.com/hahadark/WorshipCue/releases/latest) — `WorshipCue-…-English-Portable.exe` includes the **World English Bible (WEB, public domain)** and starts in English.
+**⬇ Download**: [Latest release](https://github.com/hahadark/WorshipCue/releases/latest) — Windows `WorshipCue-…-English-Portable.exe` (no install) · Mac `WorshipCue-…-English-mac-arm64.dmg` / `…-x64.dmg` ([macOS notes](#macos)) — includes the **World English Bible (WEB, public domain)** and starts in English.
 The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Version. Both builds contain the same program; switch the language any time in `View → 🌐 Language`.
 
 ![WorshipCue control screen](docs/images/main-en.png)
@@ -21,6 +21,7 @@ The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Ver
 - [Running a service](#running-a-service)
 - [Slide editor](#slide-editor)
 - [Stage display and phone remote](#stage-display-and-phone-remote)
+- [OBS dock](#obs-dock-control-panel-inside-obs) · [macOS](#macos)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Bible data and copyright](#bible-data-and-copyright)
 - [Development](#development)
@@ -85,6 +86,22 @@ Open it with `✎ Slide editor` in the item editor, the ✎ on a thumbnail, or *
 
 - `View → 🖥 Open stage display` and drag the window to the preacher's monitor, or open `http://127.0.0.1:37528/outputs/stage` in a browser/OBS on this PC.
 - `Tools → 📱 Phone remote` → turn on → scan the QR code and enter the PIN (same Wi-Fi). If Windows Firewall asks, allow "Private networks".
+
+## OBS dock (control panel inside OBS)
+
+1. Copy the **OBS dock** URL `http://127.0.0.1:37528/dock` from `Settings → Output`.
+2. In OBS: `Docks → Custom Browser Docks` → name `WorshipCue`, paste the URL → Apply.
+3. You get the current/next slide, ◀ Prev · Next ▶ · hide text, verse/chorus jumps, the cue sheet (tap to go live) and stage messages right inside OBS.
+
+It only works on this PC, so no PIN is needed. Turning off the second screen also hides the slide in OBS browser sources (can be turned off in `Settings → Output`).
+
+## macOS
+
+- Download `WorshipCue-…-English-mac-arm64.dmg` (Apple Silicon: M1/M2/M3…) or `…-English-mac-x64.dmg` (Intel) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest), open it and drag WorshipCue to `Applications`.
+- **First launch**: the app isn't signed with an Apple Developer certificate, so macOS warns about an unidentified developer. Right-click (Control-click) WorshipCue in `Applications` → **Open** → **Open**. (macOS 15+: try opening once, then `System Settings → Privacy & Security` → **Open Anyway**.) If it says the app "is damaged", run `xattr -cr /Applications/WorshipCue.app` once in Terminal.
+- **Shortcuts**: Ctrl on Windows is **⌘ (Command)** on Mac (⌘K search · ⌘E slide editor · ⌘B bold · ⌘⇧F second screen), and the app shows ⌘. On MacBooks press **fn** with F5/F6/F9/F10, or turn on "Use F1, F2, etc. keys as standard function keys" in `System Settings → Keyboard → Keyboard Shortcuts → Function Keys`. All shortcuts can be changed in `Settings → Shortcuts`.
+- **Camera**: macOS asks for camera permission the first time. If you denied it, enable WorshipCue in `System Settings → Privacy & Security → Camera`.
+- Not available on Mac: reading hymn PPTs "as shown" (needs PowerPoint on Windows; Mac uses the Auto mode).
 
 ## Keyboard shortcuts
 

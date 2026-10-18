@@ -39,6 +39,14 @@
   .bar button { font-size: 18px; font-weight: 800; padding: 14px 0; }
   .bar .nx { background: #1f3a63; border-color: #3d7bff; }
   .warn { background: #3a2c08; border-color: #806a20; }
+  /* OBS 도킹 (좁고 낮은 패널): 여백을 줄이고 아래 단추 줄은 숨김 (위 이전·다음 단추로) */
+  body.dock { padding-bottom: 8px; }
+  body.dock .bar { display: none !important; }
+  .dock-only { display: none; }
+  body.dock .dock-only { display: grid; grid-template-columns: 1fr; margin-top: 8px; }
+  body.dock .card { padding: 8px 10px; margin: 6px 0; }
+  body.dock .big button { padding: 14px 0; font-size: 18px; }
+  body.dock .txt { max-height: 4.2em; overflow: hidden; }
 </style>
 </head>
 <body>
@@ -59,6 +67,7 @@
     <div class="row labels" id="labels"></div>
   </div>
   <div class="big"><button id="bPrev">◀ 이전</button><button id="bNext" class="next">다음 ▶</button></div>
+  <div class="big dock-only"><button id="dHide">숨김</button></div>
   <div class="card" style="margin-top:12px">
     <b>큐시트</b> <span class="muted" id="cueName"></span> <span class="muted">— 누르면 송출</span>
     <div class="cue" id="cue" style="margin-top:8px"></div>

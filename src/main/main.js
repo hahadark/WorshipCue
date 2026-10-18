@@ -103,7 +103,8 @@ if (!app.requestSingleInstanceLock()) {
    */
   function onOutputKey(ev, input) {
     if (input.type !== 'keyDown') return;
-    const mods = [input.control && 'Ctrl', input.alt && 'Alt', input.shift && 'Shift', input.meta && 'Meta'].filter(Boolean);
+    const mac = process.platform === 'darwin'; // 맥은 ⌘ 를 Ctrl 로 (단축키 설정은 두 운영체제가 같다)
+    const mods = [(input.control || (mac && input.meta)) && 'Ctrl', input.alt && 'Alt', input.shift && 'Shift', !mac && input.meta && 'Meta'].filter(Boolean);
     let k = input.code || '';
     if (!k || /^(Control|Shift|Alt|Meta)(Left|Right)$/.test(k)) return;
     if (k.startsWith('Key')) k = k.slice(3); else if (k.startsWith('Digit')) k = k.slice(5); else if (k === 'NumpadEnter') k = 'Enter';
@@ -123,13 +124,14 @@ if (!app.requestSingleInstanceLock()) {
 
   function placeOutput(d) {
     if (!outputWin || outputWin.isDestroyed()) return;
-    outputWin.setFullScreen(false);
+    const mac = process.platform === 'darwin';
+    if (mac) outputWin.setSimpleFullScreen(false); else outputWin.setFullScreen(false);
     outputWin.setBounds(d.bounds);
     const ctrl = controlWin ? screen.getDisplayMatching(controlWin.getBounds()) : null;
     // 조작 화면과 다른 모니터일 때만 항상 위에 (조작 화면을 가리지 않도록)
     outputWin.setAlwaysOnTop(!(ctrl && ctrl.id === d.id), 'screen-saver');
     outputWin.showInactive();
-    outputWin.setFullScreen(true);
+    if (mac) { outputWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }); outputWin.setSimpleFullScreen(true); } else outputWin.setFullScreen(true);
     core.emit('outputs');
   }
 
@@ -150,7 +152,7 @@ if (!app.requestSingleInstanceLock()) {
 
   // ---------- 전역 단축키 ----------
   function toAccelerator(combo) {
-    return combo.split('+').map(k => ({ ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', Ctrl: 'Control', Meta: 'Super' }[k] || k)).join('+');
+    return combo.split('+').map(k => ({ ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', Ctrl: 'CommandOrControl', Meta: 'Super' }[k] || k)).join('+'); // 맥은 ⌘
   }
   function applyGlobalShortcuts() {
     globalShortcut.unregisterAll();
@@ -216,7 +218,14 @@ if (!app.requestSingleInstanceLock()) {
 
   // ---------- 시작 ----------
   app.whenReady().then(async () => {
-    Menu.setApplicationMenu(null);
+    // 맥: 앱 메뉴가 있어야 ⌘C·⌘V·⌘Z·⌘Q 가 된다. 윈도우: 메뉴 막대 없음 (조작 화면 안의 메뉴바를 쓴다)
+    if (process.platform === 'darwin') {
+      Menu.setApplicationMenu(Menu.buildFromTemplate([
+        { role: 'appMenu' },
+        { label: T('편집'), submenu: [{ role: 'undo', label: T('되돌리기') }, { role: 'redo', label: T('다시 하기') }, { type: 'separator' }, { role: 'cut', label: T('잘라내기') }, { role: 'copy', label: T('복사') }, { role: 'paste', label: T('붙여넣기') }, { role: 'selectAll', label: T('모두 선택') }] },
+        { role: 'windowMenu' },
+      ]));
+    } else Menu.setApplicationMenu(null);
     // 로딩 화면 전에 설정 파일에서 언어만 먼저 읽는다
     {
       const argi = process.argv.indexOf('--data');

@@ -28,7 +28,7 @@
   }
 
   const fontName = family => ((String(family).match(/^\s*['"]?([^'",]+)/) || [])[1] || '').trim();
-  const fontFamily = name => `'${name.replace(/'/g, '')}', 'Malgun Gothic', sans-serif`;
+  const fontFamily = name => `'${name.replace(/'/g, '')}', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif`;
 
   const TEXT_COLORS = ['#ffffff', '#fff3c4', '#ffd479', '#9ec5ff', '#b8f2c8', '#000000'];
   const REF_COLORS = ['#ffd479', '#ffffff', '#9ec5ff', '#ff9b9e', '#cccccc', '#000000'];

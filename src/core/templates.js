@@ -1,7 +1,7 @@
 'use strict';
 // 기본 출력 템플릿(프리셋). 좌표·크기는 모두 템플릿 해상도(width×height) 기준 px.
 
-const FONT_SANS = "'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', sans-serif";
+const FONT_SANS = "'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif"; // 윈도우 · 맥
 
 function base() {
   return {

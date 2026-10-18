@@ -136,6 +136,8 @@
         <h4>OBS 브라우저 소스 주소</h4>
         <label>전체 화면</label><div class="row-flex"><span class="url">http://127.0.0.1:${port}/outputs/main</span><button data-copy="http://127.0.0.1:${port}/outputs/main">복사</button></div>
         <label>투명 자막</label><div class="row-flex"><span class="url">http://127.0.0.1:${port}/outputs/overlay</span><button data-copy="http://127.0.0.1:${port}/outputs/overlay">복사</button></div>
+        <label>OBS 도킹 (조작판)</label><div class="row-flex"><span class="url">http://127.0.0.1:${port}/dock</span><button data-copy="http://127.0.0.1:${port}/dock">복사</button></div>
+        <span></span><span class="note">OBS → 도킹 → 사용자 지정 브라우저 도킹 → 이름 WorshipCue, 주소 붙여넣기. OBS 화면 한쪽에서 지금·다음 슬라이드, 이전·다음·숨김, 큐시트 순서 송출, 무대 메시지를 쓸 수 있습니다.</span>
         <span></span><div class="note">OBS → 소스 추가 → 브라우저 → URL 입력, 너비/높이는 템플릿 해상도(기본 1920×1080). 본문이 바뀌면 자동으로 갱신되며 새로 고침이 필요 없습니다.</div>
         <label>로컬 서버 포트</label>
         <div class="row-flex"><input type="number" id="oPort" min="1024" max="65535" value="${s.port}" style="width:110px"><button id="oPortSave">저장</button>
@@ -251,7 +253,7 @@
 
   async function loadFonts() {
     if (fontList) return fontList;
-    const base = ['맑은 고딕', 'Malgun Gothic', '바탕', 'Batang', '굴림', 'Gulim', '돋움', 'Dotum', '궁서', 'Gungsuh', 'Noto Sans KR', 'Noto Serif KR', 'Pretendard', 'NanumGothic', 'NanumMyeongjo', 'NanumSquare'];
+    const base = ['맑은 고딕', 'Malgun Gothic', '바탕', 'Batang', '굴림', 'Gulim', '돋움', 'Dotum', '궁서', 'Gungsuh', 'Noto Sans KR', 'Noto Serif KR', 'Pretendard', 'NanumGothic', 'NanumMyeongjo', 'NanumSquare', 'Apple SD Gothic Neo', 'AppleMyungjo', 'AppleGothic'];
     let names = [];
     try {
       if (window.queryLocalFonts) names = [...new Set((await window.queryLocalFonts()).map(f => f.family))];
@@ -338,7 +340,7 @@
         if (el.type === 'color') el.nextElementSibling.textContent = v;
       } else if (el.dataset.font !== undefined) {
         const name = el.value.trim();
-        t.font.family = name ? `'${name.replace(/'/g, '')}', 'Malgun Gothic', sans-serif` : "'Malgun Gothic', sans-serif";
+        t.font.family = name ? `'${name.replace(/'/g, '')}', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif` : "'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
         el.nextElementSibling.style.fontFamily = t.font.family;
       } else if (el.dataset.res !== undefined && el.value !== 'custom') {
         const [w, h] = el.value.split('x').map(Number);

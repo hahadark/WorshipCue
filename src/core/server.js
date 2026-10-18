@@ -159,6 +159,11 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
           return json(res, 200, { ok: true, result: result && result.ok === false ? result : true });
         } catch (e) { return json(res, 400, { ok: false, error: e.message }); }
       }
+      // OBS 도킹: 휴대폰 리모컨 화면을 이 PC 안에서 PIN 없이 (이 서버는 이 PC 에서만 열린다)
+      if (p === '/dock' || p === '/dock/') return serveFile(res, path.join(webDir, 'remote', 'index.html'), webDir);
+      if (p === '/remote.js') return serveFile(res, path.join(webDir, 'remote', 'remote.js'), webDir);
+      if (p === '/groups.js') return serveFile(res, path.join(webDir, 'shared', 'groups.js'), webDir);
+      if (p === '/r/state') return json(res, 200, { ok: true, dock: true, ...core.remote.stateFor() });
       if (p === '/api/state') return json(res, 200, core.getState());
       if (p === '/api/live') return json(res, 200, core.presentation.getLiveState());
       if (p === '/events') {
@@ -186,6 +191,15 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
       res.writeHead(404); return res.end();
     }
 
+    if (req.method === 'POST' && p === '/r/do') {
+      // 다른 웹사이트가 몰래 보내지 못하게 X-WorshipCue 머리글을 요구 (브라우저는 사전 확인에서 막힌다)
+      if (req.headers['x-worshipcue'] !== '1') { res.writeHead(403); return res.end(); }
+      return readBody(req, 4000, buf => {
+        let a = {};
+        try { a = JSON.parse(String(buf) || '{}'); } catch { return json(res, 400, { ok: false, error: '잘못된 요청' }); }
+        try { json(res, 200, { ok: true, result: core.remote.act(a) }); } catch (e) { json(res, 200, { ok: false, error: e.message }); }
+      });
+    }
     if (req.method === 'POST') {
       // 다른 웹사이트에서의 요청 차단: 사용자 정의 헤더는 교차 출처 요청에 붙일 수 없다
       if (req.headers['x-worshipcue'] !== '1') { res.writeHead(403); return res.end('Forbidden'); }
