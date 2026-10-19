@@ -88,7 +88,7 @@
       const D = window.BCDock;
       const cur = D ? D.activeWorkspace() : '';
       return [
-        { label: '패널', sub: () => ['cue', 'main', 'quick', 'library', 'stage', 'preview', 'live'].map(panel) },
+        { label: '패널', sub: () => ['cue', 'main', 'quick', 'library', 'stage', 'media', 'preview', 'live'].map(panel) },
         { label: '슬라이드 보기', sub: () => [['list', '목록'], ['grid', '격자'], ['all', '전체 격자 (모든 순서)'], ['alllist', '전체 목록 (모든 순서)']].map(([v, l]) => ({ label: on(window.BCGrid && window.BCGrid.mode() === v, l), run: () => { const b = $(`#slideView [data-sv="${v}"]`); if (b) b.click(); } })) },
         { label: '작업공간 (화면 배치)', sub: () => [
           ...(D ? D.workspaces().map((w, i) => ({ label: on(w.id === cur, w.name), key: i < 9 ? 'Ctrl+Alt+' + (i + 1) : '', run: () => D.applyWorkspace(w.id) })) : []),
@@ -109,6 +109,7 @@
         { label: '🖼 이미지·영상', run: lib('images') }, { label: '📷 카메라', run: lib('cameras') }, { label: '🔊 음악', run: lib('audio') },
         { label: '🕒 오버레이 (로고·시계·카운트다운·배너)', run: lib('overlays') }, { label: '🎨 템플릿', run: lib('templates') },
       ] },
+      { label: '🎬 미디어 (영상·음악 바로 재생)', run: () => window.BCDock && window.BCDock.show('media') },
       { label: '⏱ 무대·설교 타이머', run: () => window.BCDock && window.BCDock.show('stage') },
       { label: '🎛 스트림덱 · 외부 단추 연결…', run: () => window.BCTrigger && window.BCTrigger.open() },
       '-',

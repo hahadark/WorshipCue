@@ -14,6 +14,7 @@
     { id: 'quick', title: '빠른 설정', node: () => $('#quick') },
     { id: 'library', title: '라이브러리', node: () => $('#panelLibrary') },
     { id: 'stage', title: '무대·타이머', node: () => $('#panelStage') },
+    { id: 'media', title: '미디어', node: () => $('#panelMedia') },
     { id: 'preview', title: '미리보기', node: () => $('#panelPreview') },
     { id: 'live', title: 'LIVE', node: () => $('#panelLive') },
   ];
@@ -70,6 +71,7 @@
     api.addPanel({ id: 'quick', component: 'quick', title: byId.quick.title, position: { referencePanel: 'main', direction: 'below' } });
     api.addPanel({ id: 'library', component: 'library', title: byId.library.title, position: { referencePanel: 'quick', direction: 'within' } });
     api.addPanel({ id: 'stage', component: 'stage', title: byId.stage.title, position: { referencePanel: 'library', direction: 'within' } });
+    api.addPanel({ id: 'media', component: 'media', title: byId.media.title, position: { referencePanel: 'stage', direction: 'within' } });
     const W = $('#dock').clientWidth || 1600, H = $('#dock').clientHeight || 800;
     try {
       api.getPanel('cue').group.api.setSize({ width: 300 });

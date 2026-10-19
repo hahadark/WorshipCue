@@ -160,6 +160,7 @@
     if (window.BCCue) await window.BCCue.init();
     if (window.BCLib) window.BCLib.init();
     if (window.BCStage) window.BCStage.init();
+    if (window.BCMedia) window.BCMedia.init();
     if (window.BCGrid) window.BCGrid.init();
     if (window.BCMenu) window.BCMenu.init();
     if (window.BCRemote) window.BCRemote.init();
@@ -306,6 +307,11 @@
   });
 
   // ---------------- 미리보기 ----------------
+  /** 미디어 패널 등: 슬라이드를 미리보기 없이 바로 송출 */
+  app.sendSlidesLive = async (title, slides, index = 0) => {
+    if (window.BCLib) window.BCLib.audio.onVisualSend();
+    return cmd('sendLive', { passage: passageMeta({ title, verses: [] }, title), slides, index });
+  };
   function passageMeta(p, query) {
     const v = p.verses || [];
     const cue = app.preview && app.preview.passage === p ? app.preview.cue : null;

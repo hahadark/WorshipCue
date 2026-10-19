@@ -470,6 +470,12 @@
       /** 다른 화면을 송출할 때: '페이드아웃' 표시된 음악이면 줄이며 끄기 */
       onVisualSend() { if (cur.url && cur.fadeOnLeave && !el.paused && Date.now() - cur.startedAt > 2000) fadeOut(2500); }, // 방금(F6 으로) 시작한 음악은 그대로
       setVolumeIf(url, v) { if (cur.url === url) { cur.base = v; el.volume = v; render(); } },
+      // 미디어 패널
+      toggle() { if (!cur.url) return; if (el.paused) el.play(); else el.pause(); },
+      seek(frac) { if (el.duration) el.currentTime = Math.max(0, Math.min(1, frac)) * el.duration; },
+      setVolume(v) { clearInterval(cur.fading); cur.base = v; el.volume = v; render(); },
+      setLoop(on) { el.loop = !!on; },
+      info: () => ({ url: cur.url, title: cur.title, paused: el.paused, currentTime: el.currentTime, duration: el.duration || 0, volume: cur.base, loop: el.loop }),
       state: () => ({ playing: !!cur.url && !el.paused, title: cur.title, url: cur.url, volume: el.volume }),
     };
   })();
@@ -590,6 +596,7 @@
     onOverlays: () => { if (st.tab === 'overlays') drawOverlays(); },
     onSettings: what => { if (what === 'templates' && st.tab === 'templates') drawTemplates(); if (what === 'settings' && (st.tab === 'images' || st.tab === 'audio' || st.tab === 'hymns')) show(st.tab); },
     onSongs: () => { if (st.tab === 'songs') drawSongs(); },
+    addToCue: (type, extra, label) => addToCue(type, extra, label),
     onCameraPrefs: () => { if (st.tab === 'cameras' && root()) setTimeout(() => showCamQuality(root(), st.cams || []), 800); },
   };
 })();

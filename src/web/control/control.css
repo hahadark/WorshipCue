@@ -847,3 +847,24 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 .cg-line .cg-txt { flex: 1; white-space: pre-line; font-size: 14px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
 .cg-line .sg-edit { top: 3px; right: 4px; }
 .cg-line:hover .sg-edit { opacity: 1; }
+
+/* 🎬 미디어 패널 */
+#panelMedia { height: 100%; }
+.md { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.md-now { border-bottom: 1px solid var(--line); padding: 8px 10px; background: var(--panel2, var(--panel)); }
+.md-idle { padding: 6px 0; font-size: 13px; }
+.md-head { margin-bottom: 6px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-kind { font-size: 12px; color: var(--live); font-weight: 700; margin-right: 4px; }
+.md-ctl { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.md-ctl button { min-width: 38px; }
+.md-seek, .md-vol { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.md-seek input { flex: 1; }
+.md-seek [data-time] { font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+.md-vol input { width: 120px; }
+.md-note { font-size: 11px; margin-left: auto; }
+.md-bar { display: flex; gap: 6px; align-items: center; padding: 8px 10px; }
+.md-list { flex: 1; min-height: 0; overflow: auto; padding: 0 10px 10px; }
+.md-row { display: flex; gap: 8px; align-items: center; padding: 5px 6px; border-bottom: 1px solid var(--line-soft, var(--line)); cursor: pointer; }
+.md-row:hover { background: var(--hover); }
+.md-row .md-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.md-row button { padding: 3px 9px; font-size: 12px; }

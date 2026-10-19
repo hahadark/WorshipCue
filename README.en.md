@@ -47,6 +47,7 @@ The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Ver
 | Output | Sanctuary full screen + OBS full + OBS transparent lower third, each with its own template. Dissolve/cut transitions, logo, overlays (clock · countdown · banner), live background (camera · image · video), drawing/highlighting on the live screen. Turning off the second screen also hides OBS. |
 | 🌐 LAN output | When presentation and streaming run on different PCs, the streaming PC's OBS opens only the output screens (key required). |
 | 🎛 OBS dock | A control panel inside OBS: current/next slide, prev · next · hide, send cue items (fixed button positions), 🖼 image/score slides top-right, 🖥 full slide. |
+| 🎬 Media panel | Play videos/audio from the library straight to the screen without adding them to the cue sheet, with one playback bar: play/pause · restart · stop · position · time remaining · volume · loop · fade-out. |
 | 📷 Camera | Resolution (720p–4K), frame rate, brightness/contrast/saturation, mirror, live quality readout. |
 | Stage display | Current/next slide, clock, sermon timer, messages, item notes for the preacher and worship team. |
 | Phone remote | Next · previous · hide, jump to verses, send cue items, stage messages — from any phone on the same Wi-Fi (PIN). |

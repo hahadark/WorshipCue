@@ -125,8 +125,17 @@
   function applyVideo(p) {
     const v = current && current.querySelector('video.bc-play');
     if (!v || !p.video || !p.slide || p.slide.kind !== 'video') return;
-    const o = p.slide.video || {};
+    const o = { ...(p.slide.video || {}) };
+    if (p.video.volume != null) o.volume = p.video.volume; // 미디어 패널에서 바꾼 소리 크기
+    if (p.video.loop != null) o.loop = p.video.loop;
     R.syncVideo(v, p.video, { sound: soundHere && o.sound, volume: o.volume ?? 1, loop: !!o.loop });
+    // 페이드아웃: 소리와 화면을 서서히
+    clearInterval(v._fadeT);
+    if (p.video.fade) {
+      const f = p.video.fade, skew = Date.now() - (p.video.now || Date.now()), base = v.volume;
+      const step = () => { const k = Math.max(0, 1 - (Date.now() - skew - f.at) / f.ms); v.volume = base * k; if (current) current.style.opacity = String(k); if (k <= 0) clearInterval(v._fadeT); };
+      step(); v._fadeT = setInterval(step, 50);
+    } else if (current) current.style.opacity = '';
     if (!v.dataset.bound) {
       v.dataset.bound = '1';
       v.addEventListener('loadedmetadata', () => { if (lastPayload) R.syncVideo(v, lastPayload.video, { sound: soundHere && o.sound, volume: o.volume ?? 1, loop: !!o.loop }); });

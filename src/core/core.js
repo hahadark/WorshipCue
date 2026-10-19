@@ -205,7 +205,7 @@ class WorshipCueCore extends EventEmitter {
   }
   videoPayload() {
     const v = this.video;
-    return v ? { key: v.key, playing: v.playing, offset: v.offset, at: v.at, now: Date.now() } : null;
+    return v ? { key: v.key, playing: v.playing, offset: v.offset, at: v.at, now: Date.now(), ...(v.volume != null ? { volume: v.volume } : {}), ...(v.loop != null ? { loop: v.loop } : {}), ...(v.fade ? { fade: v.fade } : {}) } : null;
   }
   videoPosition() {
     const v = this.video;
@@ -842,16 +842,32 @@ WorshipCueCore.prototype.commands = {
     this.emit('live');
     return { message: this.stage.message };
   },
-  /** 영상 재생 조작: play | pause | toggle | restart | seek(time) */
+  /** 영상 재생 조작: play | pause | toggle | restart | seek(time) | volume(value) | loop(on) | fadeout(ms) | stop */
   videoControl(a) {
     const v = this.video;
     if (!v) throw new Error('송출 중인 영상이 없습니다.');
     const pos = this.videoPosition();
     const act = String(a.action || '');
+    if (['play', 'toggle', 'restart', 'seek'].includes(act)) { v.fade = null; clearTimeout(this._fadeT); } // 페이드 중에 다시 재생하면 페이드 취소
     if (act === 'play' || (act === 'toggle' && !v.playing)) Object.assign(v, { playing: true, offset: pos, at: Date.now(), ended: false });
     else if (act === 'pause' || act === 'toggle') Object.assign(v, { playing: false, offset: pos, at: Date.now() });
     else if (act === 'restart') Object.assign(v, { playing: true, offset: 0, at: Date.now(), ended: false });
     else if (act === 'seek') Object.assign(v, { offset: Math.max(0, Number(a.time) || 0), at: Date.now(), ended: false });
+    else if (act === 'volume') v.volume = Math.max(0, Math.min(1, Number(a.value)));
+    else if (act === 'loop') v.loop = !!a.on;
+    else if (act === 'fadeout' || act === 'stop') {
+      // 페이드아웃: 출력 화면이 소리·화면을 줄이고, 끝나면 멈추고 화면을 숨긴다 (정지 = 바로)
+      const ms = act === 'stop' ? 0 : Math.max(300, Math.min(10000, Number(a.ms) || 3000));
+      v.fade = ms ? { at: Date.now(), ms } : null;
+      clearTimeout(this._fadeT);
+      const key = v.key;
+      this._fadeT = setTimeout(() => {
+        if (!this.video || this.video.key !== key) return;
+        Object.assign(this.video, { playing: false, offset: 0, at: Date.now(), fade: null, ended: true });
+        this.presentation.clear();
+        this.emit('live');
+      }, ms);
+    }
     else throw new Error('알 수 없는 영상 조작입니다.');
     this.emit('live');
     return this.videoPayload();
