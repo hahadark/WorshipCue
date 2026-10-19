@@ -85,6 +85,7 @@
 
   function render() {
     const el = $('#cueList');
+    if (window.BCGrid) setTimeout(() => window.BCGrid.update(), 0); // 전체 보기: 큐시트가 바뀌면 다시
     if (!st.cue) { el.innerHTML = ''; return; }
     const live = app.state.live;
     const airIdx = live.hasLive && live.passage && live.passage.cueId === st.cue.id ? live.passage.cueIndex : -1;
@@ -1036,6 +1037,26 @@
     item: i => (st.cue ? st.cue.items[i] : null),
     tplOf: i => (st.cue && st.cue.items[i] ? itemTpl(st.cue.items[i]) : null),
     editorBase: i => editorBase(i),
+    /** 전체 보기(격자)용: 열린 큐시트 · i 번째 순서의 슬라이드 (미리보기와 같은 순서·꾸미기) */
+    cueInfo: () => (st.cue ? { id: st.cue.id, items: st.cue.items } : null),
+    slidesFor: async i => {
+      const it = st.cue && st.cue.items[i];
+      if (!it || it.type === 'audio') return [];
+      if (it.type === 'bible') return decorate(it, await editorBase(i));
+      let meta = null;
+      if (it.type === 'hymn') meta = await hymnMeta(it);
+      return buildSlides(it, meta);
+    },
+    /** i 번째 순서의 k 번째 슬라이드를 미리보기로 (바로 송출 모드여도 순서를 바꿀 때 첫 장을 내보내지 않게) */
+    previewAt: async (i, k) => {
+      const same = app.preview && app.preview.cue && st.cue && app.preview.cue.id === st.cue.id && app.preview.cue.index === i;
+      if (!same) {
+        app.holdDirect = (app.holdDirect || 0) + 1;
+        try { if (!(await previewItem(i))) return false; } finally { app.holdDirect--; }
+      }
+      app.setPreviewIndex(k);
+      return true;
+    },
     decorate: (it, slides, o) => decorate(it, slides, o),
     /** 슬라이드 편집기: 항목을 고치고 저장·미리보기 갱신 (가사를 고쳤으면 라이브러리 찬양에도) */
     updateItem: (i, fn, { lyrics = false } = {}) => {
