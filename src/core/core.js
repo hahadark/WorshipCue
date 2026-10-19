@@ -212,6 +212,30 @@ class WorshipCueCore extends EventEmitter {
     return v ? v.offset + (v.playing ? (Date.now() - v.at) / 1000 : 0) : 0;
   }
 
+  /**
+   * 지금 예배당 화면에 떠 있는 것 (FreeShow 처럼 층마다 보여 주고 따로 끄기)
+   * bgs: 배경 [{ src: media|slide|template, type: camera|video|image|color, label }] · bgHidden: 배경 끔
+   * content: 송출 중인 슬라이드 { kind, title, index, count, visible } · overlays: 켜진 오버레이 이름 · logo · draw
+   */
+  screenPayload() {
+    const L = this.layers;
+    const live = this.presentation.live;
+    const slide = live ? live.slides[live.index] : null;
+    const kindOf = u => (!u ? '' : u.startsWith('#') ? 'color' : u.startsWith('camera:') ? 'camera' : /\.(mp4|webm|mov|m4v|ogv|mkv)(\?|#|$)/i.test(u) ? 'video' : 'image');
+    const bgs = [];
+    if (L.media) bgs.push({ src: 'media', type: L.media.type, label: L.media.label || '' });
+    if (slide && slide.bg && kindOf(slide.bg) !== 'color') bgs.push({ src: 'slide', type: kindOf(slide.bg), label: (live.passage && (live.passage.itemTitle || live.passage.title)) || '' });
+    const t = this.templateFor('main');
+    const b = (t && t.background) || {};
+    if (['image', 'video', 'camera'].includes(b.type)) bgs.push({ src: 'template', type: b.type, label: t.name || '' });
+    const ov = this.library.overlays().filter(o => o.on).map(o => o.name || o.text || '오버레이');
+    return {
+      bgs, bgHidden: !!L.hideBg,
+      content: live ? { kind: slide ? slide.kind || 'text' : '', title: (live.passage && (live.passage.itemTitle || live.passage.title)) || '', index: live.index, count: live.slides.length, visible: !!live.visible } : null,
+      overlays: ov, logo: !!L.logo, draw: !!(this.draw && (this.draw.strokes.length || this.draw.spot)),
+    };
+  }
+
   templateFor(output) {
     const s = this.settings.get();
     // 송출 중인 순서에 따로 정한 템플릿이 있으면 그것
@@ -272,6 +296,7 @@ class WorshipCueCore extends EventEmitter {
       live: { ...this.presentation.getLiveState(), video: this.videoPayload() },
       stage: this.stagePayload(),
       layers: this.layersPayload('main'),
+      screen: this.screenPayload(),
       preview: this.presentation.preview ? {
         passage: this.presentation.preview.passage,
         index: this.presentation.preview.index,

@@ -85,7 +85,7 @@
   // ---------------- 실시간 연결 ----------------
   function connect() {
     const es = new EventSource('/events?client=control');
-    es.addEventListener('draw', e => { try { window.BCDraw && window.BCDraw.onDraw(JSON.parse(e.data)); } catch { /* 무시 */ } });
+    es.addEventListener('draw', e => { try { const d = JSON.parse(e.data); if (app.state && app.state.screen) app.state.screen.draw = !!((d.strokes && d.strokes.length) || d.spot); renderScreenLayers(); window.BCDraw && window.BCDraw.onDraw(d); } catch { /* 무시 */ } });
     es.addEventListener('state', e => {
       const first = !app.state;
       app.state = JSON.parse(e.data);
@@ -97,6 +97,7 @@
       if (first) init2();
       renderLive();
       renderStatus();
+      renderScreenLayers();
       markResults();
       if (window.BCCue && !first) window.BCCue.onLive();
     });
@@ -116,6 +117,7 @@
       renderStudio();
       renderQuick(false);
       if (window.BCSettings) window.BCSettings.onState(d.what);
+      renderScreenLayers();
     });
     es.addEventListener('update', e => {
       const u = JSON.parse(e.data);
@@ -1073,13 +1075,61 @@
   };
   function renderLayerButtons() {
     const L = app.state.layers || {};
-    $('#bBg').classList.toggle('active', !!L.hideBg); $('#bBg').textContent = L.hideBg ? '배경 보이기' : '배경 지우기';
+    $('#bBg').classList.toggle('active', !!L.hideBg); $('#bBg').textContent = L.hideBg ? '배경 다시 켜기' : '배경 끄기';
     $('#bOvOff').classList.toggle('active', !!L.overlaysOff); $('#bOvOff').textContent = L.overlaysOff ? '오버레이 다시 켜기' : '오버레이 끄기';
     $('#bLogo').classList.toggle('active', !!L.logo); $('#bLogo').textContent = L.logo ? '로고 화면 끄기' : '로고 화면';
-    const more = [L.hideBg && '배경 숨김', L.overlaysOff && '오버레이 꺼짐', L.logo && '로고 화면'].filter(Boolean);
+    const more = [L.hideBg && '배경 꺼짐', L.overlaysOff && '오버레이 꺼짐', L.logo && '로고 화면'].filter(Boolean);
     $('#bMore').classList.toggle('active', more.length > 0);
     $('#bMore').textContent = more.length ? `${more.join(' · ')} ▾` : '지우기 ▾';
   }
+  // ---------------- 지금 화면 (층마다 끄기) ----------------
+  const LY_ICON = { camera: '📷', video: '🎞', image: '🖼', color: '🎨' };
+  const LY_SRC = { media: '송출 배경', slide: '순서 배경', template: '템플릿 배경' };
+  const LY_KIND = { text: '📝', video: '🎬', camera: '📷', image: '🖼', score: '🎼', blank: '⬛', slideshow: '🎞', title: '🏷' };
+  let lyHtml = '';
+  function renderScreenLayers() {
+    const box = $('#lvLayers');
+    if (!box || !app.state) return;
+    const S = app.state.screen || {};
+    const chip = (act, cls, text, btn, title) => `<button type="button" class="ly ly-${cls}" data-ly="${act}" title="${esc(title)}"><span class="ly-t">${esc(text)}</span><span class="ly-x">${esc(btn)}</span></button>`;
+    const out = [];
+    const c = S.content;
+    if (c) {
+      const name = `${LY_KIND[c.kind] || '📝'} ${c.title || ''}${c.count > 1 ? ` ${c.index + 1}/${c.count}` : ''}`;
+      out.push(c.visible ? chip(c.kind === 'video' ? 'video' : 'content', 'on', name, '✕', c.kind === 'video' ? '영상 멈추고 지우기' : '슬라이드 지우기 (F10)') : chip('content', 'off', `${name} · 숨김`, '보이기', '슬라이드 다시 보이기 (F10)'));
+    }
+    for (const b of S.bgs || []) if (b.src === 'media') out.push(chip('media', 'on', `${LY_ICON[b.type] || '🖼'} ${LY_SRC.media}${b.label ? ': ' + b.label : ''}`, '✕', '송출 배경 끄기 (카메라는 닫힘)'));
+    const other = (S.bgs || []).filter(b => b.src !== 'media');
+    if (S.bgHidden) out.push(chip('bgon', 'off', '🖼 배경 꺼짐', '다시 켜기', '배경(순서·템플릿 배경)을 다시 켭니다'));
+    else if (other.length) out.push(chip('bgoff', 'on', other.map(b => `${LY_ICON[b.type] || '🖼'} ${LY_SRC[b.src]}`).join(' · '), '✕', '배경 끄기 — 다시 켤 때까지 어느 순서에서도 배경 없이 (영상은 멈추고 카메라는 닫힘)'));
+    if (S.overlays && S.overlays.length) out.push(chip('ov', 'on', `✨ ${S.overlays.join(', ')}`, '✕', '오버레이 끄기'));
+    if (S.logo) out.push(chip('logo', 'on', '🛡 로고 화면', '✕', '로고 화면 끄기'));
+    if (S.draw) out.push(chip('draw', 'on', '✏ 그리기', '✕', '그린 것 지우기'));
+    const au = window.BCLib && window.BCLib.audio && window.BCLib.audio.info ? window.BCLib.audio.info() : null;
+    if (au && au.url && !au.paused) out.push(chip('audio', 'on', `🔊 ${au.title || '음악'}`, '✕', '음악 줄이며 멈춤'));
+    const html = `<span class="ly-h">지금 화면</span>${out.length ? out.join('') : '<span class="muted ly-empty">비어 있음</span>'}`;
+    if (html === lyHtml) return;
+    lyHtml = html;
+    box.innerHTML = html;
+  }
+  app.renderScreenLayers = renderScreenLayers;
+  setInterval(renderScreenLayers, 1000); // 조작 PC 음악 (재생·멈춤)
+  $('#lvLayers').addEventListener('click', e => {
+    const b = e.target.closest('[data-ly]');
+    if (!b) return;
+    const act = b.dataset.ly;
+    if (act === 'content') cmd('toggleLive');
+    else if (act === 'video') cmd('videoControl', { action: 'stop' });
+    else if (act === 'media') cmd('setBackgroundMedia', { media: null });
+    else if (act === 'bgoff') cmd('toggleBackground', { on: true });
+    else if (act === 'bgon') cmd('toggleBackground', { on: false });
+    else if (act === 'ov') cmd('toggleOverlaysOff');
+    else if (act === 'logo') cmd('toggleLogoScreen', { on: false });
+    else if (act === 'draw') cmd('drawClear');
+    else if (act === 'audio' && window.BCLib) window.BCLib.audio.fadeOut(1500);
+    setTimeout(renderScreenLayers, 300);
+  });
+
   $('#btnSettings').onclick = () => window.BCSettings.open();
   $('#mode').onchange = e => cmd('updateSettings', { patch: { searchMode: e.target.value } });
   $('#navMode').onchange = e => cmd('updateSettings', { patch: { navMode: e.target.value } });

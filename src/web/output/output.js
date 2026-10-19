@@ -165,9 +165,17 @@
     mediaEl = el;
     requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = '1'; }));
   }
+  let bgOff = false;
   function applyLayers(p) {
     const L = p.layers || {};
     stage.classList.toggle('hide-bg', !!L.hideBg);
+    // 배경 끄기: 가리기만 하지 않고 배경 영상은 멈추고(카메라는 render.js 가 몇 초 뒤 닫음), 다시 켜면 이어서
+    const bgVids = () => stage.querySelectorAll('.bc-bg video, video.bc-slidebg, .bc-slidebg video, .bc-medialayer video');
+    if (!!L.hideBg !== bgOff) {
+      bgOff = !!L.hideBg;
+      if (bgOff) bgVids().forEach(v => { if (!v.dataset.cam) v.pause(); });
+      else { R.attachCameras(stage); bgVids().forEach(v => { if (!v.dataset.cam) v.play().catch(() => {}); }); }
+    }
     applyMedia(L.media || null);
     const want = L.logo ? L.logoImage : '';
     if (logoEl && (!want || logoEl.dataset.img !== want)) { const old = logoEl; logoEl = null; old.style.opacity = '0'; setTimeout(() => old.remove(), 450); }

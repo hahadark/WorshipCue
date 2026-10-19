@@ -409,7 +409,7 @@
   }
   if (typeof setInterval === 'function' && typeof document !== 'undefined') setInterval(() => {
     for (const id of [...opened.keys()]) {
-      const used = [...document.querySelectorAll('video[data-cam]')].some(v => v.dataset.cam === id && v.isConnected && !v.closest('.bc-measure'));
+      const used = [...document.querySelectorAll('video[data-cam]')].some(v => v.dataset.cam === id && v.isConnected && !v.closest('.bc-measure') && !(v.closest('.bc-stage.hide-bg') && v.closest('.bc-bg, .bc-slidebg, .bc-medialayer')));
       if (used) { camIdle.delete(id); continue; }
       if (!camIdle.has(id)) camIdle.set(id, Date.now());
       else if (Date.now() - camIdle.get(id) > 4000) closeCamera(id);
@@ -450,6 +450,7 @@
     }
   }
   function attachCamera(v, deviceId) {
+    if (!v.dataset.cam) v.dataset.cam = deviceId || '';
     // 크기 재기용 숨은 무대에는 붙이지 않는다
     setTimeout(() => {
       if (!v.isConnected || v.closest('.bc-measure')) return;
@@ -613,7 +614,7 @@
     }
     if (opts.overlays && opts.overlays.length) stage.appendChild(buildOverlays(opts.overlays, t));
     if (opts.layers && opts.layers.media) stage.insertBefore(buildMediaLayer(opts.layers.media), stage.children[1] || null);
-    if (opts.layers && opts.layers.hideBg) { stage.firstChild.style.opacity = '0'; stage.querySelectorAll('.bc-slidebg, .bc-medialayer').forEach(x => { x.style.opacity = '0'; }); }
+    if (opts.layers && opts.layers.hideBg) { stage.classList.add('hide-bg'); stage.firstChild.style.opacity = '0'; stage.querySelectorAll('.bc-slidebg, .bc-medialayer').forEach(x => { x.style.opacity = '0'; }); }
     if (opts.layers && opts.layers.logo) stage.appendChild(buildLogoScreen(opts.layers.logoImage));
     scaleStage(stage, container, t);
     // 이전 화면은 새 화면의 그림이 준비될 때까지 뒤에 둔다

@@ -884,3 +884,14 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 .lw-bugs { background: #ff3b30; } .lw-genie { background: #1f8dd6; } .lw-melon { background: #00cd3c; }
 .lw-edit textarea { font-family: inherit; }
 @media (max-width: 760px) { .lw-body { grid-template-columns: 1fr; } }
+
+/* 지금 화면: 층마다 끄기 (LIVE 아래) */
+.lv-layers { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 6px; min-height: 30px; border-top: 1px solid var(--line-soft, var(--line)); }
+.lv-layers .ly-h { font-size: 11px; color: var(--muted); margin-right: 2px; }
+.lv-layers .ly-empty { font-size: 12px; }
+.lv-layers .ly { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 2px 4px 2px 8px; border-radius: 12px; font-size: 12px; line-height: 20px; }
+.lv-layers .ly-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.lv-layers .ly-x { padding: 0 6px; border-radius: 9px; background: rgba(127,127,127,.18); font-weight: 700; }
+.lv-layers .ly-on { border-color: var(--live, #e04b4b); }
+.lv-layers .ly-on:hover .ly-x { background: var(--live, #e04b4b); color: #fff; }
+.lv-layers .ly-off { opacity: .8; border-style: dashed; }
