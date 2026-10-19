@@ -1116,3 +1116,21 @@ test('성경·그림 순서: 덧붙인 슬라이드(extra)·건너뛰기(skip) �
   assert.equal(got.items[1].extra, undefined);
   assert.equal(got.items[1].edits, undefined);
 });
+
+test('가사 정리: 되풀이로 1절·프리코러스·후렴 나누기, 여러 곡 붙여넣기', () => {
+  const { arrange } = require('../src/core/lyricsweb');
+  const { parseSongText } = require('../src/core/songimport');
+  // 빈 줄 없이 줄만 있는 가사 (예시 가사)
+  const v1 = ['첫째 절 하나', '첫째 절 둘', '첫째 절 셋'], pre = ['다리 하나', '다리 둘'], ch = ['후렴 하나', '후렴 둘'], v2 = ['둘째 절 하나', '둘째 절 둘'];
+  const a = arrange([...v1, ...pre, ...ch, ...v2, ...pre, ...ch, ...ch].join('\n'));
+  assert.equal(a.arrangement, '1절 프리코러스 후렴 2절 프리코러스 후렴 후렴');
+  assert.match(a.lyrics, /^\[1절\]\n첫째 절 하나\n첫째 절 둘\n첫째 절 셋\n\n\[프리코러스\]/); // 3줄은 한 슬라이드
+  // 한 줄 되풀이(할렐루야 할렐루야)는 나누지 않고, 곡 끝까지 이어진 되풀이도 찾는다
+  const b = arrange('주님 사랑해\n주님 경배해\n할렐루야\n할렐루야\n주님 사랑해\n주님 경배해');
+  assert.equal(b.arrangement, '후렴 1절 후렴');
+  assert.match(b.lyrics, /\[1절\]\n할렐루야\n할렐루야/);
+  // 이미 이름표가 있으면 그대로
+  assert.equal(arrange('[1절]\n가\n\n[후렴]\n나').lyrics, '[1절]\n가\n\n[후렴]\n나');
+  const songs = parseSongText('# 곡 하나\n가사 가\n가사 나\n\n# 곡 둘\n가사 다');
+  assert.deepEqual(songs.map(s => s.title), ['곡 하나', '곡 둘']);
+});

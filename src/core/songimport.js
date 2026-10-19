@@ -131,6 +131,28 @@ function parsePowerPoint(file) {
   return [{ title, lyrics: slides.join('\n\n'), credit: '', arrangement: '' }];
 }
 
+/**
+ * 붙여넣은 글 → 찬양 목록. '# 제목' 줄마다 새 곡 (없으면 한 곡: 첫 줄이 짧으면 제목)
+ * 가사에 [1절] 같은 이름표가 없으면 되풀이를 찾아 구간·슬라이드로 정리 (lines 줄씩)
+ */
+function parseSongText(text, { title: fallback = '', lines = 2 } = {}) {
+  const { arrange } = require('./lyricsweb');
+  const src = String(text || '').replace(/\r/g, '');
+  const parts = [];
+  if (/^#\s*\S/m.test(src)) {
+    for (const chunk of src.split(/^(?=#\s*\S)/m)) {
+      const m = /^#\s*(.+)\n?([\s\S]*)$/.exec(chunk.trim());
+      if (m) parts.push({ title: m[1].trim(), body: m[2] });
+    }
+  } else {
+    const ls = src.trim().split('\n');
+    let title = fallback;
+    if (!title && ls.length > 2 && ls[0].trim().length <= 40 && !ls[1].trim()) title = ls.shift().trim();
+    parts.push({ title: title || (ls.find(l => l.trim()) || '').trim().slice(0, 40), body: ls.join('\n') });
+  }
+  return parts.map(x => { const r = arrange(x.body, { lines }); return { title: x.title.slice(0, 200), lyrics: r.lyrics, credit: '', arrangement: r.arrangement }; }).filter(x => x.title && x.lyrics.trim());
+}
+
 /** 파일 하나 → 찬양 목록 (보통 한 곡) */
 function parseSongFile(file) {
   const ext = path.extname(file).toLowerCase();
@@ -146,10 +168,10 @@ function parseSongFile(file) {
     return parseOpenLyrics(text, file);
   }
   if (['.cho', '.chordpro', '.chopro', '.crd'].includes(ext) || /^\{\s*(title|t|soc|start_of_chorus)\b/im.test(text)) return parseChordPro(text, file);
-  if (ext === '.txt') return [{ title: base(file), lyrics: clean(text), credit: '', arrangement: '' }];
+  if (ext === '.txt') return /^#\s*\S/m.test(text) ? parseSongText(text) : [{ title: base(file), lyrics: clean(text), credit: '', arrangement: '' }]; // '# 제목' 이 있으면 여러 곡
   throw new Error('읽을 수 없는 형식입니다 (OpenLP .xml · ChordPro .cho · ProPresenter 6 .pro6 · PPT · .txt).');
 }
 
 const SONG_EXT = /\.(xml|cho|chordpro|chopro|crd|pro6|pro|pptx|ppsx|ppt|pps|txt)$/i;
 
-module.exports = { parseSongFile, parseOpenLyrics, parseChordPro, parsePro6, rtfToText, labelOf, SONG_EXT };
+module.exports = { parseSongFile, parseSongText, parseOpenLyrics, parseChordPro, parsePro6, rtfToText, labelOf, SONG_EXT };

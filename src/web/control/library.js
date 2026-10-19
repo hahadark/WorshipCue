@@ -87,9 +87,17 @@
 
   // ---------------- 찬양 ----------------
   async function drawSongs() {
-    bar(`<input type="text" data-q style="flex:1"><button data-new title="새 찬양 가사 입력">＋ 새 찬양</button><button data-import title="OpenLP · ChordPro · ProPresenter 6 · PPT · txt 파일에서 찬양 가져오기 (파일·폴더를 이 탭에 끌어다 놓아도 됩니다)">📥 가져오기…</button>`);
+    bar(`<input type="text" data-q style="flex:1"><button data-new title="새 찬양 가사 입력">＋ 새 찬양</button><button data-web title="벅스 · 지니 · 멜론에서 가사를 찾아 찬양 슬라이드로 (한 곡씩)">🌐 가사 찾기</button><button data-import title="파일 · 폴더 통째로 · 여러 곡 붙여넣기 (파일·폴더를 이 탭에 끌어다 놓아도 됩니다)">📥 가져오기 ▾</button>`);
     root().querySelector('[data-new]').onclick = () => editSong(null);
-    root().querySelector('[data-import]').onclick = () => pickImport();
+    root().querySelector('[data-web]').onclick = () => webLyrics(st.q.songs || '');
+    root().querySelector('[data-import]').onclick = e => {
+      const r = e.currentTarget.getBoundingClientRect();
+      window.BCCtx.show(r.left, r.bottom + 2, [
+        { label: '📄 파일 고르기… (OpenLP · ChordPro · ProPresenter 6 · PPT · txt)', run: pickImport },
+        { label: '📁 폴더 통째로… (하위 폴더까지)', run: pickImportFolder },
+        { label: '📋 여러 곡 붙여넣기…', run: pasteSongs },
+      ]);
+    };
     searchInput('찬양 제목·가사로 찾기', drawSongs);
     const r = await cmd('listSongs', { query: st.q.songs || '' });
     st.rows = r.ok ? r.result : [];
@@ -113,12 +121,37 @@
     };
     inp.click();
   }
+  async function pickImportFolder() {
+    const r = await cmd('pickFolder', { title: '찬양 파일이 있는 폴더 (하위 폴더까지 읽습니다)' });
+    if (!r.ok) return app.showMsg(r.error, 'error');
+    if (r.result) importSongs([r.result]);
+  }
+  /** 📋 여러 곡 붙여넣기: '# 제목' 줄마다 새 곡, 가사는 되풀이를 찾아 구간·슬라이드로 */
+  function pasteSongs() {
+    app.openModal('📋 여러 곡 붙여넣기', `<div class="form">
+      <span></span><div class="note">곡마다 맨 위에 <b># 제목</b> 줄을 넣고 가사를 붙여넣으세요. 한 곡이면 제목 줄 없이 붙여넣어도 됩니다 (첫 줄이 짧으면 제목).<br>
+        [1절] [후렴] 이름표가 없으면 되풀이되는 부분을 찾아 1절 · 후렴 등으로 나누고 슬라이드를 만듭니다.</div>
+      <label>가사</label><textarea id="psText" rows="16" placeholder="# 주님의 은혜 넘치네&#10;주 신실하심 놀라워&#10;…&#10;&#10;# 은혜&#10;내가 누려왔던 모든 것들이&#10;…"></textarea>
+      <label>슬라이드</label><div class="row-flex"><select id="psLines">${[1, 2, 3, 4].map(n => `<option value="${n}" ${n === 2 ? 'selected' : ''}>${n}줄씩</option>`).join('')}</select><span class="grow"></span><button id="psGo" class="primary">다음: 곡 확인</button></div>
+    </div>`);
+    $('#psText').focus();
+    $('#psGo').onclick = async () => {
+      const text = $('#psText').value;
+      if (!text.trim()) return app.showMsg('가사를 붙여넣으세요.', 'info');
+      const r = await cmd('parseSongText', { text, lines: +$('#psLines').value });
+      if (!r.ok) return app.showMsg(r.error, 'error');
+      if (!r.result.songs.length) return app.showMsg('곡을 찾지 못했습니다. 곡마다 # 제목 줄을 넣어 보세요.', 'error', 5000);
+      showImport(r.result);
+    };
+  }
   /** 파일·폴더 경로 → 미리 보기 → 저장 */
   async function importSongs(paths) {
-    app.showMsg('찬양 파일을 읽는 중…', 'info', 1500);
+    app.showMsg('찬양 파일을 읽는 중… (폴더가 크면 시간이 걸립니다)', 'info', 3000);
     const r = await cmd('importSongs', { paths });
     if (!r.ok) return app.showMsg(r.error, 'error');
-    const { songs, errors } = r.result;
+    showImport(r.result);
+  }
+  function showImport({ songs, errors }) {
     if (!songs.length) return app.showMsg(`가져올 찬양이 없습니다. ${errors.map(e => `${e.file}: ${e.error}`).join(' / ')}`, 'error', 7000);
     const dups = songs.filter(s => s.dup).length;
     app.openModal(`📥 찬양 가져오기 — ${songs.length}곡`, `<div class="imp">
@@ -137,6 +170,76 @@
       app.showMsg(`찬양 ${s.result.saved}곡을 라이브러리에 저장했습니다${s.result.skipped ? ` (같은 제목 ${s.result.skipped}곡 건너뜀)` : ''}.`, 'ok', 4000);
       show('songs');
     };
+  }
+
+  // ---------------- 🌐 웹에서 가사 찾기 (벅스 · 지니 · 멜론, 한 곡씩) ----------------
+  const LW = { results: [], cur: null, raw: '' };
+  function webLyrics(query) {
+    app.openModal('🌐 웹에서 가사 찾기', `<div class="lw">
+      <div class="row-flex"><input type="text" id="lwQ" placeholder="찬양 제목 (가수를 함께 쓰면 더 정확합니다)" style="flex:1" value="${esc(query)}"><button id="lwGo" class="primary">찾기</button>
+        <label class="tc-toggle"><input type="checkbox" data-site="bugs" checked>벅스</label><label class="tc-toggle"><input type="checkbox" data-site="genie" checked>지니</label><label class="tc-toggle"><input type="checkbox" data-site="melon" checked>멜론</label></div>
+      <div class="lw-body">
+        <div class="lw-list" id="lwList"><div class="empty">찬양 제목으로 찾으세요.</div></div>
+        <div class="lw-edit form" id="lwEdit">
+          <label>제목</label><input type="text" id="lwTitle">
+          <label>가사</label><textarea id="lwLyrics" rows="14" placeholder="왼쪽에서 곡을 고르면 가사를 가져와 1절 · 후렴 등으로 나눕니다."></textarea>
+          <label>부를 순서</label><input type="text" id="lwArr" placeholder="비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴">
+          <label>출처</label><input type="text" id="lwCredit">
+          <label>슬라이드</label><div class="row-flex"><select id="lwLines">${[1, 2, 3, 4].map(n => `<option value="${n}" ${n === 2 ? 'selected' : ''}>${n}줄씩</option>`).join('')}</select><span class="note" id="lwInfo"></span></div>
+          <span></span><div class="row-flex"><button id="lwSave" class="primary" disabled>라이브러리에 저장</button><button id="lwAdd" disabled>저장하고 큐시트에 넣기</button></div>
+        </div>
+      </div>
+      <div class="note">검색하고 고른 곡만 한 곡씩 가져옵니다. 사이트 구조가 바뀌면 못 읽을 수 있습니다 — 그때는 가사를 복사해 '📋 여러 곡 붙여넣기'로. 가사의 저작권은 권리자에게 있으니 예배 송출은 저작권 단체의 이용 조건을 확인하세요.</div>
+    </div>`);
+    const q = $('#lwQ');
+    q.focus(); q.select();
+    q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); lwSearch(); } };
+    $('#lwGo').onclick = lwSearch;
+    $('#lwList').onclick = e => { const r = e.target.closest('[data-i]'); if (r) lwPick(+r.dataset.i); };
+    $('#lwLines').onchange = async () => {
+      if (!LW.raw) return;
+      const r = await cmd('lyricsArrange', { text: LW.raw, lines: +$('#lwLines').value });
+      if (r.ok) { $('#lwLyrics').value = r.result.lyrics; $('#lwArr').value = r.result.arrangement; }
+    };
+    const save = async () => {
+      const r = await cmd('saveSong', { song: { title: $('#lwTitle').value.trim(), lyrics: $('#lwLyrics').value, credit: $('#lwCredit').value, arrangement: $('#lwArr').value, tags: '' } });
+      if (!r.ok) { app.showMsg(r.error, 'error'); return null; }
+      return r.result;
+    };
+    $('#lwSave').onclick = async () => { const s = await save(); if (s) { app.showMsg(`'${s.title}' 을(를) 찬양 라이브러리에 저장했습니다. 다른 곡도 찾을 수 있습니다.`, 'ok', 3000); if (st.tab === 'songs') drawSongs(); } };
+    $('#lwAdd').onclick = async () => { const s = await save(); if (s) { app.closeModal(); addToCue('song', { songId: s.id, title: s.title, lyrics: s.lyrics }, s.title); if (st.tab === 'songs') drawSongs(); } };
+    if (query.trim()) lwSearch();
+  }
+  async function lwSearch() {
+    const query = $('#lwQ').value.trim();
+    if (!query) return;
+    const sites = [...document.querySelectorAll('.lw [data-site]:checked')].map(x => x.dataset.site);
+    $('#lwList').innerHTML = '<div class="empty">찾는 중…</div>';
+    const r = await cmd('lyricsSearch', { query, sites });
+    if (!$('#lwList')) return;
+    if (!r.ok) { $('#lwList').innerHTML = `<div class="err-text">${esc(r.error)}</div>`; return; }
+    LW.results = r.result.results;
+    $('#lwList').innerHTML = (LW.results.length ? LW.results.map((x, i) => `<div class="lw-row" data-i="${i}"><span class="lw-site lw-${x.site}">${esc(x.siteName)}</span><span class="lw-t"><b>${esc(x.title)}</b><span class="muted">${esc(x.artist)}${x.album ? ' · ' + esc(x.album) : ''}</span></span></div>`).join('')
+      : '<div class="empty">찾는 곡이 없습니다. 제목을 줄여 보세요.</div>')
+      + (r.result.errors.length ? `<div class="warn-text note">못 읽은 사이트: ${esc(r.result.errors.join(' · '))}</div>` : '');
+  }
+  async function lwPick(i) {
+    const x = LW.results[i];
+    if (!x) return;
+    document.querySelectorAll('#lwList .lw-row').forEach(r => r.classList.toggle('sel', +r.dataset.i === i));
+    $('#lwInfo').textContent = '가사를 가져오는 중…';
+    const r = await cmd('lyricsGet', { site: x.site, id: x.id, lines: +$('#lwLines').value });
+    if (!$('#lwInfo')) return;
+    if (!r.ok) { $('#lwInfo').innerHTML = `<span class="err-text">${esc(r.error)}</span>`; return; }
+    if (!r.result.text) { $('#lwInfo').innerHTML = '<span class="warn-text">이 곡은 가사가 없습니다. 다른 사이트의 같은 곡을 눌러 보세요.</span>'; return; }
+    LW.raw = r.result.text;
+    LW.cur = x;
+    $('#lwTitle').value = x.title.replace(/\s*\((feat|Feat|FEAT)\.?[^)]*\)\s*$/, '').trim();
+    $('#lwLyrics').value = r.result.lyrics;
+    $('#lwArr').value = r.result.arrangement;
+    $('#lwCredit').value = [x.artist, x.siteName + ' 가사'].filter(Boolean).join(' · ');
+    $('#lwInfo').textContent = `${x.siteName} · 구간 ${(r.result.lyrics.match(/^\[/gm) || []).length}개 · 고친 뒤 저장하세요`;
+    $('#lwSave').disabled = $('#lwAdd').disabled = false;
   }
 
   async function addSong(id) {
@@ -589,7 +692,7 @@
   }
 
   window.BCLib = {
-    init, show, audio, tab: () => st.tab, liveMedia: m => liveMedia(m), onLayers: () => onLayers(), importSongs: paths => importSongs(paths),
+    init, show, audio, tab: () => st.tab, liveMedia: m => liveMedia(m), onLayers: () => onLayers(), importSongs: paths => importSongs(paths), webLyrics: q => webLyrics(q || ''), pasteSongs: () => pasteSongs(),
     pickImage: done => pickFile('image', f => done(f.url)),
     pickVideo: done => pickFile('image', f => done(f.url), { video: 'only' }),
     pickAudio: done => pickFile('audio', done),

@@ -870,3 +870,17 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 .md-row button { padding: 3px 9px; font-size: 12px; }
 .st-media { cursor: pointer; color: var(--live); font-weight: 600; }
 .st-media:hover { text-decoration: underline; }
+
+/* 🌐 웹에서 가사 찾기 */
+.lw { display: flex; flex-direction: column; gap: 8px; min-width: min(980px, 92vw); }
+.lw-body { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(320px, 1.4fr); gap: 10px; min-height: 420px; }
+.lw-list { overflow: auto; max-height: 60vh; border: 1px solid var(--line); border-radius: 6px; }
+.lw-row { display: flex; gap: 8px; align-items: center; padding: 6px 8px; cursor: pointer; border-bottom: 1px solid var(--line); }
+.lw-row:hover { background: var(--hover, rgba(127,127,127,.12)); }
+.lw-row.sel { background: var(--sel, rgba(80,140,255,.22)); }
+.lw-t { display: flex; flex-direction: column; min-width: 0; }
+.lw-t b, .lw-t .muted { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lw-site { flex: none; font-size: 11px; padding: 1px 6px; border-radius: 9px; color: #fff; }
+.lw-bugs { background: #ff3b30; } .lw-genie { background: #1f8dd6; } .lw-melon { background: #00cd3c; }
+.lw-edit textarea { font-family: inherit; }
+@media (max-width: 760px) { .lw-body { grid-template-columns: 1fr; } }

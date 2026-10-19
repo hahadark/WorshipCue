@@ -905,11 +905,24 @@ WorshipCueCore.prototype.commands = {
     const fs = require('fs');
     const { parseSongFile, SONG_EXT } = require('./songimport');
     const files = [];
-    for (const raw of (Array.isArray(a.paths) ? a.paths : []).slice(0, 200)) {
+    const MAX = 3000;
+    // 폴더는 하위 폴더까지 (깊이 8 · 최대 3000개)
+    const walk = (dir, depth) => {
+      let names = [];
+      try { names = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const d of names) {
+        if (files.length >= MAX) return;
+        if (d.name.startsWith('.') || d.name.startsWith('~$')) continue;
+        const f = path.join(dir, d.name);
+        if (d.isDirectory()) { if (depth < 8) walk(f, depth + 1); }
+        else if (SONG_EXT.test(d.name)) files.push(f);
+      }
+    };
+    for (const raw of (Array.isArray(a.paths) ? a.paths : []).slice(0, 500)) {
       const p = path.resolve(String(raw || ''));
       let st; try { st = fs.statSync(p); } catch { continue; }
-      if (st.isDirectory()) { for (const f of fs.readdirSync(p)) if (SONG_EXT.test(f) && files.length < 1000) files.push(path.join(p, f)); }
-      else files.push(p);
+      if (st.isDirectory()) walk(p, 0);
+      else if (files.length < MAX) files.push(p);
     }
     const have = new Set(this.library.listSongs('').map(s => s.title.replace(/\s+/g, '').toLowerCase()));
     const songs = [], errors = [];
@@ -917,12 +930,30 @@ WorshipCueCore.prototype.commands = {
       try {
         for (const s of parseSongFile(f)) {
           if (!String(s.lyrics || '').trim()) { errors.push({ file: path.basename(f), error: '가사가 없습니다.' }); continue; }
-          songs.push({ ...s, source: path.basename(f), dup: have.has(String(s.title).replace(/\s+/g, '').toLowerCase()) });
+          songs.push({ ...s, source: path.relative(path.dirname(path.resolve(String(a.paths[0] || f))), f) || path.basename(f), dup: have.has(String(s.title).replace(/\s+/g, '').toLowerCase()) });
         }
       } catch (e) { errors.push({ file: path.basename(f), error: e.message }); }
     }
     return { songs, errors };
   },
+  /** 붙여넣은 여러 곡 ('# 제목' 줄마다 새 곡) → 미리 보기 목록 (저장은 saveImportedSongs) */
+  parseSongText(a) {
+    const { parseSongText } = require('./songimport');
+    const songs = parseSongText(String(a.text || '').slice(0, 500000), { lines: Math.max(1, Math.min(6, +a.lines || 2)) });
+    const have = new Set(this.library.listSongs('').map(s => s.title.replace(/\s+/g, '').toLowerCase()));
+    return { songs: songs.map(s => ({ ...s, source: '붙여넣기', dup: have.has(s.title.replace(/\s+/g, '').toLowerCase()) })), errors: [] };
+  },
+  // ---- 웹에서 가사 찾기 (벅스·지니·멜론, 사용자가 고른 한 곡씩) ----
+  lyricsSearch(a) {
+    const sites = Array.isArray(a.sites) && a.sites.length ? a.sites : undefined;
+    return require('./lyricsweb').search(a.query, sites);
+  },
+  async lyricsGet(a) {
+    const L = require('./lyricsweb');
+    const text = await L.lyrics(String(a.site), String(a.id));
+    return { text, ...L.arrange(text, { lines: Math.max(1, Math.min(6, +a.lines || 2)) }) };
+  },
+  lyricsArrange(a) { return require('./lyricsweb').arrange(String(a.text || '').slice(0, 100000), { lines: Math.max(1, Math.min(6, +a.lines || 2)) }); },
   /** 가져온 찬양 저장 (같은 제목: skip = 건너뛰기 · new = 새로 하나 더 · replace = 덮어쓰기) */
   saveImportedSongs(a) {
     const list = (Array.isArray(a.songs) ? a.songs : []).slice(0, 1000);
