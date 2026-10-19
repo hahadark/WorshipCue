@@ -475,10 +475,12 @@
       const gc = s.kind !== 'bible' && window.BCGroup ? window.BCGroup.color(s.label) : '';
       return `<div class="srow ${k === app.preview.index ? 'in-pv' : ''}" data-k="${k}"${gc ? ` style="--gc:${gc}"` : ''}><span class="vn">${esc(s.label || String(k + 1))}</span><span class="stext">${body}</span></div>`;
     }).join('');
+    if (window.BCSlideEdit) window.BCSlideEdit.paintSel();
   }
   $('#results').addEventListener('click', e => {
     const r = e.target.closest('.srow');
     if (!r || !app.preview) return;
+    if (window.BCSlideEdit && window.BCSlideEdit.selClick(+r.dataset.k, e)) return; // Shift·Ctrl·끌기: 여러 장 고르기
     app.setPreviewIndex(+r.dataset.k);
     document.querySelectorAll('#results .srow').forEach(x => x.classList.toggle('in-pv', x === r));
   });

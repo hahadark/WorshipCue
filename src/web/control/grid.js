@@ -33,11 +33,14 @@
       if (e.target.closest('.sg-edit')) { if (window.BCSlideEdit) window.BCSlideEdit.openPreviewSlide(+c.dataset.k); return; }
       if (e.target.closest('.sg-add')) { if (window.BCSlideEdit) window.BCSlideEdit.quickOp(+c.dataset.k, 'add'); return; }
       if (e.target.closest('.sg-del')) { if (window.BCSlideEdit) window.BCSlideEdit.quickOp(+c.dataset.k, 'del'); return; }
+      if (window.BCSlideEdit && window.BCSlideEdit.selClick(+c.dataset.k, e)) return; // Shift·Ctrl·끌기: 여러 장 고르기
       app.setPreviewIndex(+c.dataset.k);
     });
     grid.addEventListener('dblclick', e => { const c = e.target.closest('.sg-cell'); if (c && !e.target.closest('.sg-edit, .sg-ops')) { app.setPreviewIndex(+c.dataset.k); app.sendPreview(); } });
+    if (window.BCSlideEdit) window.BCSlideEdit.attachSel(grid, '.sg-cell');
     grid.addEventListener('keydown', e => {
       if (!app.preview) return;
+      if (window.BCSlideEdit && window.BCSlideEdit.selKey(e)) { e.preventDefault(); e.stopPropagation(); return; }
       const cols = Math.max(1, Math.floor(grid.clientWidth / (size() + 12)));
       const d = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols }[e.key];
       if (d) { app.setPreviewIndex(app.preview.index + d); e.preventDefault(); }
@@ -98,6 +101,7 @@
       c.classList.toggle('on-air', k === liveIdx);
     });
     grid.querySelector('.sg-cell.in-pv')?.scrollIntoView({ block: 'nearest' });
+    if (window.BCSlideEdit) window.BCSlideEdit.paintSel();
   }
 
   // ---------- 전체 보기 (ProPresenter 방식) ----------

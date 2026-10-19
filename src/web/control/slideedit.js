@@ -264,7 +264,7 @@
     const k = key == null || key === '*' ? (S.key === '*' ? list.length - 1 : Number(S.key)) : Number(key);
     if (op !== 'add' && !(k >= 0)) return;
     if (op === 'del' && list.length <= 1) return app.showMsg('마지막 슬라이드는 지울 수 없습니다. 순서 자체를 지우세요.', 'info', 2500);
-    if (op === 'del' && !confirm(`${k + 1}번 슬라이드를 지울까요? (가사·내용에서도 지워집니다)`)) return;
+    if (op === 'del' && !S.noConfirm && !confirm(`${k + 1}번 슬라이드를 지울까요? (가사·내용에서도 지워집니다)`)) return;
     begin();
     if (it.type === 'title') {
       // 제목 순서: 장들을 '---' 글로 이어 같은 방법으로 고친 뒤 제목·부제·추가 슬라이드 칸으로 되돌린다
@@ -577,7 +577,7 @@
   }
 
   // ---------------- 열기·닫기 ----------------
-  async function open(i, key) {
+  async function open(i, key, keys) {
     const it = Cue() && Cue().item(i);
     if (!it) return app.showMsg('큐시트에서 순서를 먼저 고르세요.', 'info', 2000);
     if (!EDITABLE.includes(it.type)) return app.showMsg('음악 순서는 슬라이드가 없어 편집할 수 없습니다.', 'info', 3000);
@@ -589,6 +589,8 @@
     S.i = i; S.undo = []; S.redo = []; S.sel = '';
     const list = sources();
     S.key = key != null && (key === '*' || list.some(x => x.key === String(key))) ? String(key) : (list[0] ? list[0].key : '*');
+    const pre = (keys || []).map(String).filter(k => list.some(x => x.key === k));
+    if (pre.length > 1 && pre.includes(S.key)) { S.multi = new Set(pre); S.anchor = pre[0]; } else S.multi = new Set();
     const el = $('#se');
     el.style.top = (document.querySelector('.menubar')?.getBoundingClientRect().bottom || 0) + 'px';
     el.hidden = false;
@@ -597,11 +599,97 @@
     el.focus();
   }
   /** 미리보기의 k 번째 슬라이드를 편집 (격자·목록에서) */
+  const keyOf = s => (s ? (s.ekey ?? (s.src != null ? String(s.src) : undefined)) : undefined);
   function openPreviewSlide(k) {
     const p = app.preview;
     if (!p || !p.cue) return app.showMsg('큐시트 순서의 슬라이드만 편집할 수 있습니다.', 'info', 2500);
     const s = p.slides[k];
-    open(p.cue.index, s ? (s.ekey ?? (s.src != null ? s.src : undefined)) : undefined);
+    const many = selValid() && M.ks.size > 1 && M.ks.has(k);
+    const keys = many ? [...new Set([...M.ks].sort((a, b) => a - b).map(x => keyOf(p.slides[x])).filter(x => x != null))] : null;
+    open(p.cue.index, keyOf(s), keys);
+  }
+
+  // ---------------- 본문·편집 창(목록·격자)에서 여러 장 고르기 ----------------
+  // 클릭 = 그 슬라이드 미리보기 (한 장) · Shift+클릭 = 범위 · Ctrl+클릭 = 더하기/빼기 · 끌기 = 영역
+  const M = { i: -1, cue: '', ks: new Set(), anchor: -1, drag: null };
+  const selValid = () => { const p = app.preview; return !!(p && p.cue && p.cue.index === M.i && p.cue.id === M.cue); };
+  function selReset(k) { const p = app.preview; M.i = p && p.cue ? p.cue.index : -1; M.cue = p && p.cue ? p.cue.id : ''; M.ks = new Set(k == null ? [] : [k]); M.anchor = k == null ? -1 : k; }
+  const selMany = () => selValid() && M.ks.size > 1;
+  /** 목록·격자 클릭: true = 여러 장 고르기로 썼음 (미리보기 바꾸지 않기) */
+  function selClick(k, ev) {
+    if (M.drag && M.drag.moved) return true; // 끌어서 고른 직후의 클릭
+    if (!app.preview || !app.preview.cue) return false;
+    if (!selValid()) selReset(app.preview.index);
+    if (ev && ev.shiftKey) { const a = Math.min(M.anchor >= 0 ? M.anchor : k, k), b = Math.max(M.anchor >= 0 ? M.anchor : k, k); M.ks = new Set(Array.from({ length: b - a + 1 }, (_, n) => a + n)); paintSel(); return true; }
+    if (ev && (ev.ctrlKey || ev.metaKey)) { if (M.ks.has(k) && M.ks.size > 1) M.ks.delete(k); else M.ks.add(k); paintSel(); return true; }
+    selReset(k); paintSel();
+    return false;
+  }
+  function paintSel() {
+    const many = selMany();
+    document.querySelectorAll('#slideGrid .sg-cell, #results .srow').forEach(c => c.classList.toggle('msel', many && M.ks.has(+c.dataset.k)));
+    let bar = document.getElementById('mselBar');
+    if (!many) { if (bar) bar.hidden = true; return; }
+    if (!bar) {
+      document.querySelector('#panelMain .center-head').insertAdjacentHTML('afterend', '<div id="mselBar" class="msel-bar"></div>');
+      bar = document.getElementById('mselBar');
+      bar.addEventListener('click', e => { const b = e.target.closest('[data-ms]'); if (b) selAction(b.dataset.ms); });
+    }
+    const it = Cue() && Cue().item(M.i);
+    const del = it && CHUNK.includes(it.type) ? '✕ 지우기' : '⊘ 건너뛰기';
+    bar.hidden = false;
+    bar.innerHTML = `<b>고른 슬라이드 ${M.ks.size}장</b><button data-ms="edit" class="primary" title="고른 슬라이드를 함께 꾸미기 (Ctrl+E)">✎ 고른 ${M.ks.size}장 편집</button><button data-ms="del" title="${del} (Delete)">${del}</button><button data-ms="clear" title="한 장만 (Esc)">해제</button><span class="muted">Shift+클릭 범위 · Ctrl+클릭 더하기/빼기 · 끌어서 고르기</span>`;
+  }
+  async function selAction(a) {
+    if (!selMany()) return;
+    const p = app.preview;
+    if (a === 'clear') { selReset(p.index); return paintSel(); }
+    if (a === 'edit') return openPreviewSlide([...M.ks].sort((x, y) => x - y)[0]);
+    if (a === 'del') {
+      const it = Cue().item(p.cue.index);
+      if (!it || !EDITABLE.includes(it.type)) return;
+      const keys = [...new Set([...M.ks].map(k => keyOf(p.slides[k])).filter(k => k != null))];
+      const chunk = CHUNK.includes(it.type);
+      if (chunk && !confirm(`고른 슬라이드 ${keys.length}장을 지울까요? (가사·내용에서도 지워집니다)`)) return;
+      if (!$('#se').hidden) close();
+      S.i = p.cue.index; S.undo = []; S.redo = []; S.sel = ''; S.base = null;
+      if (!chunk) { S.base = await Cue().editorBase(S.i); if (!S.base.length) return; }
+      // 뒤에서부터 (앞을 지워도 뒤 번호가 밀리지 않게)
+      keys.sort((x, y) => (Number(String(y).replace(/\D/g, '')) || 0) - (Number(String(x).replace(/\D/g, '')) || 0));
+      S.quick = true; S.noConfirm = true;
+      try { for (const k of keys) { S.key = String(k); slideOp('del', String(k)); } } finally { S.quick = false; S.noConfirm = false; }
+      flush();
+      selReset(null);
+      paintSel();
+      app.showMsg(chunk ? `슬라이드 ${keys.length}장을 지웠습니다.` : `슬라이드 ${keys.length}장을 건너뛰기 (송출에서 빠짐) 했습니다.`, 'ok', 2500);
+    }
+  }
+  /** 끌어서 영역 고르기 (목록·격자) */
+  function attachSel(box, sel) {
+    box.addEventListener('pointerdown', ev => {
+      if (ev.button !== 0 || ev.target.closest('button, input, .sg-ops, .sg-edit')) { M.drag = null; return; }
+      const c = ev.target.closest(sel);
+      M.drag = c && app.preview && app.preview.cue ? { from: +c.dataset.k, moved: false } : null;
+    });
+    box.addEventListener('pointermove', ev => {
+      if (!M.drag || !(ev.buttons & 1)) return;
+      const c = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(sel);
+      if (!c || (!M.drag.moved && +c.dataset.k === M.drag.from)) return;
+      if (!M.drag.moved) { selReset(M.drag.from); M.drag.moved = true; }
+      const a = Math.min(M.drag.from, +c.dataset.k), b = Math.max(M.drag.from, +c.dataset.k);
+      M.ks = new Set(Array.from({ length: b - a + 1 }, (_, n) => a + n));
+      paintSel();
+    });
+  }
+  document.addEventListener('pointerup', () => { if (!M.drag) return; if (!M.drag.moved) M.drag = null; else setTimeout(() => { M.drag = null; }, 0); });
+  /** 목록·격자 키: Delete = 고른 것 지우기 · Esc = 해제 · Ctrl+A = 모두 */
+  function selKey(ev) {
+    if (!app.preview || !app.preview.cue) return false;
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'a') { selReset(app.preview.index); M.ks = new Set(app.preview.slides.map((_, k) => k)); paintSel(); return true; }
+    if (!selMany()) return false;
+    if (ev.key === 'Escape') { selReset(app.preview.index); paintSel(); return true; }
+    if (ev.key === 'Delete') { selAction('del'); return true; }
+    return false;
   }
   function close() {
     if (S.editing) S.editing.blur();
@@ -859,5 +947,8 @@
       setTimeout(() => inlineEdit('main'), 120);
     }
   }
-  window.BCSlideEdit = { init, open, openPreviewSlide, close, dropImage, menuFor, quickOp, isOpen: () => !$('#se').hidden };
+  // 가운데 목록(순서의 슬라이드 줄)에서도 끌기·키
+  { const res = document.getElementById('results'); if (res) { attachSel(res, '.srow'); res.addEventListener('keydown', e => { if (app.results && app.results.type === 'none' && selKey(e)) { e.preventDefault(); e.stopImmediatePropagation(); } }, true); } }
+  window.BCSlideEdit = { init, open, openPreviewSlide, close, dropImage, menuFor, quickOp, isOpen: () => !$('#se').hidden,
+    selClick, paintSel, attachSel, selKey, selAction, selMany, selCount: () => (selMany() ? M.ks.size : 0) };
 })();

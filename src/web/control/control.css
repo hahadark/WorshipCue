@@ -903,3 +903,9 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 .se-slide.msel { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--sunken)); }
 #seList { user-select: none; }
 .se-multi-note { margin: 2px 0 8px; color: var(--accent); }
+
+/* 본문·편집 창: 여러 장 고르기 */
+#slideGrid .sg-cell.msel, #results .srow.msel { outline: 3px solid var(--accent); outline-offset: -1px; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+#slideGrid, #results { user-select: none; }
+.msel-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 4px 8px; background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-bottom: 1px solid var(--line); font-size: 13px; }
+.msel-bar .muted { font-size: 11px; }

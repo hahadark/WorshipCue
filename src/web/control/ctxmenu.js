@@ -106,6 +106,12 @@
     if (!p) return [];
     const s = p.slides[k];
     const it = p.cue && Cue() && Cue().item(p.cue.index);
+    const SE = window.BCSlideEdit;
+    if (SE && SE.selMany && SE.selMany()) {
+      const n = SE.selCount();
+      const del = it && ['song', 'text', 'title'].includes(it.type) ? `✕ 고른 ${n}장 지우기` : `⊘ 고른 ${n}장 건너뛰기`;
+      return [{ head: `고른 슬라이드 ${n}장` }, { label: `✎ 고른 ${n}장 편집 (함께 꾸미기)`, key: 'Ctrl+E', run: () => SE.selAction('edit') }, { label: del, key: 'Delete', run: () => SE.selAction('del'), danger: true }, '-', { label: '선택 해제', key: 'Esc', run: () => SE.selAction('clear') }];
+    }
     return [
       { head: `슬라이드 ${k + 1}${s && s.label && !/^\d+$/.test(s.label) ? ' · ' + s.label : ''}` },
       { label: '미리보기', key: '클릭', run: () => app.setPreviewIndex(k) },
