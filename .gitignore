@@ -14,3 +14,5 @@ import-tmp/
 # 번역 점검용 목록 (tools/i18n-extract.js)
 tools/i18n-all.json
 tools/i18n-missing.json
+# SNS 소개용 스크린샷 (저장소에는 안 올림)
+promo/
