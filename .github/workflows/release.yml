@@ -1,0 +1,77 @@
+# 릴리스 빌드: GitHub 서버에서 윈도우·맥을 모두 만들어 한 릴리스(초안)에 올린다
+#  - 먼저 package.json 의 version 을 올리고 커밋·푸시
+#  - Actions 탭 → release build → Run workflow → 태그(예: v1.7.0) 입력
+#  - 릴리스는 초안(draft)으로 만든다: 파일을 확인한 뒤 '게시' 해야 자동 업데이트에 잡힌다
+#  - 한국어판 · 영어판. 윈도우는 설치판 + 포터블, 맥은 Apple Silicon(arm64) dmg
+#  - 개인용(data-personal) 판은 저장소에 없으므로 여기서 만들지 않는다 (로컬에서만)
+name: release build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.7.0) — must match package.json version'
+        required: true
+      ref:
+        description: 'Source branch/commit to build (empty = main)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check version
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if [ "v$v" != "${{ inputs.tag }}" ]; then echo "package.json version $v does not match tag ${{ inputs.tag }}"; exit 1; fi
+      - run: npm test
+      - name: Build (Korean)
+        run: npx electron-builder --win --publish never
+      - name: Build (English)
+        run: npx electron-builder --win --config build-en.json --publish never
+      - name: Create draft release (if missing) and upload
+        shell: bash
+        run: |
+          tag="${{ inputs.tag }}"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --draft --target "$(git rev-parse HEAD)" --title "WorshipCue ${tag#v}" --notes "WorshipCue ${tag#v}"
+          # 자동 업데이트는 한국어판 설치판 기준 (latest.yml · blockmap)
+          gh release upload "$tag" dist/*-Setup.exe dist/*-Setup.exe.blockmap dist/*-Portable.exe dist/latest.yml dist-en/*-Setup.exe dist-en/*-Portable.exe --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  mac:
+    needs: windows
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build (Korean)
+        run: npx electron-builder --mac --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Build (English)
+        run: npx electron-builder --mac --config build-en.json --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Upload to release
+        run: gh release upload "${{ inputs.tag }}" dist/*.dmg dist-en/*.dmg --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
