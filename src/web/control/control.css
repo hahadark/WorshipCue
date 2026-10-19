@@ -837,3 +837,13 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 .cg-head .cg-n { font-weight: 400; font-size: 12px; }
 .cg-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--sg, 240px), 1fr)); gap: 10px; padding: 8px 0; }
 .cg-empty, .cg-wait { padding: 10px 4px; font-size: 13px; }
+
+/* 전체 목록: 슬라이드마다 한 줄 */
+.cue-grid.cg-list .cg-row { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; }
+.cg-line { display: flex; align-items: baseline; gap: 10px; padding: 5px 34px 5px 8px; border-width: 2px; border-radius: 4px; }
+.cg-line .cg-k { color: var(--hl); min-width: 1.6em; text-align: right; font-size: 12px; }
+.cg-line .cg-lbl { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.cg-line[style*="--gc"] .cg-lbl { color: var(--gc); font-weight: 600; }
+.cg-line .cg-txt { flex: 1; white-space: pre-line; font-size: 14px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.cg-line .sg-edit { top: 3px; right: 4px; }
+.cg-line:hover .sg-edit { opacity: 1; }

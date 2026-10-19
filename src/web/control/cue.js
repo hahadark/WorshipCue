@@ -1048,6 +1048,15 @@
       return buildSlides(it, meta);
     },
     /** i 번째 순서의 k 번째 슬라이드를 미리보기로 (바로 송출 모드여도 순서를 바꿀 때 첫 장을 내보내지 않게) */
+    /** 미리보기를 다음(이전) 순서로: 다음은 첫 장, 이전은 마지막 장 */
+    previewStep: async d => {
+      const p = app.preview;
+      if (!st.cue || !p || !p.cue || p.cue.id !== st.cue.id) return false;
+      const i = p.cue.index + d;
+      if (i < 0) { app.showMsg('큐시트의 첫 순서입니다.', 'info', 1500); return false; }
+      if (i >= st.cue.items.length) { app.showMsg('큐시트의 마지막 순서입니다.', 'info', 1500); return false; }
+      return previewItem(i, { fromEnd: d < 0 });
+    },
     previewAt: async (i, k) => {
       const same = app.preview && app.preview.cue && st.cue && app.preview.cue.id === st.cue.id && app.preview.cue.index === i;
       if (!same) {

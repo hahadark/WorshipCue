@@ -87,7 +87,7 @@
       const cur = D ? D.activeWorkspace() : '';
       return [
         { label: '패널', sub: () => ['cue', 'main', 'quick', 'library', 'stage', 'preview', 'live'].map(panel) },
-        { label: () => on(window.BCGrid && window.BCGrid.isOn(), '슬라이드를 격자로'), run: () => { const g = window.BCGrid && window.BCGrid.isOn(); const b = $(`#slideView [data-sv="${g ? 'list' : 'grid'}"]`); if (b) b.click(); } },
+        { label: '슬라이드 보기', sub: () => [['list', '목록'], ['grid', '격자'], ['all', '전체 격자 (모든 순서)'], ['alllist', '전체 목록 (모든 순서)']].map(([v, l]) => ({ label: on(window.BCGrid && window.BCGrid.mode() === v, l), run: () => { const b = $(`#slideView [data-sv="${v}"]`); if (b) b.click(); } })) },
         { label: '작업공간 (화면 배치)', sub: () => [
           ...(D ? D.workspaces().map((w, i) => ({ label: on(w.id === cur, w.name), key: i < 9 ? 'Ctrl+Alt+' + (i + 1) : '', run: () => D.applyWorkspace(w.id) })) : []),
           '-',

@@ -115,7 +115,7 @@
         { label: '⧉ 이 슬라이드 복제', run: () => window.BCSlideEdit.quickOp(k, 'dup'), disabled: !['song', 'text', 'title'].includes(it.type) && !(s && s.xid) },
         { label: ['song', 'text', 'title'].includes(it.type) || (s && s.xid) ? '✕ 이 슬라이드 지우기' : '⊘ 이 슬라이드 건너뛰기', run: () => window.BCSlideEdit.quickOp(k, 'del'), danger: true }] : []),
       ...(it ? [{ label: '✎ 이 순서 편집칸', key: 'F2', run: () => Cue().itemAction(p.cue.index, 'edit') }] : []),
-      { label: window.BCGrid && window.BCGrid.isOn() ? '목록으로 보기' : '격자로 보기', run: click(`#slideView [data-sv="${window.BCGrid && window.BCGrid.isOn() ? 'list' : 'grid'}"]`) },
+      '-', ...[['list', '목록'], ['grid', '격자'], ['all', '전체 격자 (모든 순서)'], ['alllist', '전체 목록 (모든 순서)']].filter(([v]) => !window.BCGrid || window.BCGrid.mode() !== v).map(([v, l]) => ({ label: l + ' 로 보기', run: click(`#slideView [data-sv="${v}"]`) })),
     ];
   }
   /** 성경 검색 결과 한 줄 */
@@ -209,6 +209,12 @@
     const row = t.closest('#cueList .cue-item');
     if (row) return cueItemMenu(+row.dataset.i);
     if (t.closest('#cueList')) return cueEmptyMenu();
+    const cg = t.closest('#cueGrid .sg-cell');
+    if (cg) { // 전체 보기: 그 순서의 그 슬라이드
+      const i = +cg.dataset.i, k = +cg.dataset.k;
+      const go = async () => window.BCCue.previewAt(i, k);
+      return [{ head: `${i + 1}번 순서 · 슬라이드 ${k + 1}` }, { label: '미리보기', key: '클릭', run: go }, { label: '▶ 바로 송출', key: '더블클릭', run: async () => { if (await go()) app.sendPreview(); } }, '-', { label: '✎ 이 슬라이드 편집', key: 'Ctrl+E', run: async () => { if (await go()) window.BCSlideEdit.openPreviewSlide(k); } }, { label: '＋ 이 다음에 새 슬라이드', run: async () => { if (await go()) window.BCSlideEdit.quickOp(k, 'add'); } }, '-', ...[['list', '목록'], ['grid', '격자'], ['all', '전체 격자 (모든 순서)'], ['alllist', '전체 목록 (모든 순서)']].filter(([v]) => window.BCGrid.mode() !== v).map(([v, l]) => ({ label: l + ' 로 보기', run: click(`#slideView [data-sv="${v}"]`) }))];
+    }
     const cell = t.closest('#slideGrid .sg-cell, #results .srow');
     if (cell) return slideMenu(+cell.dataset.k);
     const verse = t.closest('#results .row[data-i]');

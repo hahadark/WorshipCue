@@ -10,14 +10,15 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const app = window.BC;
   const R = window.BCRender;
-  let mode = 'list'; // 'list' | 'grid' | 'all'
-  try { const v = localStorage.getItem('wc-slide-grid'); mode = v === '1' ? 'grid' : v === 'all' ? 'all' : 'list'; } catch { /* 저장 안 됨 */ }
+  let mode = 'list'; // 'list' | 'grid' | 'all' (전체 격자) | 'alllist' (전체 목록)
+  try { const v = localStorage.getItem('wc-slide-grid'); mode = v === '1' ? 'grid' : ['all', 'alllist'].includes(v) ? v : 'list'; } catch { /* 저장 안 됨 */ }
+  const isAll = () => mode === 'all' || mode === 'alllist';
   let on = mode !== 'list';
   let drawnKey = '';
 
   function init() {
     const head = $('.center-head');
-    head.insertAdjacentHTML('beforeend', `<span class="view-tabs" id="slideView" title="슬라이드 보기 방식"><button data-sv="list">목록</button><button data-sv="grid">격자</button><button data-sv="all" title="큐시트의 모든 순서 슬라이드를 한 화면에 (ProPresenter 방식)">전체</button></span>
+    head.insertAdjacentHTML('beforeend', `<span class="view-tabs" id="slideView" title="슬라이드 보기 방식"><button data-sv="list">목록</button><button data-sv="grid">격자</button><button data-sv="all" title="큐시트의 모든 순서 슬라이드를 한 화면에 썸네일로 (ProPresenter 방식)">전체 격자</button><button data-sv="alllist" title="큐시트의 모든 순서 슬라이드를 한 화면에 글 목록으로">전체 목록</button></span>
       <label class="tc-toggle sg-size" title="썸네일 크기"><input type="range" id="sgSize" min="150" max="420" step="10" value="${size()}"></label>`);
     $('#results').insertAdjacentHTML('afterend', '<div id="slideGrid" class="slide-grid" tabindex="0" hidden></div><div id="cueGrid" class="cue-grid" tabindex="0" hidden></div>');
     $('#slideView').onclick = e => { const b = e.target.closest('[data-sv]'); if (b) set(b.dataset.sv); };
@@ -47,11 +48,11 @@
   function size() { try { return +(localStorage.getItem('wc-slide-grid-size') || 240); } catch { return 240; } }
 
   function set(v) {
-    mode = v === true ? 'grid' : v === false ? 'list' : ['list', 'grid', 'all'].includes(v) ? v : 'list';
+    mode = v === true ? 'grid' : v === false ? 'list' : ['list', 'grid', 'all', 'alllist'].includes(v) ? v : 'list';
     on = mode !== 'list';
-    try { localStorage.setItem('wc-slide-grid', mode === 'grid' ? '1' : mode === 'all' ? 'all' : '0'); } catch { /* 무시 */ }
+    try { localStorage.setItem('wc-slide-grid', mode === 'grid' ? '1' : isAll() ? mode : '0'); } catch { /* 무시 */ }
     $('#slideView').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.sv === mode));
-    $('#sgSize').parentNode.hidden = !on;
+    $('#sgSize').parentNode.hidden = !on || mode === 'alllist';
     allKey = '';
     drawnKey = '';
     update();
@@ -65,7 +66,7 @@
     const cmTab = $('#cmView') && !$('#cmView').hidden;
     // 전체 보기: 큐시트가 열려 있고, 미리보기가 큐시트 순서이거나 비어 있을 때 (검색한 성경 본문은 보통 격자로)
     const cueOpen = window.BCCue && window.BCCue.cueInfo && window.BCCue.cueInfo();
-    const allShow = mode === 'all' && cueOpen && (!app.preview || app.preview.cue) && !textSearch && !cmTab;
+    const allShow = isAll() && cueOpen && (!app.preview || app.preview.cue) && !textSearch && !cmTab;
     $('#cueGrid').hidden = !allShow;
     if (allShow) { grid.hidden = true; $('#results').hidden = true; drawAll(); return; }
     const show = on && app.preview && !textSearch && !cmTab;
@@ -134,7 +135,8 @@
     const g = $('#cueGrid');
     const info = window.BCCue.cueInfo();
     const tplKey = JSON.stringify(app.tplFor('main'));
-    const key = JSON.stringify([info.id, info.items, tplKey.length, tplKey.slice(0, 400)]);
+    const key = JSON.stringify([mode, info.id, info.items, tplKey.length, tplKey.slice(0, 400)]);
+    g.classList.toggle('cg-list', mode === 'alllist');
     if (key !== allKey) {
       allKey = key;
       const token = ++allToken;
@@ -150,15 +152,33 @@
         const it = info.items[i];
         g.querySelector(`[data-n="${i}"]`).textContent = slides.length ? `· 슬라이드 ${slides.length}장` : '';
         const ops = it.type !== 'audio' ? '<span class="sg-ops"><button class="sg-add" title="이 다음에 새 슬라이드">＋</button><button class="sg-del" title="이 슬라이드 지우기 (성경·찬송가·그림 등은 건너뛰기)">✕</button></span>' : '';
-        row.innerHTML = slides.length ? slides.map((s, k) => `<div class="sg-cell" data-i="${i}" data-k="${k}"${s.kind !== 'bible' && window.BCGroup && window.BCGroup.color(s.label) ? ` style="--gc:${window.BCGroup.color(s.label)}"` : ''}><div class="screen sg-screen"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button>${ops}<div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('')
+        row.innerHTML = slides.length && mode === 'alllist' ? slides.map((s, k) => listRow(s, k, i)).join('')
+          : slides.length ? slides.map((s, k) => `<div class="sg-cell" data-i="${i}" data-k="${k}"${s.kind !== 'bible' && window.BCGroup && window.BCGroup.color(s.label) ? ` style="--gc:${window.BCGroup.color(s.label)}"` : ''}><div class="screen sg-screen"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button>${ops}<div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('')
           : `<div class="muted cg-empty">${err ? esc(err) : it.type === 'audio' ? '🔊 음악 · 화면은 바뀌지 않습니다' : '(슬라이드 없음)'}</div>`;
         // 화면 크기를 먼저 잡아 두고(빈 화면) 보일 때 그린다
-        row.querySelectorAll('.sg-cell').forEach(c => { const sc = c.querySelector('.sg-screen'); const t = app.tplFor('main', window.BCCue.tplOf(i)); sc.style.aspectRatio = `${t.width} / ${t.height}`; io.observe(c); });
+        if (mode !== 'alllist') row.querySelectorAll('.sg-cell').forEach(c => { const sc = c.querySelector('.sg-screen'); const t = app.tplFor('main', window.BCCue.tplOf(i)); sc.style.aspectRatio = `${t.width} / ${t.height}`; io.observe(c); });
         markAll();
       }
     }
     markAll();
   }
+  /** 전체 목록: 한 줄에 번호 · 이름(1절·후렴…) · 글 */
+  function slideText(s) {
+    const G2 = window.BCGroup;
+    const plain = t => (G2 ? G2.stripFmt(G2.stripChords(t)) : t);
+    if (s.kind === 'title') return [s.ref, s.subtitle].filter(Boolean).join(' · ');
+    if (s.kind === 'image' || s.kind === 'score') return s.caption || (s.kind === 'score' ? '🎼 악보' : '🖼 이미지');
+    if (s.kind === 'video') return '🎬 영상';
+    if (s.kind === 'camera') return '📷 카메라';
+    if (s.kind === 'blank') return s.mode === 'background' ? '⬛ 배경·로고만' : '⬛ 검은 화면';
+    return (s.parts || []).map(p => (s.kind === 'text' ? '' : p.verse + ' ') + plain(p.text)).join(s.kind === 'text' ? '\n' : ' ').trim();
+  }
+  function listRow(s, k, i) {
+    const lbl = s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' || !s.kind ? (s.ref || '') : '';
+    const gc = window.BCGroup && s.kind !== 'bible' ? window.BCGroup.color(s.label) : '';
+    return `<div class="sg-cell cg-line" data-i="${i}" data-k="${k}"${gc ? ` style="--gc:${gc}"` : ''}><b class="cg-k">${k + 1}</b>${lbl ? `<span class="cg-lbl">${esc(lbl)}</span>` : ''}<span class="cg-txt">${esc(slideText(s))}</span><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button></div>`;
+  }
+
   /** 미리보기(초록)·송출(빨강) 표시와, 미리보기 순서가 바뀌면 그 줄로 이동 */
   function markAll() {
     const g = $('#cueGrid');

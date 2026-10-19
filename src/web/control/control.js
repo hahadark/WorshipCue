@@ -421,6 +421,15 @@
   }
 
   app.setPreviewIndex = i => setPreviewIndex(i);
+  /** 미리보기 한 장 앞·뒤로. 큐시트 순서의 끝(처음)이면 다음(이전) 순서로 — '순서의 끝에서 다음 순서로' 설정을 따른다 */
+  function stepPreview(d) {
+    const p = app.preview;
+    if (!p) return;
+    const ni = p.index + d;
+    if (ni >= 0 && ni < p.slides.length) return setPreviewIndex(ni);
+    if (p.cue && settings().cueAdvance !== false && window.BCCue && window.BCCue.previewStep) return window.BCCue.previewStep(d);
+  }
+  app.stepPreview = stepPreview;
   function setPreviewIndex(i) {
     if (!app.preview) return;
     const n = app.preview.slides.length;
@@ -1298,8 +1307,8 @@
     cueEdit: () => window.BCCue && window.BCCue.edit(),
     toggleEditor: () => window.BCCue && window.BCCue.toggleEditor(),
     openHistory: () => openHistory(),
-    previewPrevSlide: () => setPreviewIndex((app.preview?.index ?? 0) - 1),
-    previewNextSlide: () => setPreviewIndex((app.preview?.index ?? 0) + 1),
+    previewPrevSlide: () => stepPreview(-1),
+    previewNextSlide: () => stepPreview(1),
     previewPrevVerse: () => previewAdjacentVerse(-1),
     previewNextVerse: () => previewAdjacentVerse(1),
     previewChapterStart,
