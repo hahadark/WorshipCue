@@ -27,7 +27,11 @@
     $('badge').className = 'badge' + (L.has && L.visible ? '' : ' off');
     $('count').textContent = L.has ? `${L.index + 1} / ${L.count}` : '';
     $('title').textContent = L.title || '송출 중인 화면 없음';
-    $('text').textContent = L.text || '';
+    // 글 없는 그림·악보: 도킹(이 PC)에서는 그림으로
+    if (DOCK && L.image) {
+      if ($('text').dataset.img !== L.image) { $('text').dataset.img = L.image; $('text').className = 'txt img'; $('text').innerHTML = `<img alt="" src="${esc(L.image)}">`; }
+    } else { delete $('text').dataset.img; $('text').className = 'txt'; $('text').textContent = L.text || ''; }
+    if (DOCK && r.obs) { $('dPip').classList.toggle('on', !!r.obs.pip); $('dFull').classList.toggle('on', !!r.obs.full); }
     $('next').textContent = L.next ? '다음: ' + L.next : '';
     $('xHide').textContent = L.visible ? '숨김' : '보이기';
     $('dHide').textContent = L.visible ? '글자 숨김' : '다시 보이기';
@@ -64,6 +68,8 @@
   $('bNext').onclick = $('xNext').onclick = () => act({ action: 'next' });
   $('bPrev').onclick = $('xPrev').onclick = () => act({ action: 'prev' });
   $('xHide').onclick = $('dHide').onclick = () => act({ action: 'toggle' });
+  $('dPip').onclick = () => act({ action: 'obsPip' });
+  $('dFull').onclick = () => act({ action: 'obsFull' });
   $('labels').onclick = e => { const b = e.target.closest('[data-goto]'); if (b) act({ action: 'goto', index: +b.dataset.goto }); };
   $('cue').onclick = e => { const b = e.target.closest('[data-cue]'); if (b) act({ action: 'cue', index: +b.dataset.cue }); };
   $('msgSend').onclick = () => act({ action: 'message', text: $('msg').value });

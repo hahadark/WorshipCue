@@ -10,6 +10,9 @@
   body.opaque { background: #000; }
   body.held { background: transparent !important; }
   body.held > * { visibility: hidden; }
+  /* OBS 자막: 그림 슬라이드 우상단 */
+  .bc-pip { position: fixed; top: 3vh; right: 2vw; width: 30vw; z-index: 50; border-radius: 1vw; overflow: hidden; box-shadow: 0 0.5vw 2vw rgba(0,0,0,.55); }
+  .bc-pip > * { pointer-events: none; }
   body.nocursor, body.nocursor * { cursor: none !important; }
   #screen { position: fixed; inset: 0; }
 </style>

@@ -172,14 +172,32 @@
     if (logoEl && logoEl !== stage.lastChild) stage.appendChild(logoEl); // 늘 맨 위
   }
 
+  /** OBS 자막: 글 없는 그림·악보 슬라이드를 우상단에 작게 (예배당 화면 모양 그대로) */
+  let pipKey = '';
+  function applyPip(p, show) {
+    let el = document.getElementById('bcPip');
+    const want = p.pip && show && (p.slide.kind === 'image' || p.slide.kind === 'score');
+    if (!want) { if (el) el.remove(); pipKey = ''; return; }
+    if (!el) { el = document.createElement('div'); el.id = 'bcPip'; el.className = 'bc-pip'; document.body.appendChild(el); }
+    const t = p.pip.template;
+    el.style.aspectRatio = `${t.width} / ${t.height}`;
+    const k = JSON.stringify([p.slide.image, p.slide.bg, p.slide.edit || null, t.id, t.width]);
+    if (k === pipKey) return;
+    pipKey = k;
+    el.innerHTML = '';
+    R.renderInto(el, { ...p.slide, caption: '' }, t);
+  }
   function render(p) {
     if (p.cameras) R.setCameraPrefs(p.cameras); // 카메라 해상도·프레임·밝기 (조작 화면과 같게)
     queueMicrotask(() => { if (stage && tpl && drawState) R.paintDraw(stage, drawState, tpl); }); // 그리기 층은 늘 맨 위
     lastPayload = p;
     document.body.classList.toggle('nocursor', p.cursorHidden !== false);
     document.body.classList.toggle('held', !!p.held); // 보조 화면을 꺼서 OBS 화면도 숨김
+    // 그림 우상단을 켰으면, 자막(가사만) 화면에서는 그림을 크게 그리지 않고 우상단에만 (가사가 있으면 가사는 아래에)
+    if (p.pip && p.slide && (p.slide.kind === 'image' || p.slide.kind === 'score') && typeof p.slide.caption !== 'string') p = { ...p, slide: { ...p.slide, caption: '' } };
     const stageChanged = setupStage(p.template);
     const show = p.hasLive && p.visible && p.slide;
+    applyPip(p, show);
     const key = show ? JSON.stringify([p.slide, p.versionName]) : '';
     const bg = stage.firstChild;
     bg.style.opacity = (!show && p.template.clearHidesBackground) ? '0' : '1';

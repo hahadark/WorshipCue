@@ -17,9 +17,15 @@
   .muted { color: var(--muted); font-size: 13px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
   .live { border-color: var(--live); }
-  .live .t { font-size: 18px; font-weight: 700; margin: 4px 0; }
-  .live .txt { font-size: 15px; line-height: 1.5; min-height: 2.4em; }
-  .live .nx { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  /* 지금 화면 칸: 글 양과 상관없이 높이를 고정해서 아래 단추가 움직이지 않게 */
+  .live .t { font-size: 18px; font-weight: 700; margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 1.4em; }
+  .live .txt { font-size: 15px; line-height: 1.5; height: 4.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; white-space: pre-line; }
+  .live .txt.img { display: flex; align-items: center; justify-content: center; background: #000; border-radius: 6px; -webkit-line-clamp: unset; }
+  .live .txt img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .live .nx { font-size: 13px; color: var(--muted); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 1.4em; }
+  .labels { flex-wrap: nowrap !important; overflow-x: auto; height: 46px; scrollbar-width: thin; }
+  .labels button { flex: 0 0 auto !important; }
+  .obsrow button.on { border-color: var(--accent); background: #1f3a63; }
   .badge { display: inline-block; background: var(--live); color: #fff; font-size: 12px; padding: 1px 8px; border-radius: 6px; }
   .badge.off { background: #555; }
   .big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -46,7 +52,7 @@
   body.dock .dock-only { display: grid; grid-template-columns: 1fr; margin-top: 8px; }
   body.dock .card { padding: 8px 10px; margin: 6px 0; }
   body.dock .big button { padding: 14px 0; font-size: 18px; }
-  body.dock .txt { max-height: 4.2em; overflow: hidden; }
+  body.dock .live .txt { height: 4.5em; }
 </style>
 </head>
 <body>
@@ -68,6 +74,7 @@
   </div>
   <div class="big"><button id="bPrev">◀ 이전</button><button id="bNext" class="next">다음 ▶</button></div>
   <div class="big dock-only"><button id="dHide">숨김</button></div>
+  <div class="row obsrow dock-only" style="grid-template-columns:1fr 1fr"><button id="dPip" title="글 없는 그림·악보 슬라이드를 OBS 자막 화면 우상단에 작게">🖼 그림 우상단</button><button id="dFull" title="OBS 자막 화면에 슬라이드를 예배당 화면 모양 그대로">🖥 슬라이드 그대로</button></div>
   <div class="card" style="margin-top:12px">
     <b>큐시트</b> <span class="muted" id="cueName"></span> <span class="muted">— 누르면 송출</span>
     <div class="cue" id="cue" style="margin-top:8px"></div>

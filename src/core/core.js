@@ -57,7 +57,8 @@ class WorshipCueCore extends EventEmitter {
     this.pendingImports = new Map();
     this.outputClients = new Map(); // clientId → {client, kind, connectedAt, ack}
     this.desktop = null; // Electron 측에서 등록 (모니터·창 상태)
-    this.obsHold = false; // 보조 화면을 꺼서 OBS 화면도 숨긴 상태 (다시 켜거나 송출하면 풀림)
+    this.obsHold = false;
+    this.obsFull = false; // OBS 자막 출력에 '슬라이드 그대로' (예배당 화면 템플릿) — 그때그때 켜고 끔 // 보조 화면을 꺼서 OBS 화면도 숨긴 상태 (다시 켜거나 송출하면 풀림)
 
     const s = this.settings.get();
     if (!s.versionId || !this.store.getVersion(s.versionId)) {
@@ -242,7 +243,11 @@ class WorshipCueCore extends EventEmitter {
       held: this.obsHold,
       slide: live.slide,
       versionName: live.passage ? live.passage.versionName : '',
-      template: this.templateFor(output),
+      // OBS 자막: '슬라이드 그대로' 면 예배당 화면과 같은 모양으로, 아니면 자막 템플릿
+      template: output === 'overlay' && this.obsFull ? this.templateFor('main') : this.templateFor(output),
+      obsFull: output === 'overlay' && this.obsFull,
+      // OBS 자막: 글 없는 그림·악보 슬라이드를 우상단에 작게 (예배당 화면 모양으로)
+      pip: output === 'overlay' && !this.obsFull && this.settings.get().output.obsPip ? { template: this.templateFor('main') } : null,
       overlays: this.library.activeFor(output),
       layers: this.layersPayload(output),
       video: this.videoPayload(),
@@ -263,6 +268,7 @@ class WorshipCueCore extends EventEmitter {
   getState() {
     const s = this.settings.get();
     return {
+      obsView: this.obsView(),
       live: { ...this.presentation.getLiveState(), video: this.videoPayload() },
       stage: this.stagePayload(),
       layers: this.layersPayload('main'),
@@ -315,6 +321,9 @@ class WorshipCueCore extends EventEmitter {
     }
   }
 }
+
+/** OBS 자막 보기 상태: full (슬라이드 그대로) · pip (그림 슬라이드 우상단) */
+WorshipCueCore.prototype.obsView = function () { return { full: !!this.obsFull, pip: !!this.settings.get().output.obsPip }; };
 
 WorshipCueCore.prototype.commands = {
   // ---- 검색 (Live 에 영향 없음) ----
@@ -479,6 +488,13 @@ WorshipCueCore.prototype.commands = {
   },
 
   // ---- 설정 ----
+  /** OBS 자막 보기: pip (그림 슬라이드 우상단) · full (슬라이드 그대로) */
+  setObsView(a) {
+    if (typeof a.full === 'boolean') this.obsFull = a.full;
+    if (typeof a.pip === 'boolean') { this.settings.update(d => { d.output.obsPip = a.pip; }); this.settingsChanged('settings'); }
+    this.emit('live');
+    return this.obsView();
+  },
   /** 자동 업데이트 상태 */
   updateStatus() { return this.update || { state: 'idle', mode: 'none' }; },
   /** 자동 업데이트: check (지금 확인) · open (받기 페이지) · installNow (다시 시작해서 설치) */
@@ -555,6 +571,7 @@ WorshipCueCore.prototype.commands = {
       if (p.output && typeof p.output.cursorHidden === 'boolean') d.output.cursorHidden = p.output.cursorHidden;
       if (p.output && typeof p.output.autoOnSend === 'boolean') d.output.autoOnSend = p.output.autoOnSend;
       if (p.output && typeof p.output.linkObs === 'boolean') d.output.linkObs = p.output.linkObs;
+      if (p.output && typeof p.output.obsPip === 'boolean') d.output.obsPip = p.output.obsPip;
       if (p.lanOutput) {
         d.lanOutput = { enabled: false, port: 37550, key: '', ...(d.lanOutput || {}) };
         if (typeof p.lanOutput.enabled === 'boolean') d.lanOutput.enabled = p.lanOutput.enabled;

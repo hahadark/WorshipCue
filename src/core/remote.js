@@ -105,12 +105,15 @@ class RemoteServer {
         has: live.hasLive, visible: live.visible, index: live.index, count: live.count,
         title: live.passage ? (live.passage.cueIndex >= 0 && live.passage.itemTitle ? live.passage.itemTitle : live.passage.title) : '',
         text: text(live.slide), next: text(live.nextSlide),
+        // 글 없는 그림·악보 슬라이드: 도킹(이 PC)에서 그림으로 보여 준다
+        image: live.slide && (live.slide.kind === 'image' || live.slide.kind === 'score') && live.slide.image ? live.slide.image : '',
         labels: live.slides.map(x => (x.startsWith('¶') ? x.slice(1) : '')),
         cueIndex: live.passage ? live.passage.cueIndex : -1,
       },
       cue: cue ? { name: cue.name, items: cue.items.map(it => ({ title: it.title, type: it.type })) } : null,
       control: [...core.outputClients.values()].some(c => c.client === 'control'),
       stage: { message: core.stage.message },
+      obs: core.obsView(),
     };
   }
 
@@ -160,6 +163,8 @@ class RemoteServer {
       case 'goto': return core.command('gotoSlide', { index: Number(a.index) || 0 });
       case 'cue': control(); core.emit('remote-cue', { index: Number(a.index) || 0 }); return { sent: true };
       case 'message': return core.command('stageMessage', { text: String(a.text || '') });
+      case 'obsPip': return core.command('setObsView', { pip: !core.obsView().pip });
+      case 'obsFull': return core.command('setObsView', { full: !core.obsView().full });
       case 'timer': return core.command('stageTimer', { action: String(a.op || ''), minutes: Number(a.minutes) || 0 });
       default: throw new Error('알 수 없는 조작입니다.');
     }

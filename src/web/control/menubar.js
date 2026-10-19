@@ -78,6 +78,8 @@
         { label: app.state && app.state.layers && app.state.layers.media ? `■ 송출 배경 끄기 (${app.state.layers.media.label || '미디어'})` : '　송출 배경 끄기', run: () => window.BCLib && window.BCLib.liveMedia(null) },
       ] },
       { label: () => on(window.BCDraw && window.BCDraw.isOn(), '✎ 화면에 그리기·강조'), run: () => window.BCDraw && window.BCDraw.toggle() },
+      { label: () => on(app.state && app.state.obsView && app.state.obsView.pip, 'OBS 자막: 그림·악보 슬라이드 우상단에'), run: () => app.cmd('setObsView', { pip: !(app.state.obsView && app.state.obsView.pip) }) },
+      { label: () => on(app.state && app.state.obsView && app.state.obsView.full, 'OBS 자막: 슬라이드 그대로 (예배당 화면 모양)'), run: () => app.cmd('setObsView', { full: !(app.state.obsView && app.state.obsView.full) }) },
       '-',
       { label: () => on(app.state && app.state.settings.previewMode === false, '미리보기 끄기 (클릭하면 바로 송출)'), run: click('#btnStudio') },
       { label: '보조 화면(예배당) 켜기·끄기', key: 'Ctrl+Shift+F', run: act('toggleOutputWindow') },
