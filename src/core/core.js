@@ -17,7 +17,7 @@ const { findDirs, listBibles, metaFor } = require('./bethlehem');
 const { normalizeCue, newId, sampleItems } = require('./cues');
 const { Hymns } = require('./hymns');
 const { SongInbox, onlineSearchUrl } = require('./songinbox');
-const { HymnLyrics } = require('./hymnlyrics');
+const { HymnLyrics, countHymns, FILE: HYMN_FILE } = require('./hymnlyrics');
 const { Library } = require('./library');
 const { BOOKS, getBook } = require('./books');
 const { formatTitle } = require('./db');
@@ -652,7 +652,7 @@ WorshipCueCore.prototype.commands = {
   // ---- 베들레헴 성경 폴더에서 한꺼번에 가져오기 ----
   findBethlehem(a) {
     const extra = a.dir ? [String(a.dir)] : [];
-    return findDirs(extra).map(dir => ({ dir, bibles: listBibles(dir) }));
+    return findDirs(extra).map(dir => ({ dir, bibles: listBibles(dir), hymns: countHymns(path.join(dir, HYMN_FILE)) }));
   },
   importBethlehem(a) {
     const dir = String(a.dir || '');
@@ -670,6 +670,12 @@ WorshipCueCore.prototype.commands = {
     this.logger.info(`베들레헴에서 가져옴: ${results.filter(r => r.ok).map(r => r.file).join(', ')}`);
     this.settingsChanged('versions');
     return results;
+  },
+  /** 베들레헴의 새찬송가 가사 DB 를 데이터 폴더로 복사 (베들레헴을 지워도 OBS 자막 가사를 쓸 수 있게) */
+  importBethlehemHymns(a) {
+    const count = this.hymnLyrics.importFrom(String(a.dir || ''));
+    this.logger.info(`베들레헴에서 새찬송가 가사 ${count}곡을 가져옴`);
+    return { count };
   },
   // ---- 찬송가·교독문 폴더 ----
   listHymnFolders() { return this.hymns.folders(); },

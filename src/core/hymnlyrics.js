@@ -122,7 +122,9 @@ class HymnLyrics {
   find() {
     const s = this.core.settings.get();
     const dirs = s.bethlehemDir ? [s.bethlehemDir] : candidates();
-    // 개인용 빌드는 프로그램 폴더(resources)에 들어 있다 — 베들레헴이 없는 PC 에서도
+    // 설정 → 베들레헴에서 가져오기로 데이터 폴더에 복사해 둔 것 → 개인용 빌드의 프로그램 폴더(resources)
+    // (베들레헴을 지웠거나 없는 PC 에서도)
+    if (this.core.dataDir) dirs.push(this.core.dataDir);
     if (process.resourcesPath) dirs.push(process.resourcesPath);
     for (const d of dirs) {
       const f = /\.hdb$/i.test(d) ? d : path.join(d, FILE);
@@ -144,7 +146,8 @@ class HymnLyrics {
 
   status() {
     const f = this.find();
-    return { found: !!f, path: f };
+    const inData = !!this.core.dataDir && fs.existsSync(path.join(this.core.dataDir, FILE)); // 데이터 폴더에 복사해 둔 것
+    return { found: !!f, path: f, inData };
   }
 
   /** 장 번호 → { number, title, verses, chorus } 또는 null */
@@ -160,6 +163,29 @@ class HymnLyrics {
   }
 
   close() { try { if (this.db) this.db.close(); } catch { /* 무시 */ } this.db = null; }
+
+  /** 베들레헴 폴더의 가사 DB 를 데이터 폴더로 복사 → 가사 수 */
+  importFrom(dir) {
+    const src = path.join(String(dir || ''), FILE);
+    const n = countHymns(src);
+    if (!n) throw new Error('새찬송가 가사 파일(새찬송가.hdb)을 읽지 못했습니다.');
+    const dest = path.join(this.core.dataDir, FILE);
+    if (path.resolve(src) === path.resolve(dest)) return n;
+    this.close(); // 데이터 폴더의 것을 열고 있으면 덮어쓰지 못한다
+    fs.copyFileSync(src, dest);
+    return n;
+  }
 }
 
-module.exports = { HymnLyrics, parseHtext, candidates, alignLyrics, splitEven };
+/** 가사 DB 의 찬송가 수 (없거나 읽지 못하면 0) */
+function countHymns(file) {
+  if (!fs.existsSync(file)) return 0;
+  let db = null;
+  try {
+    const { DatabaseSync } = require('node:sqlite');
+    db = new DatabaseSync(file, { readOnly: true });
+    return db.prepare('SELECT COUNT(DISTINCT chapter) AS c FROM hymnal').get().c || 0;
+  } catch { return 0; } finally { try { if (db) db.close(); } catch { /* 무시 */ } }
+}
+
+module.exports = { HymnLyrics, parseHtext, candidates, alignLyrics, splitEven, countHymns, FILE };

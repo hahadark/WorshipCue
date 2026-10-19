@@ -537,7 +537,7 @@
     const r = importState;
     $('#setBody').innerHTML = `
       <h4 style="margin-top:0;color:var(--hl)">베들레헴 성경에서 가져오기</h4>
-      <div class="note">개역개정·쉬운성경·우리말·현대인·ESV·NIV 등은 <b>베들레헴 성경</b>을 설치한 뒤 그 데이터를 가져와 쓸 수 있습니다.
+      <div class="note">개역개정·쉬운성경·우리말·현대인·ESV·NIV 등과 <b>새찬송가 가사</b>(찬송가 악보 PPT 의 OBS 자막용)는 <b>베들레헴 성경</b>을 설치한 뒤 그 데이터를 가져와 쓸 수 있습니다.
         설치 방법: <button id="bhSetup">베들레헴 설치 안내 페이지 열기</button> → 받은 압축을 풀어 <b>BethlehemWin</b> 폴더를 C 드라이브 등의 맨 위(예: C:\\BethlehemWin)에 복사</div>
       <div class="row-flex" style="margin:8px 0"><button id="bhFind">자동으로 찾기</button>
         <input type="text" id="bhDir" placeholder="또는 폴더 경로 직접 입력 (예: D:\\BethlehemWin)" style="width:340px"><button id="bhFindDir">이 폴더에서 찾기</button><span id="bhMsg" class="note"></span></div>
@@ -582,20 +582,30 @@
       if (!r.ok) return app.showMsg(r.error, 'error');
       if (!r.result.length) { $('#bhList').innerHTML = '<div class="warn-text note">BethlehemWin 폴더를 찾지 못했습니다. 베들레헴을 설치했다면 폴더 경로를 직접 입력하세요.</div>'; return; }
       const installed = new Set(app.state.versions.map(v => v.id));
+      const lyr = (await cmd('hymnLyricsStatus', {})).result || {};
       $('#bhList').innerHTML = r.result.map((g, gi) => `<div class="report" style="margin-bottom:8px"><div><b>${esc(g.dir)}</b></div>
-        <div class="row-flex" style="flex-wrap:wrap;margin:6px 0">${g.bibles.map(b => `<label class="tc-toggle" style="min-width:150px"><input type="checkbox" data-g="${gi}" value="${esc(b.file)}" ${b.known ? 'checked' : ''}>${esc(b.name)}${installed.has(b.id) ? ' <span class="muted">(설치됨·교체)</span>' : ''}</label>`).join('')}</div>
-        <button data-bhgo="${gi}">선택한 번역본 가져오기</button> <span class="note" id="bhRes${gi}"></span></div>`).join('');
+        <div class="row-flex" style="flex-wrap:wrap;margin:6px 0">${g.bibles.map(b => `<label class="tc-toggle" style="min-width:150px"><input type="checkbox" data-g="${gi}" value="${esc(b.file)}" ${b.known ? 'checked' : ''}>${esc(b.name)}${installed.has(b.id) ? ' <span class="muted">(설치됨·교체)</span>' : ''}</label>`).join('')}${g.hymns ? `<label class="tc-toggle" style="min-width:150px" title="찬송가 악보 PPT 에는 글자가 없어 OBS 자막(가사만)에 이 가사를 씁니다. 데이터 폴더로 복사해 두면 베들레헴을 지워도 됩니다."><input type="checkbox" data-hymn="${gi}" checked>🎵 새찬송가 가사 (${g.hymns}곡)${lyr.inData ? ' <span class="muted">(있음·교체)</span>' : ''}</label>` : ''}</div>
+        <button data-bhgo="${gi}">선택한 항목 가져오기</button> <span class="note" id="bhRes${gi}"></span></div>`).join('');
       $('#bhList').querySelectorAll('[data-bhgo]').forEach(btn => btn.onclick = async () => {
         const gi = +btn.dataset.bhgo;
         const files = [...$('#bhList').querySelectorAll(`input[data-g="${gi}"]:checked`)].map(x => x.value);
-        if (!files.length) return;
+        const hymn = !!$('#bhList').querySelector(`input[data-hymn="${gi}"]:checked`);
+        if (!files.length && !hymn) return;
         btn.disabled = true;
+        // 새찬송가 가사: 파일 복사라 금방
+        let hymnMsg = '';
+        if (hymn) {
+          const h = await cmd('importBethlehemHymns', { dir: r.result[gi].dir });
+          if (!h.ok) { btn.disabled = false; $('#bhRes' + gi).innerHTML = `<span class="err-text">${esc(h.error)}</span>`; return; }
+          hymnMsg = `새찬송가 가사 ${h.result.count}곡`;
+        }
+        if (!files.length) { btn.disabled = false; app.showMsg(`베들레헴에서 ${hymnMsg}을 가져왔습니다.`, 'ok'); drawData(); return; }
         $('#bhRes' + gi).textContent = `${files.length}개 가져오는 중… (번역본마다 1~2초)`;
         const x = await cmd('importBethlehem', { dir: r.result[gi].dir, files });
         btn.disabled = false;
         if (!x.ok) { $('#bhRes' + gi).innerHTML = `<span class="err-text">${esc(x.error)}</span>`; return; }
         const ok = x.result.filter(y => y.ok), bad = x.result.filter(y => !y.ok);
-        app.showMsg(`베들레헴에서 ${ok.length}개 번역본을 가져왔습니다.`, 'ok');
+        app.showMsg(`베들레헴에서 ${ok.length}개 번역본${hymnMsg ? ' · ' + hymnMsg : ''}을 가져왔습니다.`, 'ok');
         drawData();
         if (bad.length) setTimeout(() => app.showMsg('가져오지 못한 파일: ' + bad.map(y => `${y.file} (${y.error})`).join(', '), 'error', 8000), 300);
       });
