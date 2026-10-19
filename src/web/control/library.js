@@ -319,14 +319,14 @@
       const liveUrl = ((app.state && app.state.layers && app.state.layers.media) || {}).url || '';
       st.lastMedia = JSON.stringify((app.state.layers || {}).media || null);
       const b = body(`<div class="lib-grid">${st.rows.map((f, k) => { const on = !!liveUrl && liveUrl === f.url; return `<div class="lib-cell ${f.video ? 'is-video' : ''} ${on ? 'live' : ''}" data-k="${k}" title="${esc(f.name)}">${thumb(f)}<span>${f.video ? '🎞 ' : ''}${esc(f.name)}${on ? ' · <b class="live-dot">LIVE 배경</b>' : ''}</span>
-        <div class="lib-cell-act"><button data-live="${k}" class="${on ? 'danger' : 'primary'}" title="${on ? '송출 배경 끄기' : '지금 송출 화면의 배경으로 바로 (슬라이드와 따로, 다른 순서로 넘어가도 그대로)'}">${on ? '■ 배경 끄기' : '▶ 송출 배경'}</button><button data-bg="${k}" title="고른 순서의 배경으로">배경</button><button data-tb="${k}" title="빠른 설정에서 고른 출력(예배당/OBS)의 템플릿 배경으로">전체 배경</button>${f.video ? '' : `<button data-lg="${k}" title="이 그림을 로고 오버레이로">로고</button>`}</div></div>`; }).join('') || '<div class="empty">찾는 그림·영상이 없습니다.</div>'}</div>`);
+        <div class="lib-cell-act"><button data-live="${k}" class="${on ? 'danger' : 'primary'}" title="${on ? '송출 배경 끄기' : '지금 송출 화면의 배경으로 바로 (슬라이드와 따로, 다른 순서로 넘어가도 그대로)'}">${on ? '■ 배경 끄기' : '▶ 송출 배경'}</button>${itemBgBtn(k, f.url)}${tplBgBtn(k, f.url)}${f.video ? '' : `<button data-lg="${k}" title="이 그림을 로고 오버레이로">로고</button>`}</div></div>`; }).join('') || '<div class="empty">찾는 그림·영상이 없습니다.</div>'}</div>`);
       const item = k => (st.rows[k].video
         ? { type: 'video', extra: { file: st.rows[k].url, title: st.rows[k].name, sound: true, volume: 1, loop: false, endAction: 'hold' } }
         : { type: 'image', extra: { image: st.rows[k].url, title: st.rows[k].name } });
-      b.querySelectorAll('[data-tb]').forEach(x => x.onclick = e => { e.stopPropagation(); setTemplateBg(st.rows[+x.dataset.tb]); });
+      b.querySelectorAll('[data-tb]').forEach(x => x.onclick = e => { e.stopPropagation(); const f = st.rows[+x.dataset.tb]; const t = curTpl(); if (t && bgUrlOf(t) === f.url) app.removeTemplateBg(t).then(() => setTimeout(() => show('images'), 300)); else setTemplateBg(f); });
       b.querySelectorAll('[data-live]').forEach(x => x.onclick = e => { e.stopPropagation(); const f = st.rows[+x.dataset.live]; liveMedia({ type: f.video ? 'video' : 'image', url: f.url, label: f.name }); });
       bindRows(b, k => { const it = item(k); addToCue(it.type, it.extra, st.rows[k].name); }, item);
-      b.querySelectorAll('[data-bg]').forEach(x => x.onclick = e => { e.stopPropagation(); setItemBg(st.rows[+x.dataset.bg].url); });
+      b.querySelectorAll('[data-bg]').forEach(x => x.onclick = e => { e.stopPropagation(); const url = st.rows[+x.dataset.bg].url; const sel = window.BCCue && window.BCCue.selected(); if (sel && sel.bg === url) { app.removeItemBg(window.BCCue.selIndex()); } else setItemBg(url); setTimeout(() => show('images'), 300); });
       b.querySelectorAll('[data-lg]').forEach(x => x.onclick = e => { e.stopPropagation(); editOverlay({ type: 'logo', image: st.rows[+x.dataset.lg].url, name: st.rows[+x.dataset.lg].name, size: 140 }); });
     } else {
       const b = body(st.rows.map((f, k) => `<div class="lib-row" data-k="${k}"><button data-play="${k}" class="lib-play" title="바로 재생 (조작 PC)">▶</button><span class="lib-t"><b>${esc(f.name)}</b></span><span class="muted">${esc(f.folder)}</span></div>`).join('') || '<div class="empty">찾는 음악이 없습니다.</div>');
@@ -470,6 +470,17 @@
     const r = await cmd('saveTemplate', { template: t });
     if (!r.ok) return app.showMsg(r.error, 'error');
     app.showMsg(`${out === 'main' ? '예배당 화면' : 'OBS 자막'} 템플릿 배경을 '${f.name}' (으)로 바꿨습니다.`, 'ok', 2500);
+  }
+  /** 그림 칸의 '배경' · '전체 배경' 단추: 이미 그 배경이면 '빼기' */
+  const curTpl = () => { const out = (document.querySelector('#qTarget .on') || {}).dataset?.out || 'main'; return app.tplFor(out); };
+  const bgUrlOf = t => (t && t.background ? (t.background.type === 'image' ? t.background.image : t.background.type === 'video' ? t.background.video : '') : '');
+  function itemBgBtn(k, url) {
+    const sel = window.BCCue && window.BCCue.selected();
+    return sel && sel.bg === url ? `<button data-bg="${k}" class="active" title="고른 순서 '${esc(sel.title)}' 에서 이 배경 빼기">■ 배경 빼기</button>` : `<button data-bg="${k}" title="고른 순서의 배경으로">배경</button>`;
+  }
+  function tplBgBtn(k, url) {
+    const t = curTpl();
+    return t && bgUrlOf(t) === url ? `<button data-tb="${k}" class="active" title="템플릿 '${esc(t.name)}' 에서 이 배경 빼기 (단색으로)">■ 전체 배경 빼기</button>` : `<button data-tb="${k}" title="빠른 설정에서 고른 출력(예배당/OBS)의 템플릿 배경으로">전체 배경</button>`;
   }
   function setItemBg(url) {
     const ok = window.BCCue && window.BCCue.updateSelected(it => {

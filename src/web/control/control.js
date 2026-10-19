@@ -53,6 +53,48 @@
     return tplById(id);
   };
   app.tplFor = tplFor;
+  // ---------------- 배경 빼기: 순서 배경(그 순서에서 지움) · 템플릿 배경(템플릿을 단색으로) ----------------
+  const MEDIA_BG = ['image', 'video', 'camera'];
+  /** i 번째 큐시트 순서의 배경이 어디서 오는지 */
+  app.bgInfo = i => {
+    const C = window.BCCue;
+    const it = C && i >= 0 ? C.item(i) : null;
+    const t = tplFor('main', it && C.tplOf ? C.tplOf(i) : null);
+    return { i, item: it, itemBg: it && it.bg && !String(it.bg).startsWith('#') ? it.bg : '', tpl: t && t.background && MEDIA_BG.includes(t.background.type) ? t : null };
+  };
+  app.removeItemBg = async i => {
+    const it = window.BCCue && window.BCCue.item(i);
+    if (!it || !window.BCCue.updateItem(i, x => { x.bg = ''; })) return;
+    showMsg(`'${it.title}' 순서에서 배경을 뺐습니다.`, 'ok', 2000);
+    // 지금 송출 중인 순서면 송출 화면도 바로 (보던 슬라이드 그대로)
+    const L = app.state.live;
+    if (!(L && L.hasLive && L.visible && L.passage && L.passage.cueId === window.BCCue.currentId() && L.passage.cueIndex === i)) return;
+    const at = L.index;
+    for (let k = 0; k < 20 && !(app.preview && app.preview.cue && app.preview.cue.index === i && !app.preview.slides.some(s => s.bg)); k++) await new Promise(r => setTimeout(r, 100));
+    if (!app.preview || !app.preview.cue || app.preview.cue.index !== i) return;
+    app.setPreviewIndex(at);
+    await sendPreview();
+  };
+  app.removeTemplateBg = async t => {
+    const c = structuredClone(t);
+    c.background = { ...c.background, type: 'color', color: c.background.color || '#000000' };
+    const r = await cmd('saveTemplate', { template: c });
+    if (!r.ok) return showMsg(r.error, 'error');
+    showMsg(`템플릿 '${t.name}' 의 배경을 뺐습니다 (단색).`, 'ok', 2500);
+  };
+  /** 배경 메뉴: 이 순서에서 빼기 · 템플릿에서 빼기 · 잠깐 끄기 */
+  app.bgMenuItems = i => {
+    const b = app.bgInfo(i);
+    const L = (app.state && app.state.layers) || {};
+    return [
+      { head: '배경' },
+      ...(b.itemBg ? [{ label: `🗑 이 순서에서 배경 빼기 ('${b.item.title}')`, run: () => app.removeItemBg(i) }] : []),
+      ...(b.tpl ? [{ label: `🗑 템플릿 '${b.tpl.name}' 배경 빼기 (이 템플릿을 쓰는 모든 순서)`, run: () => app.removeTemplateBg(b.tpl) }] : []),
+      ...(L.media ? [{ label: `■ 송출 배경 끄기 (${L.media.label || '미디어'})`, run: () => cmd('setBackgroundMedia', { media: null }) }] : []),
+      '-',
+      { label: L.hideBg ? '배경 다시 켜기' : '잠깐 끄기 (다시 켤 때까지 모든 순서에서 배경 없이)', run: () => cmd('toggleBackground', { on: !L.hideBg }) },
+    ];
+  };
   const pvOver = () => (app.preview && app.preview.tpl) || null;
   const lvOver = () => (app.state.live.passage && app.state.live.passage.tpl) || null;
   /** 모니터에 함께 보일 오버레이 (켜져 있고 그 출력에 나가는 것) */
@@ -1101,7 +1143,7 @@
     for (const b of S.bgs || []) if (b.src === 'media') out.push(chip('media', 'on', `${LY_ICON[b.type] || '🖼'} ${LY_SRC.media}${b.label ? ': ' + b.label : ''}`, '✕', '송출 배경 끄기 (카메라는 닫힘)'));
     const other = (S.bgs || []).filter(b => b.src !== 'media');
     if (S.bgHidden) out.push(chip('bgon', 'off', '🖼 배경 꺼짐', '다시 켜기', '배경(순서·템플릿 배경)을 다시 켭니다'));
-    else if (other.length) out.push(chip('bgoff', 'on', other.map(b => `${LY_ICON[b.type] || '🖼'} ${LY_SRC[b.src]}`).join(' · '), '✕', '배경 끄기 — 다시 켤 때까지 어느 순서에서도 배경 없이 (영상은 멈추고 카메라는 닫힘)'));
+    else if (other.length) out.push(chip('bgoff', 'on', other.map(b => `${LY_ICON[b.type] || '🖼'} ${LY_SRC[b.src]}`).join(' · '), '✕', '배경 빼기 · 끄기 (이 순서에서 빼기 / 템플릿에서 빼기 / 잠깐 끄기)'));
     if (S.overlays && S.overlays.length) out.push(chip('ov', 'on', `✨ ${S.overlays.join(', ')}`, '✕', '오버레이 끄기'));
     if (S.logo) out.push(chip('logo', 'on', '🛡 로고 화면', '✕', '로고 화면 끄기'));
     if (S.draw) out.push(chip('draw', 'on', '✏ 그리기', '✕', '그린 것 지우기'));
@@ -1121,7 +1163,7 @@
     if (act === 'content') cmd('toggleLive');
     else if (act === 'video') cmd('videoControl', { action: 'stop' });
     else if (act === 'media') cmd('setBackgroundMedia', { media: null });
-    else if (act === 'bgoff') cmd('toggleBackground', { on: true });
+    else if (act === 'bgoff') { const r = b.getBoundingClientRect(); const lv = app.state.live && app.state.live.passage; window.BCCtx.show(r.left, r.top - 4, app.bgMenuItems(lv && lv.cueId === (window.BCCue && window.BCCue.currentId()) ? lv.cueIndex : -1)); return; }
     else if (act === 'bgon') cmd('toggleBackground', { on: false });
     else if (act === 'ov') cmd('toggleOverlaysOff');
     else if (act === 'logo') cmd('toggleLogoScreen', { on: false });
