@@ -30,7 +30,9 @@ function latestRelease() {
 function setupUpdater(core) {
   const current = app.getVersion();
   // 설치판(NSIS)만 스스로 업데이트할 수 있다. 포터블은 electron-builder 가 PORTABLE_EXECUTABLE_DIR 을 준다
-  const canInstall = app.isPackaged && process.platform === 'win32' && !process.env.PORTABLE_EXECUTABLE_DIR;
+  // 영어판·개인용은 latest.yml(한국어 공개판 설치 파일)로 바꾸면 성경·언어가 바뀌므로 알리기만
+  const variant = (() => { try { const p = require('../../package.json'); return p.worshipcuePersonal ? 'personal' : p.worshipcueLang === 'en' ? 'en' : ''; } catch { return ''; } })();
+  const canInstall = app.isPackaged && process.platform === 'win32' && !process.env.PORTABLE_EXECUTABLE_DIR && !variant;
   const set = patch => { core.update = { current, mode: canInstall ? 'auto' : 'notify', page: PAGE, ...(core.update || {}), ...patch }; core.emit('update', core.update); };
   set({ state: 'idle' });
   const enabled = () => core.settings.get().autoUpdate !== false;

@@ -35,6 +35,9 @@
     "en-US"
   ],
   "compression": "maximum",
+  "extraMetadata": {
+    "worshipcuePersonal": true
+  },
   "publish": [
     {
       "provider": "github",
