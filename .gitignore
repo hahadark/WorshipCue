@@ -16,3 +16,7 @@ tools/i18n-all.json
 tools/i18n-missing.json
 # SNS 소개용 스크린샷 (저장소에는 안 올림)
 promo/
+
+# 사용 통계 집계 화면 열쇠 (저장소에 올리지 않음)
+telemetry/.stats-key
+telemetry/.wrangler/

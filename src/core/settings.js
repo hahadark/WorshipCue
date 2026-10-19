@@ -77,6 +77,7 @@ function defaults() {
     ui: { theme: 'dark', scale: 100 }, // 조작 화면 테마·글자 크기 (송출 디자인과 별개)
     droppedFiles: [],
     uiLang: 'ko',
+    telemetry: true,     // 익명 사용 통계 (하루 한 번: 무작위 설치 번호·버전·언어·OS) — 설정 → 정보에서 끄기
     autoUpdate: true,    // 자동 업데이트 (설치판: 끌 때 설치 · 포터블·맥: 알림)        // 화면 언어 ('ko' 한국어 · 'en' English)
     cueTimes: false,     // 예배 진행 시계 (⏰ 시작 시각 · 순서별 예정 시간) 쓰기 — 기본 끔 (큐시트 메뉴에서 켬)
     cueTimesV2: true,    // 예전 기본값(켬)을 한 번 끈 표시

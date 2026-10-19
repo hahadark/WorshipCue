@@ -597,6 +597,8 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.cueTimes === 'boolean') d.cueTimes = p.cueTimes;
       if (p.uiLang === 'ko' || p.uiLang === 'en') d.uiLang = p.uiLang;
       if (typeof p.autoUpdate === 'boolean') d.autoUpdate = p.autoUpdate;
+      if (typeof p.telemetry === 'boolean') d.telemetry = p.telemetry;
+      if (p.telemetryNotice === true) d.telemetryNotice = true;
       if (typeof p.hymnBackground === 'string') d.hymnBackground = p.hymnBackground.slice(0, 300);
       if (typeof p.songSearchUrl === 'string') d.songSearchUrl = p.songSearchUrl.trim().slice(0, 500);
       if (typeof p.songDownloadDir === 'string') d.songDownloadDir = p.songDownloadDir.trim().slice(0, 500);

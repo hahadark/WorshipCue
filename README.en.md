@@ -28,7 +28,8 @@ The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Ver
 
 ## Get started in 5 minutes
 
-1. **Download and run** `WorshipCue-…-English-Setup.exe` (installer — downloads updates in the background and **installs them when you quit**, never restarting during a service) or `…-English-Portable.exe` (no install, USB — notifies you of new versions) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest). Updates keep your cue sheets, Bible data and settings; see `Settings → About`. If Windows SmartScreen warns you, click "More info → Run anyway".
+1. **Download and run** `WorshipCue-…-English-Setup.exe` (installer — **notifies you of new versions**; download the new English-Setup from the release page) or `…-English-Portable.exe` (no install, USB — notifies you of new versions) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest). Updates keep your cue sheets, Bible data and settings; see `Settings → About`.
+   - 📊 **Anonymous usage count**: once a day the app sends only a **random install ID, version, UI language and OS** so we can count how many installs are in use (no names, church, Bible or cue sheet content). Turn it off in `Settings → About → Send anonymous usage statistics`. If Windows SmartScreen warns you, click "More info → Run anyway".
 2. **Sanctuary screen**: connect a second monitor and click `Second screen` at the bottom (Ctrl+Shift+F). Choose the monitor in `File → ⚙ Settings → Output`.
 3. **OBS** (when streaming): add a Browser source with `http://127.0.0.1:37528/outputs/main` (full screen) or `/outputs/overlay` (transparent lower third), 1920×1080.
 4. **Make a cue sheet**: add items with the buttons at the bottom left (Hymn·PPT · Bible · Song · Announcement · Title · ＋ More).
@@ -51,7 +52,7 @@ The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Ver
 | 📷 Camera | Resolution (720p–4K), frame rate, brightness/contrast/saturation, mirror, live quality readout. |
 | Stage display | Current/next slide, clock, sermon timer, messages, item notes for the preacher and worship team. |
 | Phone remote | Next · previous · hide, jump to verses, send cue items, stage messages — from any phone on the same Wi-Fi (PIN). |
-| More | ⬆ **Auto update** (installer: installs on quit, never restarts during a service · portable/Mac: notifications) · 🌐 Korean / English UI · 🍎 Mac (Apple Silicon) · Stream Deck / Companion buttons (HTTP), workspaces (saved panel layouts), 5 control-screen themes, drag-and-drop files (including PPT), cue sheet manager (pin · templates · duplicate for next week · trash). |
+| More | ⬆ **Update notifications** (new versions are announced in the app) · 🌐 Korean / English UI · 🍎 Mac (Apple Silicon) · Stream Deck / Companion buttons (HTTP), workspaces (saved panel layouts), 5 control-screen themes, drag-and-drop files (including PPT), cue sheet manager (pin · templates · duplicate for next week · trash). |
 
 ## Menus
 

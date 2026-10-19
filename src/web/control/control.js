@@ -207,6 +207,11 @@
   async function init2() {
     if (window.BCDock) window.BCDock.init(app);
     renderStudio();
+    // 익명 사용 통계: 처음 한 번 알린다 (설정 → 정보에서 끄기)
+    if (!app.state.settings.telemetryNotice) {
+      setTimeout(() => showMsg('📊 사용자 수를 세려고 하루 한 번 익명 신호(무작위 설치 번호 · 버전 · 언어 · OS)를 보냅니다. 설정 → 정보에서 끌 수 있습니다.', 'info', 12000), 4000);
+      cmd('updateSettings', { patch: { telemetryNotice: true } });
+    }
     const b = await cmd('getBooks');
     app.books = b.ok ? b.result : [];
     fillVersions();

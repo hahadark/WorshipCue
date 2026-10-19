@@ -7,6 +7,7 @@ const { WorshipCueCore } = require('../core/core');
 const { startServer } = require('../core/server');
 const i18n = require('../core/i18n');
 const { setupUpdater } = require('./updater');
+const { setupTelemetry } = require('./telemetry');
 
 // 화면 언어: 설정에 있으면 그것, 처음 실행이면 이 빌드의 기본 언어 (영어판: package.json 의 worshipcueLang = 'en')
 const BUILD_LANG = (() => { try { return require('../../package.json').worshipcueLang === 'en' ? 'en' : 'ko'; } catch { return 'ko'; } })();
@@ -277,6 +278,7 @@ if (!app.requestSingleInstanceLock()) {
     }
 
     setupUpdater(core); // 자동 업데이트 (설치판) · 새 버전 알림 (포터블·맥)
+    setupTelemetry(core); // 익명 사용 통계 (하루 한 번, 설정에서 끄기)
     core.desktop = {
       listDisplays, status, setOutput,
       globalShortcutStatus: () => globalStatus,

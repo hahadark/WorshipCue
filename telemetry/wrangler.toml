@@ -1,0 +1,11 @@
+# WorshipCue 익명 사용 통계 워커 — 올리기: npx wrangler deploy (이 폴더에서)
+# 집계 화면 열쇠: npx wrangler secret put STATS_KEY
+name = "worshipcue-usage"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "worshipcue-usage"
+database_id = "3a90a352-c498-4696-be8e-51e61289ff42"
