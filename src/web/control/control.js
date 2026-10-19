@@ -551,7 +551,8 @@
     if (v && v.duration) cmd('videoControl', { action: 'seek', time: e.target.value * v.duration });
   });
 
-  $('#lvSlides').addEventListener('dblclick', e => {
+  // LIVE 슬라이드 단추: 한 번 누르면 그 슬라이드로 (이미 송출 중인 것 안에서 이동)
+  $('#lvSlides').addEventListener('click', e => {
     const b = e.target.closest('button[data-i]');
     if (b) cmd('gotoSlide', { index: +b.dataset.i });
   });
