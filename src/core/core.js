@@ -18,6 +18,9 @@ const { normalizeCue, newId, sampleItems } = require('./cues');
 const { Hymns } = require('./hymns');
 const { SongInbox, onlineSearchUrl } = require('./songinbox');
 const { HymnLyrics, countHymns, FILE: HYMN_FILE } = require('./hymnlyrics');
+
+/** 모두 지우기로 숨긴 배경은 다시 송출하면 돌아온다 (배경 끄기로 직접 끈 것은 그대로) */
+function unclearBg(core) { if (core.layers.bgByClear) { core.layers.hideBg = false; core.layers.bgByClear = false; } }
 const { Library } = require('./library');
 const { BOOKS, getBook } = require('./books');
 const { formatTitle } = require('./db');
@@ -405,6 +408,7 @@ WorshipCueCore.prototype.commands = {
 
   // ---- Live ----
   sendLive(a) {
+    unclearBg(this);
     this.holdObs(false); // 새로 송출하면 OBS 도 다시 보인다
     const r = this.presentation.sendLive(a && a.slides ? a : null);
     this.addHistory();
@@ -436,8 +440,8 @@ WorshipCueCore.prototype.commands = {
   gotoSlide(a) { return this.presentation.gotoSlide(a.index); },
   extendLive(a) { return this.presentation.extendLive(a); },
   clearLive() { return this.presentation.clear(); },
-  restoreLive() { return this.presentation.restore(); },
-  toggleLive() { return this.presentation.toggle(); },
+  restoreLive() { unclearBg(this); return this.presentation.restore(); },
+  toggleLive() { const r = this.presentation.toggle(); if (this.presentation.live && this.presentation.live.visible) { unclearBg(this); this.emit('live'); } return r; },
   getLiveState() { return this.presentation.getLiveState(); },
   getState() { return this.getState(); },
 
@@ -839,6 +843,7 @@ WorshipCueCore.prototype.commands = {
       if (!this.screenPayload().bgs.length) { this.emit('live'); return this.layersPayload(); }
     }
     this.layers.hideBg = off;
+    this.layers.bgByClear = false; // 직접 끈 배경은 다시 켤 때까지
     this.emit('live');
     return this.layersPayload();
   },
@@ -855,7 +860,7 @@ WorshipCueCore.prototype.commands = {
   /** 모두 지우기: 글자 숨김 + 배경 숨김 + 오버레이 끄기 + 로고 화면 끔 (음악은 조작 화면에서 멈춤) */
   clearAll() {
     if (this.presentation.live && this.presentation.live.visible) this.presentation.clear();
-    this.layers.hideBg = true;
+    if (!this.layers.hideBg) { this.layers.hideBg = true; this.layers.bgByClear = true; } // 모두 지우기로 숨긴 배경은 다음 송출 때 다시
     this.layers.logo = false;
     this.layers.media = null; // 송출 배경(카메라·그림·영상)도 끄기 — 카메라가 계속 켜져 있지 않게
     const on = this.library.overlays().filter(o => o.on).map(o => o.id);

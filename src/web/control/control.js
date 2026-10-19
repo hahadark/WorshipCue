@@ -1311,9 +1311,9 @@
     for (const out of ['main', 'overlay']) {
       const cs = o.clients.filter(c => c.output === out && c.kind !== 'window');
       const name = out === 'main' ? 'OBS 전체' : 'OBS 자막';
-      if (!cs.length) { parts.push(`<span class="st" title="/outputs/${out} 에 연결된 브라우저 소스 없음"><span class="dot off"></span>${name} 연결 없음</span>`); continue; }
+      if (!cs.length) { parts.push(`<span class="st" title="/outputs/${out} 에 연결된 브라우저 소스 없음"><span class="dot off"></span><span>${name}</span> 연결 없음</span>`); continue; }
       const synced = cs.every(c => c.ack && c.ack.version === live.version);
-      parts.push(`<span class="st" title="연결 ${cs.length}개 · 출력 화면이 보고한 상태 버전과 송출 버전을 비교합니다"><span class="dot ${synced ? 'ok' : 'warn'}"></span>${name} ${cs.length}개 ${synced ? '동기화됨' : '갱신 대기'}</span>`);
+      parts.push(`<span class="st" title="연결 ${cs.length}개 · 출력 화면이 보고한 상태 버전과 송출 버전을 비교합니다"><span class="dot ${synced ? 'ok' : 'warn'}"></span><span>${name}</span> ${cs.length}개 ${synced ? '동기화됨' : '갱신 대기'}</span>`);
     }
     const win = o.clients.filter(c => c.kind === 'window');
     if (win.length && d && d.visible) { // 숨겨진 출력 창은 표시하지 않음
