@@ -75,6 +75,18 @@
     app.setPreviewIndex(at);
     await sendPreview();
   };
+  /** 지금 송출 중인 순서에서 배경 빼기 */
+  async function removeLiveItemBg() {
+    const lv = app.state.live && app.state.live.passage;
+    if (!lv || !(lv.cueIndex >= 0) || !lv.cueId) return;
+    if (window.BCCue && lv.cueId === window.BCCue.currentId()) return app.removeItemBg(lv.cueIndex);
+    // 다른 큐시트의 순서: 저장된 큐시트에서 뺀다 (다음 송출부터)
+    const r = await cmd('getCue', { id: lv.cueId });
+    if (!r.ok || !r.result.items[lv.cueIndex]) return;
+    r.result.items[lv.cueIndex].bg = '';
+    await cmd('saveCue', { cue: r.result });
+    showMsg(`'${lv.itemTitle || lv.title}' 순서에서 배경을 뺐습니다.`, 'ok', 2000);
+  }
   app.removeTemplateBg = async t => {
     const c = structuredClone(t);
     c.background = { ...c.background, type: 'color', color: c.background.color || '#000000' };
@@ -1143,7 +1155,7 @@
     for (const b of S.bgs || []) if (b.src === 'media') out.push(chip('media', 'on', `${LY_ICON[b.type] || '🖼'} ${LY_SRC.media}${b.label ? ': ' + b.label : ''}`, '✕', '송출 배경 끄기 (카메라는 닫힘)'));
     const other = (S.bgs || []).filter(b => b.src !== 'media');
     if (S.bgHidden) out.push(chip('bgon', 'off', '🖼 배경 꺼짐', '다시 켜기', '배경(순서·템플릿 배경)을 다시 켭니다'));
-    else if (other.length) out.push(chip('bgoff', 'on', other.map(b => `${LY_ICON[b.type] || '🖼'} ${LY_SRC[b.src]}`).join(' · '), '✕', '배경 빼기 · 끄기 (이 순서에서 빼기 / 템플릿에서 빼기 / 잠깐 끄기)'));
+    else for (const b of other) out.push(chip(b.src === 'slide' ? 'bgitem' : 'bgtpl', 'on', `${LY_ICON[b.type] || '🖼'} ${LY_SRC[b.src]}${b.src === 'template' && b.label ? ': ' + b.label : ''}`, '✕', b.src === 'slide' ? '이 순서에서 배경 빼기' : '템플릿 배경 빼기 (단색으로, 이 템플릿을 쓰는 모든 순서)'));
     if (S.overlays && S.overlays.length) out.push(chip('ov', 'on', `✨ ${S.overlays.join(', ')}`, '✕', '오버레이 끄기'));
     if (S.logo) out.push(chip('logo', 'on', '🛡 로고 화면', '✕', '로고 화면 끄기'));
     if (S.draw) out.push(chip('draw', 'on', '✏ 그리기', '✕', '그린 것 지우기'));
@@ -1163,7 +1175,8 @@
     if (act === 'content') cmd('toggleLive');
     else if (act === 'video') cmd('videoControl', { action: 'stop' });
     else if (act === 'media') cmd('setBackgroundMedia', { media: null });
-    else if (act === 'bgoff') { const r = b.getBoundingClientRect(); const lv = app.state.live && app.state.live.passage; window.BCCtx.show(r.left, r.top - 4, app.bgMenuItems(lv && lv.cueId === (window.BCCue && window.BCCue.currentId()) ? lv.cueIndex : -1)); return; }
+    else if (act === 'bgitem') removeLiveItemBg();
+    else if (act === 'bgtpl') { const lv = app.state.live && app.state.live.passage; app.removeTemplateBg(tplFor('main', lv && lv.tpl)); }
     else if (act === 'bgon') cmd('toggleBackground', { on: false });
     else if (act === 'ov') cmd('toggleOverlaysOff');
     else if (act === 'logo') cmd('toggleLogoScreen', { on: false });
