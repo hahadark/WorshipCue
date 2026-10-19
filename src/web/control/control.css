@@ -907,5 +907,14 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 /* 본문·편집 창: 여러 장 고르기 */
 #slideGrid .sg-cell.msel, #results .srow.msel { outline: 3px solid var(--accent); outline-offset: -1px; background: color-mix(in srgb, var(--accent) 16%, transparent); }
 #slideGrid, #results { user-select: none; }
-.msel-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 4px 8px; background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-bottom: 1px solid var(--line); font-size: 13px; }
+#panelMain { position: relative; }
+/* 고른 슬라이드 막대: 제목 줄 위에 겹쳐 (목록·격자가 밀리거나 가려지지 않게) */
+.msel-bar { position: absolute; left: 0; right: 0; top: 0; min-height: 100%; z-index: 40; display: flex; align-items: center; flex-wrap: nowrap; overflow: hidden; gap: 6px; padding: 0 8px; background: color-mix(in srgb, var(--accent) 24%, var(--panel)); border-bottom: 2px solid var(--accent); font-size: 13px; white-space: nowrap; }
+.msel-bar button { padding: 2px 8px; }
+.center-head { position: relative; }
 .msel-bar .muted { font-size: 11px; }
+
+/* 슬라이드 썸네일 안의 그림을 끌면 브라우저가 그림을 끌어 가서 '끌어서 고르기'가 끊기지 않게 */
+#slideGrid img, #cueGrid img, #results .srow img, #seList img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
+#cueGrid { user-select: none; }
+#cueGrid .sg-cell.msel { outline: 3px solid var(--accent); outline-offset: -1px; background: color-mix(in srgb, var(--accent) 16%, transparent); }

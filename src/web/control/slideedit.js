@@ -628,10 +628,11 @@
   function paintSel() {
     const many = selMany();
     document.querySelectorAll('#slideGrid .sg-cell, #results .srow').forEach(c => c.classList.toggle('msel', many && M.ks.has(+c.dataset.k)));
+    document.querySelectorAll('#cueGrid .sg-cell').forEach(c => c.classList.toggle('msel', many && +c.dataset.i === M.i && M.ks.has(+c.dataset.k)));
     let bar = document.getElementById('mselBar');
     if (!many) { if (bar) bar.hidden = true; return; }
     if (!bar) {
-      document.querySelector('#panelMain .center-head').insertAdjacentHTML('afterend', '<div id="mselBar" class="msel-bar"></div>');
+      document.querySelector('#panelMain .center-head').insertAdjacentHTML('beforeend', '<div id="mselBar" class="msel-bar"></div>');
       bar = document.getElementById('mselBar');
       bar.addEventListener('click', e => { const b = e.target.closest('[data-ms]'); if (b) selAction(b.dataset.ms); });
     }
@@ -666,15 +667,20 @@
   }
   /** 끌어서 영역 고르기 (목록·격자) */
   function attachSel(box, sel) {
+    box.addEventListener('dragstart', ev => { if (ev.target.closest(sel)) ev.preventDefault(); }); // 썸네일 그림이 끌려가지 않게
     box.addEventListener('pointerdown', ev => {
       if (ev.button !== 0 || ev.target.closest('button, input, .sg-ops, .sg-edit')) { M.drag = null; return; }
       const c = ev.target.closest(sel);
-      M.drag = c && app.preview && app.preview.cue ? { from: +c.dataset.k, moved: false } : null;
+      const sameItem = x => x.dataset.i == null || (app.preview && app.preview.cue && +x.dataset.i === app.preview.cue.index);
+      M.drag = c && app.preview && app.preview.cue && sameItem(c) ? { from: +c.dataset.k, moved: false } : null;
     });
     box.addEventListener('pointermove', ev => {
       if (!M.drag || !(ev.buttons & 1)) return;
+      // 가장자리로 끌면 저절로 넘김
+      const br = box.getBoundingClientRect();
+      if (ev.clientY > br.bottom - 30) box.scrollTop += 18; else if (ev.clientY < br.top + 30) box.scrollTop -= 18;
       const c = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(sel);
-      if (!c || (!M.drag.moved && +c.dataset.k === M.drag.from)) return;
+      if (!c || (c.dataset.i != null && !(app.preview && app.preview.cue && +c.dataset.i === app.preview.cue.index)) || (!M.drag.moved && +c.dataset.k === M.drag.from)) return;
       if (!M.drag.moved) { selReset(M.drag.from); M.drag.moved = true; }
       const a = Math.min(M.drag.from, +c.dataset.k), b = Math.max(M.drag.from, +c.dataset.k);
       M.ks = new Set(Array.from({ length: b - a + 1 }, (_, n) => a + n));
@@ -682,6 +688,13 @@
     });
   }
   document.addEventListener('pointerup', () => { if (!M.drag) return; if (!M.drag.moved) M.drag = null; else setTimeout(() => { M.drag = null; }, 0); });
+  /** 전체 격자·전체 목록 클릭: 미리보기 중인 순서의 칸에서 Shift·Ctrl·끌기면 고르기 (true = 썼음) */
+  function selClickAll(i, k, ev) {
+    if (M.drag && M.drag.moved) return true;
+    const p = app.preview;
+    if (!p || !p.cue || p.cue.index !== i) return false;
+    return selClick(k, ev);
+  }
   /** 목록·격자 키: Delete = 고른 것 지우기 · Esc = 해제 · Ctrl+A = 모두 */
   function selKey(ev) {
     if (!app.preview || !app.preview.cue) return false;
@@ -799,6 +812,8 @@
     });
     $('#seList').addEventListener('pointermove', ev => {
       if (!S.lasso || !(ev.buttons & 1)) return;
+      const lr = $('#seList').getBoundingClientRect();
+      if (ev.clientY > lr.bottom - 30) $('#seList').scrollTop += 18; else if (ev.clientY < lr.top + 30) $('#seList').scrollTop -= 18;
       const c = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('#seList .se-slide');
       if (!c || c.dataset.key === '*' || (!S.lasso.moved && c.dataset.key === S.lasso.from)) return;
       S.lasso.moved = true;
@@ -950,5 +965,5 @@
   // 가운데 목록(순서의 슬라이드 줄)에서도 끌기·키
   { const res = document.getElementById('results'); if (res) { attachSel(res, '.srow'); res.addEventListener('keydown', e => { if (app.results && app.results.type === 'none' && selKey(e)) { e.preventDefault(); e.stopImmediatePropagation(); } }, true); } }
   window.BCSlideEdit = { init, open, openPreviewSlide, close, dropImage, menuFor, quickOp, isOpen: () => !$('#se').hidden,
-    selClick, paintSel, attachSel, selKey, selAction, selMany, selCount: () => (selMany() ? M.ks.size : 0) };
+    selClick, selClickAll, paintSel, attachSel, selKey, selAction, selMany, selCount: () => (selMany() ? M.ks.size : 0) };
 })();

@@ -117,10 +117,14 @@
       const x = at(e);
       if (!x) return;
       const op = e.target.closest('.sg-edit') ? 'edit' : e.target.closest('.sg-add') ? 'add' : e.target.closest('.sg-del') ? 'del' : '';
+      if (!op && window.BCSlideEdit && window.BCSlideEdit.selClickAll(x.i, x.k, e)) return; // Shift·Ctrl·끌기: 여러 장 고르기
       if (!(await window.BCCue.previewAt(x.i, x.k))) return;
+      if (!op && window.BCSlideEdit) window.BCSlideEdit.selClick(x.k, {}); // 다른 순서를 누르면 거기서 새로 고르기
       if (op === 'edit') window.BCSlideEdit.openPreviewSlide(x.k);
       else if (op) window.BCSlideEdit.quickOp(x.k, op);
     });
+    if (window.BCSlideEdit) window.BCSlideEdit.attachSel(g, '.sg-cell');
+    g.addEventListener('keydown', e => { if (window.BCSlideEdit && window.BCSlideEdit.selKey(e)) { e.preventDefault(); e.stopPropagation(); } });
     g.addEventListener('dblclick', async e => {
       const x = at(e);
       if (!x || e.target.closest('.sg-edit, .sg-ops')) return;
