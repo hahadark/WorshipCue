@@ -297,6 +297,9 @@
     $('#q').value = `${b.short}${btn.dataset.ch}`;
     // 장은 절 목록만 띄운다 — 미리보기는 절을 눌렀을 때
     showPassageList(r.result.passage);
+    // 격자·전체 보기·주석이었으면 절이 보이는 '목록' 으로
+    if (window.BCGrid && window.BCGrid.mode() !== 'list') window.BCGrid.set('list');
+    if (!$('#cmView').hidden) $('#centerTabs [data-c=text]').click();
   });
   $('#chapterGrid').addEventListener('keydown', e => {
     const btns = [...$('#chapterGrid').querySelectorAll('button')];

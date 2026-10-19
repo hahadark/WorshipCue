@@ -202,5 +202,5 @@
     } else if (pvI >= 0) g.querySelector('.sg-cell.in-pv')?.scrollIntoView({ block: 'nearest' });
   }
 
-  window.BCGrid = { init, update, isOn: () => on, mode: () => mode };
+  window.BCGrid = { init, update, set, isOn: () => on, mode: () => mode };
 })();
