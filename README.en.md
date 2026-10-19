@@ -38,15 +38,19 @@ The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Ver
 
 | | |
 |---|---|
-| Cue sheet | Bible · songs · hymns/song PPTs · announcements · titles · images · videos · audio · slideshow (pre-service loop) · camera · blank screen, in one list. F6 at the end of an item moves on to the next item. |
+| Cue sheet | Bible · songs · hymns/song PPTs · announcements · titles · images · videos · audio · slideshow (pre-service loop) · camera · blank screen, in one list. F6 at the end of an item moves on to the next item. Clicking an item only previews it. |
+| Running | **Pick the preview slide with ← → and press Enter to go live** (at the end of an item → moves to the next item). 🗂 **All · grid / All · list** (ProPresenter style): every slide of every item on one screen, clicking an item in the cue sheet jumps to its row. Thumbnails: ＋ add · ✕ delete · ✎ edit. LIVE slide numbers go live with one click. |
 | Bible | Search by reference (`John 3:16`, `Jn 3:16-18`, `Ps 23`, `Rom 8:1,28`) or by words. Automatic slide splitting so text never overflows. Parallel translation (two translations at once). |
 | Songs | Song library, `[Verse 1]` `[Chorus]` labels with group colors, arrangement (`1 C 2 C C`), number/C/B/E keys to jump to a verse/chorus/bridge/ending while live, chords for the worship team, song credits. Import from OpenLP · ChordPro · ProPresenter 6 · PPT · txt. |
 | ✏ Slide editor | FreeShow-style: drag text boxes, add text/images/shapes/camera boxes, per-slide or common styling, insert/duplicate/delete/move slides, ← → to change slides. Works on every item type. |
 | ✍ Text formatting | **Ctrl+B bold**, font size and text color right in the lyrics/announcement box. |
-| Output | Sanctuary full screen + OBS full + OBS transparent lower third, each with its own template. Dissolve/cut transitions, logo, overlays (clock · countdown · banner), live background (camera · image · video), drawing/highlighting on the live screen. |
+| Output | Sanctuary full screen + OBS full + OBS transparent lower third, each with its own template. Dissolve/cut transitions, logo, overlays (clock · countdown · banner), live background (camera · image · video), drawing/highlighting on the live screen. Turning off the second screen also hides OBS. |
+| 🌐 LAN output | When presentation and streaming run on different PCs, the streaming PC's OBS opens only the output screens (key required). |
+| 🎛 OBS dock | A control panel inside OBS: current/next slide, prev · next · hide, send cue items (fixed button positions), 🖼 image/score slides top-right, 🖥 full slide. |
+| 📷 Camera | Resolution (720p–4K), frame rate, brightness/contrast/saturation, mirror, live quality readout. |
 | Stage display | Current/next slide, clock, sermon timer, messages, item notes for the preacher and worship team. |
 | Phone remote | Next · previous · hide, jump to verses, send cue items, stage messages — from any phone on the same Wi-Fi (PIN). |
-| More | Stream Deck / Companion buttons (HTTP), workspaces (saved panel layouts), 5 control-screen themes, drag-and-drop files (including PPT), cue sheet manager (pin · templates · duplicate for next week · trash). |
+| More | ⬆ **Auto update** (installer: installs on quit, never restarts during a service · portable/Mac: notifications) · 🌐 Korean / English UI · 🍎 Mac (Apple Silicon) · Stream Deck / Companion buttons (HTTP), workspaces (saved panel layouts), 5 control-screen themes, drag-and-drop files (including PPT), cue sheet manager (pin · templates · duplicate for next week · trash). |
 
 ## Menus
 
