@@ -77,6 +77,7 @@
       { label: `메모${it.note ? ' 고치기' : ' 달기'}…`, run: A('note') },
       ...(Cue().timesOn() ? [{ label: '예정 시간…', run: A('duration') }] : []),
       ...(it.type === 'song' && !it.songId ? [{ label: '📚 찬양 라이브러리에 저장', run: A('tolib') }] : []),
+      ...(it.type !== 'audio' && Cue().themes && Cue().themes().length ? ['-', { head: '테마 (이 순서만)' }, { label: (Cue().themeOf(i) ? '' : '✓ ') + '기본 (전체 설정 따름)', run: () => Cue().itemAction(i, 'theme', '') }, ...Cue().themes().map(t => ({ label: (Cue().themeOf(i) === t.id ? '✓ ' : '') + '🎨 ' + t.name, run: () => Cue().itemAction(i, 'theme', t.id) }))] : []),
       ...(app.bgInfo && (app.bgInfo(i).itemBg || app.bgInfo(i).tpl) ? ['-', ...app.bgMenuItems(i).filter(x => x !== '-' && !x.head && !/잠깐|다시 켜기|송출 배경/.test(x.label))] : []),
       '-',
       { label: '위로', key: 'Alt+↑', run: A('up'), disabled: i === 0 },

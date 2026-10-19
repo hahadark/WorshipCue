@@ -506,6 +506,22 @@ WorshipCueCore.prototype.commands = {
     this.logger.info(`테마 적용: ${theme.name} (${outputs.join(', ')})`);
     return { id: theme.id, outputs };
   },
+  /** 순서별 테마: 테마의 예배당·OBS 템플릿이 없으면 만들고 id 를 돌려준다 (전체 설정·이미 고친 템플릿은 그대로) */
+  ensureTheme(a) {
+    const theme = THEMES.find(t => t.id === a.id);
+    if (!theme) throw new Error('테마를 찾을 수 없습니다.');
+    const ids = {};
+    let added = false;
+    this.settings.update(d => {
+      for (const o of OUTPUTS) {
+        const tpl = buildOne(theme, o);
+        ids[o] = tpl.id;
+        if (!d.templates.some(x => x.id === tpl.id)) { d.templates.push(tpl); added = true; }
+      }
+    });
+    if (added) this.settingsChanged('templates');
+    return ids;
+  },
   deleteTemplate(a) {
     const s = this.settings.get();
     if (s.templates.length <= 1) throw new Error('마지막 템플릿은 삭제할 수 없습니다.');

@@ -19,10 +19,39 @@
   const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map(), songs: new Map(), songTimer: null };
   /** 순서별 템플릿 { main, overlay } (없으면 null = 출력 기본) */
   const itemTpl = it => (it.tplMain || it.tplOverlay ? { main: it.tplMain || '', overlay: it.tplOverlay || '' } : null);
+  // 순서별 테마: 테마의 예배당·OBS 템플릿을 이 순서에만
+  let themeList = [];
+  const loadThemes = async () => { if (themeList.length) return themeList; const r = await cmd('listThemes', {}); themeList = r.ok ? r.result.map(t => ({ id: t.id, name: t.name })) : []; return themeList; };
+  /** 이 순서의 테마 id ('' = 기본, 'custom' = 직접 고른 템플릿) */
+  const themeOf = it => {
+    const m = /^theme-(.+)-main$/.exec(it.tplMain || '');
+    if (m && (!it.tplOverlay || it.tplOverlay === `theme-${m[1]}-overlay`)) return m[1];
+    return it.tplMain || it.tplOverlay ? 'custom' : '';
+  };
+  const themeName = it => { const id = themeOf(it); if (!id) return ''; if (id === 'custom') return '직접 고른 템플릿'; const t = themeList.find(x => x.id === id); return t ? t.name : id; };
+  async function setItemTheme(i, id) {
+    const it = st.cue && st.cue.items[i];
+    if (!it) return;
+    if (!id) { delete it.tplMain; delete it.tplOverlay; }
+    else {
+      const r = await cmd('ensureTheme', { id });
+      if (!r.ok) return app.showMsg(r.error, 'error');
+      it.tplMain = r.result.main; it.tplOverlay = r.result.overlay;
+    }
+    save(); render(); if (i === st.sel) forceEditor();
+    // 지금 송출 중인 순서면 송출 화면도 (보던 슬라이드 그대로)
+    const L = app.state.live;
+    const onAir = L && L.hasLive && L.visible && L.passage && L.passage.cueId === st.cue.id && L.passage.cueIndex === i;
+    const at = onAir ? L.index : 0;
+    await previewItem(i, { keepIndex: true });
+    if (onAir) { app.setPreviewIndex(at); await app.sendPreview(); }
+    app.showMsg(id ? `${i + 1}번 '${it.title}': 테마 '${(themeList.find(t => t.id === id) || {}).name || id}'` : `${i + 1}번 '${it.title}': 기본 테마로`, 'ok', 1800);
+  }
   const newId = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
   // ---------------- 불러오기·저장 ----------------
   async function init() {
+    loadThemes().then(() => { render(); });
     await refreshList();
     let id = app.state.settings.activeCueId;
     if (!st.list.some(c => c.id === id)) id = st.list[0] && st.list[0].id;
@@ -95,7 +124,7 @@
       <div class="cue-item ${i === st.sel ? 'sel' : ''} ${i === pvIdx ? 'pv' : ''} ${i === airIdx ? 'air' : ''} ${i === airIdx && !live.visible ? 'hid' : ''}" draggable="true" data-i="${i}">
         <span class="cue-no">${i + 1}</span>
         <span class="cue-ico" title="${TYPE[it.type]}">${ICON[it.type]}</span>
-        <span class="cue-body"><b>${esc(it.title)}</b><span class="cue-detail">${esc(detail(it))}</span>${it.note ? `<span class="cue-note">📝 ${esc(it.note)}</span>` : ''}</span>
+        <span class="cue-body"><b>${esc(it.title)}</b>${themeOf(it) ? `<span class="cue-theme" title="이 순서만 다른 테마">🎨 ${esc(themeName(it))}</span>` : ''}<span class="cue-detail">${esc(detail(it))}</span>${it.note ? `<span class="cue-note">📝 ${esc(it.note)}</span>` : ''}</span>
         ${plan[i] && timesOn() ? `<span class="cue-time" title="예정 시작${it.duration ? ' · ' + it.duration + '분' : ''}">${plan[i]}${it.duration ? `<small>${it.duration}분</small>` : ''}</span>` : ''}
         <button class="cue-edit" data-edit="${i}" title="이 순서 고치기 (F2)">✎</button>
       </div>`).join('') : '<div class="empty">아래 버튼으로 예배 순서를 추가하세요.</div>';
@@ -549,6 +578,7 @@
         <label>제목</label><input type="text" data-k="title" value="${esc(it.title)}">
         ${fields}
         ${['song', 'text', 'title', 'bible'].includes(it.type) ? `<label>배경</label><div class="ce-row">${it.bg ? thumbTag(it.bg) : '<span class="muted">템플릿 배경</span>'}<button data-act="itembg">🖼 이미지·영상 고르기…</button>${it.bg ? '<button data-act="itembgclear">지우기</button>' : ''}</div>` : ''}
+        ${it.type !== 'audio' ? `<label>테마</label><div class="ce-row"><select data-theme title="이 순서에만 다른 테마 (예배당·OBS 템플릿을 함께 바꿈)"><option value="">기본 (전체 설정 따름)</option>${themeOf(it) === 'custom' ? '<option value="custom" selected>직접 고른 템플릿 (아래)</option>' : ''}${themeList.map(t => `<option value="${esc(t.id)}" ${themeOf(it) === t.id ? 'selected' : ''}>🎨 ${esc(t.name)}</option>`).join('')}</select></div>` : ''}
         ${it.type !== 'audio' ? `<label>템플릿</label><div class="ce-row">${tplSelect('tplMain', '예배당', it.tplMain)}${tplSelect('tplOverlay', 'OBS', it.tplOverlay)}</div>` : ''}
         ${it.type !== 'audio' && it.type !== 'video' ? `<label>자동 넘김</label><div class="ce-row"><input type="number" data-k="autoSec" min="0" max="3600" value="${it.autoSec || ''}" placeholder="0" style="width:80px"> 초마다 <label class="tc-toggle"><input type="checkbox" data-k="autoLoop" ${it.autoLoop ? 'checked' : ''}> 끝나면 처음부터 반복</label><span class="note">0 = 끔 (F6 으로 넘김) · 숨김(F10) 중에는 멈춤</span></div>` : ''}
         ${it.type !== 'audio' ? actionsHtml(it) : ''}
@@ -605,6 +635,7 @@
   }
   $('#cueEditor').addEventListener('input', e => { if (e.target.dataset.k) editChanged(e.target); });
   $('#cueEditor').addEventListener('change', e => { if (e.target.dataset.k && (e.target.tagName === 'SELECT' || e.target.type === 'checkbox')) editChanged(e.target); });
+  $('#cueEditor').addEventListener('change', e => { const s = e.target.closest('[data-theme]'); if (s && s.value !== 'custom') setItemTheme(st.sel, s.value); });
   $('#cueEditor').addEventListener('keydown', e => { if (e.key === 'Escape' && e.target.matches('input, textarea')) { e.target.blur(); } });
   $('#cueEditor').addEventListener('click', e => {
     const it = st.cue && st.cue.items[st.sel];
@@ -792,6 +823,7 @@
     if (!it) return;
     switch (act) {
       case 'preview': previewItem(i); break;
+      case 'theme': setItemTheme(i, extra || ''); break;
       case 'send': showSide('cue'); sendItem(i); break;
       case 'edit': st.sel = i; render(); setEditor(true); focusTitle(); break;
       case 'up': if (i > 0) { moveItem(i, i - 1); render(); forceEditor(); } break;
@@ -1119,6 +1151,7 @@
     editorOn: () => editorOn,
     /** 오른쪽 클릭 메뉴용: i 번째 순서에 하는 일 */
     itemAction: (i, act, extra) => itemAction(i, act, extra),
+    themes: () => themeList, themeOf: i => (st.cue && st.cue.items[i] ? themeOf(st.cue.items[i]) : ''),
     onLive: () => { render(); onEnter(); },
     // 다른 곳(다른 창·외부 연동)에서 바뀐 큐시트는 다시 불러온다. 방금 내가 저장한 것은 제외
     onCues: d => { refreshList(); if (st.cue && d && d.id === st.cue.id && Date.now() - st.lastSave > 1500) openCue(st.cue.id); },

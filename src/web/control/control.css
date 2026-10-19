@@ -895,3 +895,6 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 .lv-layers .ly-on { border-color: var(--live, #e04b4b); }
 .lv-layers .ly-on:hover .ly-x { background: var(--live, #e04b4b); color: #fff; }
 .lv-layers .ly-off { opacity: .8; border-style: dashed; }
+
+/* 큐시트: 이 순서만 다른 테마 */
+.cue-item .cue-theme { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 500; color: var(--muted); }
