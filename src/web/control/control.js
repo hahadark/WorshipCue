@@ -1320,6 +1320,7 @@
     cueEdit: () => window.BCCue && window.BCCue.edit(),
     toggleEditor: () => window.BCCue && window.BCCue.toggleEditor(),
     openHistory: () => openHistory(),
+    webLyrics: () => window.BCCue && window.BCCue.webLyrics(),
     previewPrevSlide: () => stepPreview(-1),
     previewNextSlide: () => stepPreview(1),
     previewPrevVerse: () => previewAdjacentVerse(-1),

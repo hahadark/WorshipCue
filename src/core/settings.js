@@ -25,6 +25,7 @@ const DEFAULT_SHORTCUTS = {
   cueNext: 'Ctrl+ArrowDown',
   cueEdit: 'F2',
   toggleEditor: 'Ctrl+Shift+E',
+  webLyrics: 'Ctrl+L',
 };
 
 const SHORTCUT_LABELS = {
@@ -47,6 +48,7 @@ const SHORTCUT_LABELS = {
   cueNext: '큐시트 다음 순서 미리보기',
   cueEdit: '선택한 순서 편집',
   toggleEditor: '편집칸 보이기·숨기기',
+  webLyrics: '웹에서 가사 찾기 (고른 찬양 순서에 넣기)',
 };
 
 function defaults() {

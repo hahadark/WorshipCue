@@ -520,7 +520,8 @@
           <select data-k="endAction" title="영상이 끝나면"><option value="hold" ${(it.endAction || 'hold') === 'hold' ? 'selected' : ''}>끝나면: 마지막 장면에서 멈춤</option><option value="black" ${it.endAction === 'black' ? 'selected' : ''}>끝나면: 화면 숨김</option><option value="next" ${it.endAction === 'next' ? 'selected' : ''}>끝나면: 다음 순서 송출</option></select></div>`,
       audio: `<label>음악</label><div class="ce-row"><span class="muted ce-file">${esc(it.file ? fileName(it.file) : '(고르지 않음)')}</span><button data-act="audiopick">🔊 음악 고르기…</button><button data-act="audioplay">▶</button><button data-act="audiostop">■</button></div>
         <label>소리 크기</label><div class="ce-row"><input type="range" data-k="volume" min="0" max="1" step="0.05" value="${it.volume ?? 1}" style="flex:1"><label class="tc-toggle"><input type="checkbox" data-k="loop" ${it.loop ? 'checked' : ''}> 반복</label><label class="tc-toggle"><input type="checkbox" data-k="fadeOnLeave" ${it.fadeOnLeave !== false ? 'checked' : ''}> 다른 화면을 송출하면 페이드아웃</label></div>`,
-      song: `${it.songId ? `<label>라이브러리</label><div class="ce-row note">📚 라이브러리 찬양과 연결됨 — 가사를 고치면 이 찬양을 쓰는 모든 큐시트에 반영 <button data-act="unlink">연결 끊기</button></div>` : `<label>라이브러리</label><div class="ce-row note"><button data-act="tolib">📚 라이브러리에 저장</button> 저장하면 다음 주에도 검색해서 바로 넣을 수 있습니다</div>`}
+      song: `<label>웹</label><div class="ce-row"><button data-act="weblyrics" class="${(it.lyrics || '').trim() ? '' : 'primary'}" title="이 순서의 제목으로 벅스·지니·멜론에서 찾아 가사·부를 순서를 채웁니다 (Ctrl+L)">🌐 웹에서 가사 찾기</button><span class="muted">제목으로 찾아 이 순서에 바로 넣습니다</span></div>
+        ${it.songId ? `<label>라이브러리</label><div class="ce-row note">📚 라이브러리 찬양과 연결됨 — 가사를 고치면 이 찬양을 쓰는 모든 큐시트에 반영 <button data-act="unlink">연결 끊기</button></div>` : `<label>라이브러리</label><div class="ce-row note"><button data-act="tolib">📚 라이브러리에 저장</button> 저장하면 다음 주에도 검색해서 바로 넣을 수 있습니다</div>`}
         <label>가사</label><textarea data-k="lyrics" data-fmt rows="7" placeholder="[1절]&#10;첫째 줄&#10;둘째 줄&#10;&#10;[후렴]&#10;…">${esc(it.lyrics || '')}</textarea>
         <span></span><div class="ce-row note"><label class="tc-toggle"><input type="checkbox" data-k="showTitle" ${it.showTitle ? 'checked' : ''}> 화면에 제목 표시</label> · 빈 줄 = 다음 슬라이드 · [1절] 줄은 슬라이드 이름</div>
         <span></span><div class="ce-row note">${window.BCFmt ? window.BCFmt.bar() : ''}</div>
@@ -659,6 +660,7 @@
       case 'audioplay': playAudio(it); break;
       case 'audiostop': if (window.BCLib) window.BCLib.audio.stop(); break;
       case 'itembg': if (window.BCLib) window.BCLib.pickImage(url => { it.bg = url; save(); forceEditor(); previewItem(i, { keepIndex: true }); }); break;
+      case 'weblyrics': webLyrics(i); break;
       case 'itembgclear': it.bg = ''; save(); forceEditor(); previewItem(i, { keepIndex: true }); break;
       case 'tolib': {
         const r = await cmd('saveSong', { song: { title: it.title, lyrics: it.lyrics || '', credit: it.credit || '' } });
@@ -826,6 +828,31 @@
   }
 
   /** 새 순서: 고른 순서 바로 다음에 넣고, 가운데 편집칸에서 바로 쓰게 한다 */
+  /** 🌐 웹에서 가사 찾기: i = 찬양 순서면 그 순서에 넣고, 아니면(-1) 새 찬양 순서로 */
+  function webLyrics(i = st.sel) {
+    if (!window.BCLib || !window.BCLib.webLyrics) return;
+    const it = st.cue && i >= 0 ? st.cue.items[i] : null;
+    const song = it && it.type === 'song' ? it : null;
+    const q = song && song.title && song.title !== TYPE.song ? song.title : '';
+    window.BCLib.webLyrics(q, {
+      target: song ? `${i + 1}번 '${song.title}'` : '',
+      apply: d => {
+        if (!st.cue) return;
+        const fill = x => {
+          x.title = d.title || x.title;
+          x.lyrics = d.lyrics;
+          x.order = d.arrangement || '';
+          if (d.credit && !x.credit) x.credit = d.credit;
+          if (d.songId) { x.songId = d.songId; if (d.song) st.songs.set(d.songId, d.song); }
+        };
+        const k = song ? st.cue.items.indexOf(song) : -1;
+        if (k >= 0) { fill(song); st.sel = k; save(); forceEditor(); render(); previewItem(k); }
+        else { addItem('song', { title: d.title || TYPE.song }); const n = st.cue.items[st.sel]; if (n) { fill(n); save(); forceEditor(); render(); previewItem(st.sel); } }
+        app.showMsg(`'${d.title}' 가사를 넣었습니다.`, 'ok', 2000);
+      },
+    });
+  }
+
   function addItem(type, extra = {}) {
     if (!st.cue) return;
     const it = { id: newId(), type, title: extra.title || TYPE[type], note: '', ...extra };
@@ -865,6 +892,7 @@
     const b = e.target.closest('button[data-add]');
     if (!b) return;
     if (b.dataset.add === 'hymn') openHymnPicker({});
+    else if (b.dataset.add === 'weblyrics') webLyrics(-1);
     else addItem(b.dataset.add);
   });
   // 왼쪽 탭: 큐시트 / 성경 책
@@ -1025,6 +1053,7 @@
   }
 
   window.BCCue = {
+    webLyrics: () => webLyrics(st.sel),
     init, render, onCueNext, move, showSide, onSongDownloaded, onSongInbox: showInbox,
     currentId: () => (st.cue ? st.cue.id : ''),
     addItem: (type, extra) => addItem(type, extra),

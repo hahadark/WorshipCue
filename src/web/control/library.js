@@ -173,8 +173,10 @@
   }
 
   // ---------------- 🌐 웹에서 가사 찾기 (벅스 · 지니 · 멜론, 한 곡씩) ----------------
-  const LW = { results: [], cur: null, raw: '' };
-  function webLyrics(query) {
+  const LW = { results: [], cur: null, raw: '', apply: null };
+  /** opts.apply(d): 큐시트 순서에 넣기 (d = { title, lyrics, arrangement, credit, songId }) · opts.target: 넣을 순서 이름 */
+  function webLyrics(query, opts = {}) {
+    LW.apply = typeof opts.apply === 'function' ? opts.apply : null;
     app.openModal('🌐 웹에서 가사 찾기', `<div class="lw">
       <div class="row-flex"><input type="text" id="lwQ" placeholder="찬양 제목 (가수를 함께 쓰면 더 정확합니다)" style="flex:1" value="${esc(query)}"><button id="lwGo" class="primary">찾기</button>
         <label class="tc-toggle"><input type="checkbox" data-site="bugs" checked>벅스</label><label class="tc-toggle"><input type="checkbox" data-site="genie" checked>지니</label><label class="tc-toggle"><input type="checkbox" data-site="melon" checked>멜론</label></div>
@@ -186,7 +188,7 @@
           <label>부를 순서</label><input type="text" id="lwArr" placeholder="비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴">
           <label>출처</label><input type="text" id="lwCredit">
           <label>슬라이드</label><div class="row-flex"><select id="lwLines">${[1, 2, 3, 4].map(n => `<option value="${n}" ${n === 2 ? 'selected' : ''}>${n}줄씩</option>`).join('')}</select><span class="note" id="lwInfo"></span></div>
-          <span></span><div class="row-flex"><button id="lwSave" class="primary" disabled>라이브러리에 저장</button><button id="lwAdd" disabled>저장하고 큐시트에 넣기</button></div>
+          <span></span><div class="row-flex">${LW.apply ? `<button id="lwAdd" class="primary" disabled title="${esc(opts.target || '고른 순서 다음에 새 찬양 순서로')}">${opts.target ? '✓ 이 순서에 넣기' : '✓ 큐시트에 넣기'}</button><label class="tc-toggle"><input type="checkbox" id="lwLib" checked> 라이브러리에도 저장</label>` : '<button id="lwSave" class="primary" disabled>라이브러리에 저장</button><button id="lwAdd" disabled>저장하고 큐시트에 넣기</button>'}</div>
         </div>
       </div>
       <div class="note">검색하고 고른 곡만 한 곡씩 가져옵니다. 사이트 구조가 바뀌면 못 읽을 수 있습니다 — 그때는 가사를 복사해 '📋 여러 곡 붙여넣기'로. 가사의 저작권은 권리자에게 있으니 예배 송출은 저작권 단체의 이용 조건을 확인하세요.</div>
@@ -206,8 +208,17 @@
       if (!r.ok) { app.showMsg(r.error, 'error'); return null; }
       return r.result;
     };
-    $('#lwSave').onclick = async () => { const s = await save(); if (s) { app.showMsg(`'${s.title}' 을(를) 찬양 라이브러리에 저장했습니다. 다른 곡도 찾을 수 있습니다.`, 'ok', 3000); if (st.tab === 'songs') drawSongs(); } };
-    $('#lwAdd').onclick = async () => { const s = await save(); if (s) { app.closeModal(); addToCue('song', { songId: s.id, title: s.title, lyrics: s.lyrics }, s.title); if (st.tab === 'songs') drawSongs(); } };
+    if ($('#lwSave')) $('#lwSave').onclick = async () => { const s = await save(); if (s) { app.showMsg(`'${s.title}' 을(를) 찬양 라이브러리에 저장했습니다. 다른 곡도 찾을 수 있습니다.`, 'ok', 3000); if (st.tab === 'songs') drawSongs(); } };
+    $('#lwAdd').onclick = async () => {
+      if (LW.apply) {
+        const d = { title: $('#lwTitle').value.trim(), lyrics: $('#lwLyrics').value, arrangement: $('#lwArr').value.trim(), credit: $('#lwCredit').value, songId: '' };
+        if ($('#lwLib').checked) { const s = await save(); if (!s) return; d.songId = s.id; d.song = s; if (st.tab === 'songs') drawSongs(); }
+        app.closeModal();
+        LW.apply(d);
+        return;
+      }
+      const s = await save(); if (s) { app.closeModal(); addToCue('song', { songId: s.id, title: s.title, lyrics: s.lyrics }, s.title); if (st.tab === 'songs') drawSongs(); }
+    };
     if (query.trim()) lwSearch();
   }
   async function lwSearch() {
@@ -239,7 +250,8 @@
     $('#lwArr').value = r.result.arrangement;
     $('#lwCredit').value = [x.artist, x.siteName + ' 가사'].filter(Boolean).join(' · ');
     $('#lwInfo').textContent = `${x.siteName} · 구간 ${(r.result.lyrics.match(/^\[/gm) || []).length}개 · 고친 뒤 저장하세요`;
-    $('#lwSave').disabled = $('#lwAdd').disabled = false;
+    $('#lwAdd').disabled = false;
+    if ($('#lwSave')) $('#lwSave').disabled = false;
   }
 
   async function addSong(id) {
@@ -692,7 +704,7 @@
   }
 
   window.BCLib = {
-    init, show, audio, tab: () => st.tab, liveMedia: m => liveMedia(m), onLayers: () => onLayers(), importSongs: paths => importSongs(paths), webLyrics: q => webLyrics(q || ''), pasteSongs: () => pasteSongs(),
+    init, show, audio, tab: () => st.tab, liveMedia: m => liveMedia(m), onLayers: () => onLayers(), importSongs: paths => importSongs(paths), webLyrics: (q, opts) => webLyrics(q || '', opts), pasteSongs: () => pasteSongs(),
     pickImage: done => pickFile('image', f => done(f.url)),
     pickVideo: done => pickFile('image', f => done(f.url), { video: 'only' }),
     pickAudio: done => pickFile('audio', done),

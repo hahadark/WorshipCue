@@ -46,7 +46,7 @@
     ]],
     ['큐시트', [
       { label: '＋ 순서 넣기 (고른 순서 다음에)', sub: [
-        { label: '🎼 찬송가·PPT', run: add('hymn') }, { label: '📖 성경', run: add('bible') }, { label: '🎵 찬양', run: add('song') },
+        { label: '🎼 찬송가·PPT', run: add('hymn') }, { label: '📖 성경', run: add('bible') }, { label: '🎵 찬양', run: add('song') }, { label: '🌐 웹에서 가사 찾아 찬양 넣기…', key: 'Ctrl+L', run: () => window.BCCue && window.BCCue.webLyrics() },
         { label: '📢 공지', run: add('text') }, { label: '🏷 제목', run: add('title') },
         '-',
         { label: '🖼 이미지', run: add('image') }, { label: '🎬 영상', run: add('video') }, { label: '🔊 음악', run: add('audio') },
