@@ -1398,6 +1398,12 @@
       const own = t && t.closest && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable || t.closest('#slideGrid, #chapterGrid, .ctx-menu, .dv-tabs-container'));
       if (!own) { e.preventDefault(); actions[combo === 'ArrowLeft' ? 'previewPrevSlide' : 'previewNextSlide'](); return; }
     }
+    // Enter: 화살표로 고른 미리보기 슬라이드를 송출 (글 쓰는 칸·단추·목록처럼 Enter 를 따로 쓰는 곳 밖에서)
+    if (!editing && $('#modal').hidden && combo === 'Enter' && !e.repeat && app.preview && app.preview.slides) {
+      const t = e.target;
+      const own = t && t.closest && (/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName) || t.isContentEditable || t.closest('#slideGrid, #results, #cueList, #chapterGrid, #bookList, .ctx-menu, .mb-drop, .dv-tabs-container'));
+      if (!own) { e.preventDefault(); sendPreview(); return; }
+    }
     // 브라우저 기본 동작 중 송출 화면에 위험한 키 차단 (새로 고침 등)
     if (combo === 'F5' || combo === 'Ctrl+R' || combo === 'Ctrl+Shift+R') e.preventDefault();
   }, true);

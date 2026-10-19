@@ -746,7 +746,11 @@
     }
     if (e.key === 'ArrowDown') { st.sel = Math.min(n - 1, st.sel + 1); render(); forceEditor(); e.preventDefault(); }
     else if (e.key === 'ArrowUp') { st.sel = Math.max(0, st.sel - 1); render(); forceEditor(); e.preventDefault(); }
-    else if (e.key === 'Enter') { quietPreview(st.sel); e.preventDefault(); }
+    else if (e.key === 'Enter') { // 이미 미리보기 중인 순서면 고른 슬라이드를 송출, 아니면 미리보기
+      const pv = app.preview && app.preview.cue && app.preview.cue.id === st.cue.id && app.preview.cue.index === st.sel;
+      if (pv) app.sendPreview(); else quietPreview(st.sel);
+      e.preventDefault();
+    }
     else if (e.key === 'Delete' && st.sel >= 0) { removeItem(st.sel); e.preventDefault(); }
   });
   // 끌어서 순서 바꾸기

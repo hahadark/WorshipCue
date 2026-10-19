@@ -108,7 +108,7 @@ It only works on this PC, so no PIN is needed. Turning off the second screen als
 | Key | Action |
 |---|---|
 | F6 / F5 | Next / previous slide (at the end of an item: next item) |
-| F9 · double-click a slide | Go live |
+| **Enter** · F9 · double-click a slide | Go live (pick the preview slide with ← → then Enter) |
 | F10 | Hide / show text |
 | ← / → · PageUp / PageDown | Previous / next preview slide |
 | Ctrl+↓ / Ctrl+↑ | Preview next / previous cue item |

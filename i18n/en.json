@@ -1629,6 +1629,7 @@
  "크레스트": "Crest",
  "크레스트 (예식·기념)": "Crest (ceremonies)",
  "클릭": "Click",
+ "클릭 = 미리보기 (화면에는 안 나감) · ← → 로 고르고 Enter(F9) = 송출 · Ctrl+↑↓ = 이전/다음 · 끌어서 순서 바꾸기": "Click = preview (not shown on screen) · pick with ← → then Enter (F9) = go live · Ctrl+↑↓ = previous/next · drag to reorder",
  "클릭 = 미리보기 (화면에는 안 나감) · 송출은 F9 · Ctrl+↑↓ = 이전/다음 · 끌어서 순서 바꾸기": "Click = preview (not shown on screen) · F9 = go live · Ctrl+↑↓ = previous/next · drag to reorder",
  "클릭: 고르기 · 더블클릭 또는 Enter: {1}": "Click: select · Double-click or Enter: {1}",
  "키 발급…": "Get a key…",
