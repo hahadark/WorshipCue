@@ -1,7 +1,7 @@
 'use strict';
 // 베들레헴 성경의 새찬송가 가사 DB (BethlehemWin\새찬송가.hdb, SQLite: hymnal(chapter, title, htext))
 // - 찬송가 PPT 의 악보 그림에는 글자가 없으므로, OBS 자막(가사만)에 쓸 가사를 여기서 가져온다
-// - 사용자의 베들레헴 설치 폴더에서 읽기만 한다 (프로그램에 포함하지 않음)
+// - 사용자의 베들레헴 설치 폴더에서 읽기만 한다 (공개판에는 포함하지 않음 · 개인용 빌드만 resources 에 넣음)
 
 const fs = require('fs');
 const os = require('os');
@@ -122,6 +122,8 @@ class HymnLyrics {
   find() {
     const s = this.core.settings.get();
     const dirs = s.bethlehemDir ? [s.bethlehemDir] : candidates();
+    // 개인용 빌드는 프로그램 폴더(resources)에 들어 있다 — 베들레헴이 없는 PC 에서도
+    if (process.resourcesPath) dirs.push(process.resourcesPath);
     for (const d of dirs) {
       const f = /\.hdb$/i.test(d) ? d : path.join(d, FILE);
       if (fs.existsSync(f)) return f;

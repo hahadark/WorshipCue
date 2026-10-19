@@ -9,6 +9,10 @@
     {
       "from": "data-personal/bible.db",
       "to": "bible.db"
+    },
+    {
+      "from": "data-personal/새찬송가.hdb",
+      "to": "새찬송가.hdb"
     }
   ],
   "win": {
