@@ -316,8 +316,10 @@
     st.rows = r.ok ? r.result : [];
     if (st.tab !== (kind === 'audio' ? 'audio' : 'images')) return;
     if (kind === 'image') {
-      const b = body(`<div class="lib-grid">${st.rows.map((f, k) => `<div class="lib-cell ${f.video ? 'is-video' : ''}" data-k="${k}" title="${esc(f.name)}">${thumb(f)}<span>${f.video ? '🎞 ' : ''}${esc(f.name)}</span>
-        <div class="lib-cell-act"><button data-live="${k}" class="primary" title="지금 송출 화면의 배경으로 바로 (슬라이드와 따로, 다른 순서로 넘어가도 그대로)">▶ 송출 배경</button><button data-bg="${k}" title="고른 순서의 배경으로">배경</button><button data-tb="${k}" title="빠른 설정에서 고른 출력(예배당/OBS)의 템플릿 배경으로">전체 배경</button>${f.video ? '' : `<button data-lg="${k}" title="이 그림을 로고 오버레이로">로고</button>`}</div></div>`).join('') || '<div class="empty">찾는 그림·영상이 없습니다.</div>'}</div>`);
+      const liveUrl = ((app.state && app.state.layers && app.state.layers.media) || {}).url || '';
+      st.lastMedia = JSON.stringify((app.state.layers || {}).media || null);
+      const b = body(`<div class="lib-grid">${st.rows.map((f, k) => { const on = !!liveUrl && liveUrl === f.url; return `<div class="lib-cell ${f.video ? 'is-video' : ''} ${on ? 'live' : ''}" data-k="${k}" title="${esc(f.name)}">${thumb(f)}<span>${f.video ? '🎞 ' : ''}${esc(f.name)}${on ? ' · <b class="live-dot">LIVE 배경</b>' : ''}</span>
+        <div class="lib-cell-act"><button data-live="${k}" class="${on ? 'danger' : 'primary'}" title="${on ? '송출 배경 끄기' : '지금 송출 화면의 배경으로 바로 (슬라이드와 따로, 다른 순서로 넘어가도 그대로)'}">${on ? '■ 배경 끄기' : '▶ 송출 배경'}</button><button data-bg="${k}" title="고른 순서의 배경으로">배경</button><button data-tb="${k}" title="빠른 설정에서 고른 출력(예배당/OBS)의 템플릿 배경으로">전체 배경</button>${f.video ? '' : `<button data-lg="${k}" title="이 그림을 로고 오버레이로">로고</button>`}</div></div>`; }).join('') || '<div class="empty">찾는 그림·영상이 없습니다.</div>'}</div>`);
       const item = k => (st.rows[k].video
         ? { type: 'video', extra: { file: st.rows[k].url, title: st.rows[k].name, sound: true, volume: 1, loop: false, endAction: 'hold' } }
         : { type: 'image', extra: { image: st.rows[k].url, title: st.rows[k].name } });
@@ -342,6 +344,7 @@
     if (!r.ok) return app.showMsg(r.error, 'error');
     app.showMsg(same || !m ? '송출 배경을 껐습니다.' : `송출 배경: ${m.label || (m.type === 'camera' ? '카메라' : '미디어')}`, 'ok', 1800);
     if (st.tab === 'cameras') drawCameras();
+    else if (st.tab === 'images') show('images');
   }
   async function drawCameras() {
     bar(`<span class="muted" style="flex:1">웹캠·캡처보드를 누르면 송출 화면의 배경으로 바로 나갑니다 (슬라이드는 그 위에)</span><button data-refresh title="카메라를 새로 꽂았을 때">새로 찾기</button><button data-off class="danger" title="송출 배경 끄기">배경 끄기</button>`);
@@ -446,7 +449,13 @@
   }
 
   /** 송출 배경이 바뀌면 카메라 탭 표시 갱신 */
-  function onLayers() { if (st.tab === 'cameras' && root()) { const cur = JSON.stringify((app.state.layers || {}).media || null); if (cur !== st.lastMedia) { st.lastMedia = cur; drawCameras(); } } }
+  function onLayers() {
+    if (!root() || !['cameras', 'images'].includes(st.tab)) return;
+    const cur = JSON.stringify((app.state.layers || {}).media || null);
+    if (cur === st.lastMedia) return;
+    st.lastMedia = cur;
+    if (st.tab === 'cameras') drawCameras(); else show('images');
+  }
 
   /** 썸네일: 영상은 첫 장면 (소리 없음) */
   function thumb(f) {

@@ -98,6 +98,7 @@
       renderLive();
       renderStatus();
       renderScreenLayers();
+      if (window.BCLib && window.BCLib.onLayers) window.BCLib.onLayers(); // 송출 배경 표시 (송출 중인 슬라이드가 없어도)
       markResults();
       if (window.BCCue && !first) window.BCCue.onLive();
     });
@@ -525,7 +526,6 @@
     }
     R.renderInto($('#lvScreen'), live.slide, tpl, { checker: true, hidden: !live.visible, versionName: live.passage.versionName, overlays: overlaysFor(app.view.lv), layers: app.state.layers });
     app.lvTpl = tpl;
-    if (window.BCLib && window.BCLib.onLayers) window.BCLib.onLayers();
     if (window.BCDraw) window.BCDraw.paintLive(); // 화면에 그린 것
     $('#lvInfo').textContent = [live.passage.cueIndex >= 0 && live.slide.kind !== 'bible' ? live.passage.itemTitle || live.slide.ref : live.slide.ref, live.passage.versionName].filter(Boolean).join(' · ');
     $('#lvCount').textContent = `${live.index + 1} / ${live.count}`;

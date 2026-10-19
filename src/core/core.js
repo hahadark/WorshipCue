@@ -830,7 +830,18 @@ WorshipCueCore.prototype.commands = {
     this.emit('live');
     return this.layersPayload();
   },
-  toggleBackground(a) { this.layers.hideBg = a && typeof a.on === 'boolean' ? a.on : !this.layers.hideBg; this.emit('live'); return this.layersPayload(); },
+  /** 배경 끄기 ↔ 다시 켜기. 끌 때 송출 배경(라이브러리에서 띄운 카메라·그림·영상)은 아예 끈다 */
+  toggleBackground(a) {
+    const off = a && typeof a.on === 'boolean' ? a.on : !this.layers.hideBg;
+    if (off && this.layers.media) {
+      this.layers.media = null;
+      // 송출 배경만 있었으면 거기서 끝 (순서·템플릿 배경까지 숨겨 두지 않는다)
+      if (!this.screenPayload().bgs.length) { this.emit('live'); return this.layersPayload(); }
+    }
+    this.layers.hideBg = off;
+    this.emit('live');
+    return this.layersPayload();
+  },
   toggleLogoScreen(a) { this.layers.logo = a && typeof a.on === 'boolean' ? a.on : !this.layers.logo; this.emit('live'); return this.layersPayload(); },
   /** 오버레이 모두 끄기 ↔ 다시 켜기 (끄기 전에 켜져 있던 것만) */
   toggleOverlaysOff() {
