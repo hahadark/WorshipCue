@@ -397,6 +397,26 @@
     }
     return cams.get(deviceId);
   }
+  // 쓰는 곳(화면의 video[data-cam])이 없어진 카메라는 4초 뒤 닫는다
+  // (디졸브·순서 넘김처럼 잠깐 빠졌다 다시 쓰는 경우는 그대로 이어서)
+  const camIdle = new Map(); // deviceId → 처음 안 쓰인 시각
+  function closeCamera(id) {
+    const p = cams.get(id);
+    cams.delete(id);
+    opened.delete(id);
+    camIdle.delete(id);
+    if (p) p.then(s => s.getTracks().forEach(t => t.stop())).catch(() => {});
+  }
+  if (typeof setInterval === 'function' && typeof document !== 'undefined') setInterval(() => {
+    for (const id of [...opened.keys()]) {
+      const used = [...document.querySelectorAll('video[data-cam]')].some(v => v.dataset.cam === id && v.isConnected && !v.closest('.bc-measure'));
+      if (used) { camIdle.delete(id); continue; }
+      if (!camIdle.has(id)) camIdle.set(id, Date.now());
+      else if (Date.now() - camIdle.get(id) > 4000) closeCamera(id);
+    }
+  }, 1000);
+  /** 열려 있는 카메라 (시험·상태 확인용) */
+  function openCameras() { return [...opened.keys()]; }
   /** 지금 받는 화질과 카메라가 낼 수 있는 최대 */
   async function cameraInfo(deviceId) {
     const s = await cameraStream(deviceId);
@@ -633,5 +653,5 @@
     svg.innerHTML = spot + lines;
   }
 
-  global.BCRender = { buildMediaLayer, attachCameras, cameraStream, cameraInfo, setCameraPrefs, paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
+  global.BCRender = { buildMediaLayer, attachCameras, cameraStream, cameraInfo, setCameraPrefs, openCameras, closeCamera, paintDraw, editFor, esc, buildLogoScreen, syncVideo, safeUrl, isVideo, lyricsOnly, buildOverlays, clockText, countdownText, buildContent, buildStage, scaleStage, fit, fitsAt, renderInto, backgroundCss, contentRect };
 })(window);

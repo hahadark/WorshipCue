@@ -815,6 +815,7 @@ WorshipCueCore.prototype.commands = {
     if (this.presentation.live && this.presentation.live.visible) this.presentation.clear();
     this.layers.hideBg = true;
     this.layers.logo = false;
+    this.layers.media = null; // 송출 배경(카메라·그림·영상)도 끄기 — 카메라가 계속 켜져 있지 않게
     const on = this.library.overlays().filter(o => o.on).map(o => o.id);
     if (on.length) { this.layers.savedOverlays = on; on.forEach(id => this.library.toggleOverlay(id, false)); this.settingsChanged('overlays'); }
     if (this.video && this.video.playing) Object.assign(this.video, { playing: false, offset: this.videoPosition(), at: Date.now() });

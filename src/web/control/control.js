@@ -295,7 +295,8 @@
     const r = await cmd('getChapter', { bookId: app.selectedBook, chapter: +btn.dataset.ch });
     if (!r.ok) return showMsg(r.error, 'error');
     $('#q').value = `${b.short}${btn.dataset.ch}`;
-    loadPassage(r.result.passage, { query: $('#q').value });
+    // 장은 절 목록만 띄운다 — 미리보기는 절을 눌렀을 때
+    showPassageList(r.result.passage);
   });
   $('#chapterGrid').addEventListener('keydown', e => {
     const btns = [...$('#chapterGrid').querySelectorAll('button')];
@@ -771,8 +772,7 @@
     const it = app.results.items[i];
     if (!it) return false;
     if (app.results.type === 'passage') {
-      if (!app.preview) return false;
-      const inPreview = app.preview.passage.verses.some(v => v.chapter === it.chapter && v.verse === it.verse);
+      const inPreview = !!app.preview && app.preview.passage.verses.some(v => v.book === it.book && v.chapter === it.chapter && v.verse === it.verse);
       if (!inPreview) { await clearRange(it); return true; }
       setPreviewIndex(SL.indexOfVerse(app.preview.slides, it.chapter, it.verse));
       return true;
@@ -1267,6 +1267,9 @@
       const synced = win.every(c => c.ack && c.ack.version === live.version);
       parts.push(`<span class="st"><span class="dot ${synced ? 'ok' : 'warn'}"></span>출력 창 ${synced ? '반영됨' : '갱신 대기'}</span>`);
     }
+    // 송출 배경(카메라·그림·영상)이 켜져 있으면: 눌러서 끄기
+    const md = st.layers && st.layers.media;
+    if (md) parts.unshift(`<span class="st st-media" data-media-off title="눌러서 송출 배경 끄기"><span class="dot err"></span>${md.type === 'camera' ? '📷' : md.type === 'video' ? '🎞' : '🖼'} 송출 배경: ${esc(md.label || '')} ✕</span>`);
     // 업데이트: 새 버전이 있을 때만
     const u = app.update;
     if (u && (u.state === 'ready' || u.state === 'available' || (u.state === 'downloading' && u.version))) {
@@ -1276,6 +1279,7 @@
     $('#status').innerHTML = parts.join('');
   }
   $('#status').addEventListener('click', e => {
+    if (e.target.closest('[data-media-off]')) { cmd('setBackgroundMedia', { media: null }); return; }
     const b = e.target.closest('[data-update]');
     if (!b) return;
     if (b.dataset.update === 'available') cmd('updateAction', { action: 'open' });

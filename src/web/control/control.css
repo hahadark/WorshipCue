@@ -868,3 +868,5 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 .md-row:hover { background: var(--hover); }
 .md-row .md-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
 .md-row button { padding: 3px 9px; font-size: 12px; }
+.st-media { cursor: pointer; color: var(--live); font-weight: 600; }
+.st-media:hover { text-decoration: underline; }
