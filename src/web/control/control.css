@@ -898,3 +898,8 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 
 /* 큐시트: 이 순서만 다른 테마 */
 .cue-item .cue-theme { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 500; color: var(--muted); }
+
+/* 슬라이드 편집기: 여러 장 고르기 */
+.se-slide.msel { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--sunken)); }
+#seList { user-select: none; }
+.se-multi-note { margin: 2px 0 8px; color: var(--accent); }

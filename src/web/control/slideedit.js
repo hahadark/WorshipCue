@@ -18,7 +18,7 @@
   const NOTEXT = ['image', 'score', 'video', 'camera', 'blank']; // 본문 글상자가 없는 슬라이드
   const r1 = n => Math.round(n * 10) / 10;
 
-  const S = { i: -1, key: '*', out: 'main', sel: '', base: null, undo: [], redo: [], dirty: false, timer: 0, drag: null, editing: null };
+  const S = { i: -1, key: '*', out: 'main', sel: '', base: null, undo: [], redo: [], dirty: false, timer: 0, drag: null, editing: null, multi: new Set(), anchor: '', prev: null, prevKey: null, lasso: null };
   const item = () => Cue() && Cue().item(S.i);
   const tpl = () => app.tplFor(S.out, Cue().tplOf(S.i));
 
@@ -91,8 +91,55 @@
   function undo() { if (!S.undo.length) return; S.redo.push(snapshot()); restore(S.undo.pop()); }
   function redo() { if (!S.redo.length) return; S.undo.push(snapshot()); restore(S.redo.pop()); }
   /** 저장(모아서) + 다시 그리기 */
+  // ---------------- 여러 장 고르기: 고른 슬라이드 모두에 같은 꾸미기 ----------------
+  const others = () => [...S.multi].filter(k => k !== S.key && k !== '*');
+  const multiOn = () => S.key !== '*' && S.multi.size > 1;
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  /** 기준 슬라이드에서 바뀐 것(before → after)만 다른 고른 슬라이드에 그대로 */
+  function propagate(before, after) {
+    const it = item();
+    const ks = others();
+    if (!ks.length || !it) return;
+    const b = before || {}, a = after || {};
+    const fields = new Set([...Object.keys(b), ...Object.keys(a)]);
+    for (const k of ks) {
+      it.edits = it.edits || {};
+      const e = it.edits[k] = it.edits[k] || {};
+      for (const f of fields) {
+        const bv = b[f], av = a[f];
+        if (same(bv, av)) continue;
+        if (f === 'items') { // 글상자·그림·도형: id 별로 넣기·바꾸기·빼기
+          const bi = new Map((bv || []).map(x => [x.id, x])), ai = new Map((av || []).map(x => [x.id, x]));
+          let list = e.items || [];
+          for (const id of bi.keys()) if (!ai.has(id)) list = list.filter(x => x.id !== id);
+          for (const [id, x] of ai) {
+            if (bi.has(id) && same(bi.get(id), x)) continue;
+            const j = list.findIndex(y => y.id === id);
+            if (j >= 0) list[j] = structuredClone(x); else list.push(structuredClone(x));
+          }
+          e.items = list;
+          continue;
+        }
+        if ((f === 'style' || f === 'box') && av && typeof av === 'object') { // 바뀐 항목만
+          e[f] = e[f] || {};
+          for (const s of new Set([...Object.keys(bv || {}), ...Object.keys(av)])) {
+            if (same((bv || {})[s], av[s])) continue;
+            if (av[s] === undefined) delete e[f][s]; else e[f][s] = structuredClone(av[s]);
+          }
+          continue;
+        }
+        if (av === undefined) delete e[f]; else e[f] = structuredClone(av);
+      }
+    }
+  }
   function commit({ lyrics = false, list = true } = {}) {
+    if (multiOn() && S.prevKey === S.key) {
+      const cur = item().edits ? item().edits[S.key] : undefined;
+      if (!same(S.prev, cur)) { propagate(S.prev, cur); list = true; }
+    }
     clean();
+    S.prev = item() && item().edits && item().edits[S.key] ? structuredClone(item().edits[S.key]) : null;
+    S.prevKey = S.key;
     S.lyricsDirty = S.lyricsDirty || lyrics;
     clearTimeout(S.timer);
     S.timer = setTimeout(flush, 300);
@@ -105,9 +152,29 @@
     S.lyricsDirty = false;
   }
 
+  /** 목록에서 고르기: one = 한 장 · range = 기준(anchor)부터 여기까지 · toggle = 더하기/빼기 */
+  function pickSlides(key, how) {
+    S.sel = '';
+    if (key === '*') { S.multi.clear(); S.key = '*'; return draw(); }
+    const keys = sources().map(x => x.key);
+    if (how === 'range' && S.anchor && keys.includes(S.anchor)) {
+      const a = keys.indexOf(S.anchor), b = keys.indexOf(key);
+      S.multi = new Set(keys.slice(Math.min(a, b), Math.max(a, b) + 1));
+      S.key = key;
+    } else if (how === 'toggle' && S.key !== '*') {
+      const m = new Set(S.multi.size ? S.multi : [S.key]);
+      if (m.has(key) && m.size > 1) { m.delete(key); S.multi = m; if (S.key === key) S.key = [...m][0]; }
+      else { m.add(key); S.multi = m; S.key = key; }
+    } else { S.multi = new Set([key]); S.anchor = key; S.key = key; }
+    draw();
+  }
+
   // ---------------- 그리기 ----------------
   function draw({ list = true } = {}) {
     if ($('#se').hidden || !item()) return;
+    if (S.key === '*') S.multi.clear();
+    else if (!S.multi.has(S.key)) { S.multi = new Set([S.key]); S.anchor = S.key; }
+    if (S.prevKey !== S.key) { const e = item().edits && item().edits[S.key]; S.prev = e ? structuredClone(e) : null; S.prevKey = S.key; }
     if (list) drawList();
     drawCanvas();
     drawProps();
@@ -118,7 +185,7 @@
     const list = sources();
     const own = k => !!(it.edits && it.edits[k]);
     $('#seList').innerHTML = `<div class="se-slide ${S.key === '*' ? 'on' : ''}" data-key="*"><div class="screen se-thumb"></div><div class="se-cap"><b>공통</b> 모든 슬라이드${own('*') ? ' <span class="se-dot" title="꾸민 것 있음">●</span>' : ''}</div></div>`
-      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}${x.skipped ? ' skipped' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${x.skipped ? ' <span class="muted">(건너뜀)</span>' : ''}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div>`
+      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}${S.multi.size > 1 && S.multi.has(x.key) ? ' msel' : ''}${x.skipped ? ' skipped' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${x.skipped ? ' <span class="muted">(건너뜀)</span>' : ''}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div>`
         + (canOps() ? opsHtml(x) : '') + '</div>').join('')
       + (canOps() ? '<button type="button" class="se-addslide" data-op="add" title="고른 슬라이드 다음에 새 슬라이드 (Ctrl+Shift+N)">＋ 슬라이드</button>' : '');
     const t = tpl();
@@ -279,7 +346,7 @@
     const own = raw(false);
     const src = curSource();
     const k = t.height / 1080;
-    let h = `<h4>${S.key === '*' ? '공통 (모든 슬라이드)' : `슬라이드: ${esc(src ? src.label : '')}`}</h4><div class="form se-form">`
+    let h = `<h4>${S.key === '*' ? '공통 (모든 슬라이드)' : multiOn() ? `고른 슬라이드 ${S.multi.size}장` : `슬라이드: ${esc(src ? src.label : '')}`}</h4>${multiOn() ? `<div class="note se-multi-note">여기서 바꾸는 꾸미기·글상자·배경이 고른 ${S.multi.size}장에 함께 적용됩니다 (Esc: 한 장만)</div>` : ''}<div class="form se-form">`
       + field('배경', `${own.bg ? `<span class="se-bgname" title="${esc(own.bg)}">${own.bg.startsWith('#') ? `<i class="se-sw" style="background:${esc(own.bg)}"></i>` : '🖼'}</span>` : `<span class="muted">${S.key !== '*' && e.bg ? '공통 배경' : it.bg ? '순서 배경' : '템플릿'}</span>`}<button type="button" data-a="bgpick">그림·영상…</button>${colIn('bgcolor', own.bg && own.bg.startsWith('#') ? own.bg : '#000000')}${own.bg ? '<button type="button" data-a="bgclear">지우기</button>' : ''}`)
       + field('', `<label class="tc-toggle"><input type="checkbox" data-chk="hideMain" ${own.hideMain ? 'checked' : ''}> 본문 글 숨기기</label>`)
       + field('', `<label class="tc-toggle"><input type="checkbox" data-chk="allOutputs" ${own.allOutputs ? 'checked' : ''}> OBS 자막(투명)에도 위치·꾸미기 적용</label>`)
@@ -594,7 +661,7 @@
           app.showMsg('이 꾸미기를 모든 슬라이드에 적용했습니다.', 'ok', 1800);
           break;
         }
-        case 'reset': begin(); if (item().edits) delete item().edits[S.key]; S.sel = ''; commit(); break;
+        case 'reset': begin(); if (item().edits) { delete item().edits[S.key]; for (const k of others()) delete item().edits[k]; } S.prev = null; S.sel = ''; commit(); break;
       }
     });
     // 속성 입력: 바꾸는 동안 캔버스만, 다 바꾸면 저장
@@ -632,15 +699,33 @@
       if (opb) { ev.stopPropagation(); const c0 = opb.closest('.se-slide'); slideOp(opb.dataset.op, c0 ? c0.dataset.key : null); return; }
       const c = ev.target.closest('.se-slide');
       if (!c) return;
-      S.key = c.dataset.key; S.sel = '';
-      draw();
+      if (S.lasso && S.lasso.moved) { S.lasso = null; return; } // 끌어서 고른 직후의 클릭
+      pickSlides(c.dataset.key, ev.shiftKey ? 'range' : (ev.ctrlKey || ev.metaKey) ? 'toggle' : 'one');
     });
+    // 끌어서 여러 장 고르기 (영역 선택)
+    $('#seList').addEventListener('pointerdown', ev => {
+      if (ev.button !== 0 || ev.target.closest('[data-op], button')) return;
+      const c = ev.target.closest('.se-slide');
+      if (!c || c.dataset.key === '*') { S.lasso = null; return; }
+      S.lasso = { from: c.dataset.key, moved: false };
+    });
+    $('#seList').addEventListener('pointermove', ev => {
+      if (!S.lasso || !(ev.buttons & 1)) return;
+      const c = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('#seList .se-slide');
+      if (!c || c.dataset.key === '*' || (!S.lasso.moved && c.dataset.key === S.lasso.from)) return;
+      S.lasso.moved = true;
+      S.anchor = S.lasso.from;
+      pickSlides(c.dataset.key, 'range');
+    });
+    // 놓을 때: 끌어서 골랐으면 바로 뒤 클릭 하나만 무시 (목록을 다시 그려 클릭이 안 올 수도 있으니 곧 풀어 둔다)
+    document.addEventListener('pointerup', () => { if (!S.lasso) return; if (!S.lasso.moved) S.lasso = null; else setTimeout(() => { S.lasso = null; }, 0); });
     $('#seWrap').addEventListener('pointerdown', onPointerDown);
     $('#seWrap').addEventListener('dblclick', ev => { const b = ev.target.closest('.se-box'); if (b && !b.classList.contains('locked')) inlineEdit(b.dataset.id); });
     el.addEventListener('keydown', ev => {
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName);
       const ctrl = ev.ctrlKey || ev.metaKey;
-      if (ev.key === 'Escape' && !typing) { ev.preventDefault(); if (S.sel) { S.sel = ''; draw({ list: false }); } else close(); return; }
+      if (ev.key === 'Escape' && !typing) { ev.preventDefault(); if (S.sel) { S.sel = ''; draw({ list: false }); } else if (multiOn()) { S.multi = new Set([S.key]); draw(); } else close(); return; }
+      if (ctrl && ev.key.toLowerCase() === 'a' && !typing && !S.sel) { ev.preventDefault(); const ks = sources().filter(x => !x.skipped).map(x => x.key); if (ks.length) { S.multi = new Set(ks); if (!S.multi.has(S.key)) S.key = ks[0]; draw(); } return; }
       if (ctrl && ev.key.toLowerCase() === 'z' && !typing) { ev.preventDefault(); if (ev.shiftKey) redo(); else undo(); return; }
       if (ctrl && ev.key.toLowerCase() === 'y' && !typing) { ev.preventDefault(); redo(); return; }
       if (typing) return;
