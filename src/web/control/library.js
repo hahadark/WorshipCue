@@ -102,7 +102,7 @@
     const r = await cmd('listSongs', { query: st.q.songs || '' });
     st.rows = r.ok ? r.result : [];
     if (st.tab !== 'songs') return;
-    const b = body(st.rows.length ? st.rows.map((s, k) => `<div class="lib-row" data-k="${k}"><span class="lib-ico">🎵</span><span class="lib-t"><b>${esc(s.title)}</b><span class="muted">${esc(s.first)}</span></span><button data-edit="${k}" title="가사 고치기">고치기</button></div>`).join('')
+    const b = body(st.rows.length ? st.rows.map((s, k) => `<div class="lib-row" data-k="${k}"><span class="lib-ico">🎵</span><span class="lib-t" data-noi18n><b>${esc(s.title)}</b><span class="muted">${esc(s.first)}</span></span><button data-edit="${k}" title="가사 고치기">고치기</button></div>`).join('')
       : `<div class="empty">${st.q.songs ? '찾는 찬양이 없습니다.' : '저장한 찬양이 없습니다.<br>＋ 새 찬양 으로 가사를 입력하거나, 큐시트의 찬양 순서에서 \'📚 라이브러리에 저장\'을 누르세요.'}</div>`);
     const pick = k => { const s = st.rows[k]; if (s) addSong(s.id); };
     bindRows(b, pick, k => ({ type: 'song', extra: { songId: st.rows[k].id, title: st.rows[k].title } }));
@@ -293,7 +293,7 @@
     const r = await cmd('searchHymns', { query: st.q.hymns || '' });
     st.rows = r.ok ? r.result : [];
     if (st.tab !== 'hymns') return;
-    const b = body(st.rows.length ? st.rows.map((h, k) => `<div class="lib-row" data-k="${k}"><span class="lib-no">${h.kind === 'reading' ? '' : h.number ?? ''}</span><span class="lib-t"><b>${esc(h.title)}</b></span><span class="muted">${esc(h.folder)}</span></div>`).join('')
+    const b = body(st.rows.length ? st.rows.map((h, k) => `<div class="lib-row" data-k="${k}"><span class="lib-no">${h.kind === 'reading' ? '' : h.number ?? ''}</span><span class="lib-t" data-noi18n><b>${esc(h.title)}</b></span><span class="muted">${esc(h.folder)}</span></div>`).join('')
       : `<div class="empty">찾는 찬송가·PPT 가 없습니다.<br><span class="muted">'설정·온라인…' 에서 폴더를 등록하거나 온라인에서 찾을 수 있습니다.</span></div>`);
     const item = k => { const h = st.rows[k]; if (h.bethlehem) return null; const title = h.number != null && !/^교독문/.test(h.title) ? `${h.number}장 ${h.title}` : h.title; return { type: 'hymn', extra: { title, file: h.file, number: h.number, background: 'default' } }; };
     bindRows(b, async k => { const h = st.rows[k]; if (h.bethlehem) { const d = await window.BCCue.addBethlehem(h); if (d) app.showMsg(`'${d.title}' 을(를) 큐시트에 넣었습니다.`, 'ok', 1500); return; } const it = item(k); addToCue(it.type, it.extra, it.extra.title); }, item);
@@ -329,7 +329,7 @@
       b.querySelectorAll('[data-bg]').forEach(x => x.onclick = e => { e.stopPropagation(); const url = st.rows[+x.dataset.bg].url; const sel = window.BCCue && window.BCCue.selected(); if (sel && sel.bg === url) { app.removeItemBg(window.BCCue.selIndex()); } else setItemBg(url); setTimeout(() => show('images'), 300); });
       b.querySelectorAll('[data-lg]').forEach(x => x.onclick = e => { e.stopPropagation(); editOverlay({ type: 'logo', image: st.rows[+x.dataset.lg].url, name: st.rows[+x.dataset.lg].name, size: 140 }); });
     } else {
-      const b = body(st.rows.map((f, k) => `<div class="lib-row" data-k="${k}"><button data-play="${k}" class="lib-play" title="바로 재생 (조작 PC)">▶</button><span class="lib-t"><b>${esc(f.name)}</b></span><span class="muted">${esc(f.folder)}</span></div>`).join('') || '<div class="empty">찾는 음악이 없습니다.</div>');
+      const b = body(st.rows.map((f, k) => `<div class="lib-row" data-k="${k}"><button data-play="${k}" class="lib-play" title="바로 재생 (조작 PC)">▶</button><span class="lib-t" data-noi18n><b>${esc(f.name)}</b></span><span class="muted">${esc(f.folder)}</span></div>`).join('') || '<div class="empty">찾는 음악이 없습니다.</div>');
       const item = k => ({ type: 'audio', extra: { file: st.rows[k].url, title: st.rows[k].name, volume: 1, fadeOnLeave: true } });
       bindRows(b, k => addToCue('audio', item(k).extra, st.rows[k].name), item);
       b.querySelectorAll('[data-play]').forEach(x => x.onclick = e => { e.stopPropagation(); const k = +x.dataset.play; audio.play({ url: st.rows[k].url, title: st.rows[k].name, list: st.rows, index: k }); });
@@ -530,7 +530,7 @@
       const rows = r.ok ? r.result : [];
       $('#lpList').innerHTML = kind === 'image'
         ? rows.filter(f => (opts.video === 'only' ? f.video : opts.video === false ? !f.video : true)).map((f, k, arr) => { rows._shown = arr; return `<div class="lib-cell" data-k="${k}">${thumb(f)}<span>${f.video ? '🎞 ' : ''}${esc(f.name)}</span></div>`; }).join('')
-        : rows.map((f, k) => `<div class="lib-row" data-k="${k}"><span class="lib-ico">🔊</span><span class="lib-t"><b>${esc(f.name)}</b></span><span class="muted">${esc(f.folder)}</span></div>`).join('');
+        : rows.map((f, k) => `<div class="lib-row" data-k="${k}"><span class="lib-ico">🔊</span><span class="lib-t" data-noi18n><b>${esc(f.name)}</b></span><span class="muted">${esc(f.folder)}</span></div>`).join('');
       const shown = kind === 'image' ? (rows._shown || []) : rows;
       $('#lpList').querySelectorAll('[data-k]').forEach(x => x.onclick = () => { app.closeModal(); done(shown[+x.dataset.k]); });
     };
@@ -630,7 +630,7 @@
     const list = app.state.settings.overlays || [];
     const b = body(list.length ? list.map(o => `<div class="lib-row ov-row ${o.on ? 'on' : ''}" data-id="${esc(o.id)}">
         <label class="ov-switch" title="켜기·끄기"><input type="checkbox" data-tog ${o.on ? 'checked' : ''}><span></span></label>
-        <span class="lib-t"><b>${esc(o.name)}</b><span class="muted">${esc(OV_TYPES.find(x => x[0] === o.type)?.[1] || '')} · ${esc(ovSummary(o))} · ${o.outputs.map(x => (x === 'main' ? '예배당' : 'OBS')).join('·') || '출력 없음'}</span></span>
+        <span class="lib-t" data-noi18n><b>${esc(o.name)}</b><span class="muted">${esc(OV_TYPES.find(x => x[0] === o.type)?.[1] || '')} · ${esc(ovSummary(o))} · ${o.outputs.map(x => (x === 'main' ? '예배당' : 'OBS')).join('·') || '출력 없음'}</span></span>
         <button data-edit>고치기</button><button data-del title="지우기">✕</button></div>`).join('')
       : '<div class="empty">오버레이가 없습니다.<br>위의 단추로 로고·시계·카운트다운(예배 시작까지)·배너(공지)를 만드세요.</div>');
     b.querySelectorAll('.ov-row').forEach(r => {

@@ -75,7 +75,7 @@
             ${checked.length ? `<span class="cm-bulk"><b>${checked.length}개</b>${S.view === 'trash' ? '<button data-a="restoreSel">되살리기</button><button data-a="purgeSel" class="danger">아주 지우기</button>' : '<button data-a="exportSel">내보내기</button><button data-a="trashSel" class="danger">휴지통</button>'}</span>` : ''}</div>
           <div class="cm-list">${list.map(x => `<div class="cm-row ${x.id === S.sel ? 'sel' : ''} ${x.id === current() ? 'cur' : ''}" data-id="${esc(x.id)}">
               <input type="checkbox" data-chk="${esc(x.id)}" ${S.checked.has(x.id) ? 'checked' : ''}>
-              <span class="cm-name"><span class="cm-l1">${x.pinned ? '<i>📌</i>' : ''}${x.template ? '<i>📄</i>' : ''}<b>${esc(x.name)}</b>${x.id === current() ? '<span class="cm-open">열림</span>' : ''}</span><small>${x.serviceDate ? `${esc(x.serviceDate)} (${dayOf(x.serviceDate)})` : '날짜 없음'} · ${x.count}개 순서${x.memo ? ' · 📝' : ''}</small></span>
+              <span class="cm-name"><span class="cm-l1">${x.pinned ? '<i>📌</i>' : ''}${x.template ? '<i>📄</i>' : ''}<b data-noi18n>${esc(x.name)}</b>${x.id === current() ? '<span class="cm-open">열림</span>' : ''}</span><small>${x.serviceDate ? `${esc(x.serviceDate)} (${dayOf(x.serviceDate)})` : '날짜 없음'} · ${x.count}개 순서${x.memo ? ' · 📝' : ''}</small></span>
               <span class="cm-when muted">${S.view === 'trash' ? '지운 지 ' + ago(x.deletedAt) : ago(x.updatedAt)}</span></div>`).join('') || `<div class="empty">${S.view === 'trash' ? '휴지통이 비어 있습니다.' : S.q ? '찾는 큐시트가 없습니다.' : '큐시트가 없습니다.'}</div>`}</div>
         </div>
         <div class="cm-right">${c ? detail(c) : '<div class="empty">왼쪽에서 큐시트를 고르세요.</div>'}</div>

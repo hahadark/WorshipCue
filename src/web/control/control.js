@@ -992,7 +992,7 @@
     if (!items.length) return hideSuggest();
     let no = 0;
     el.innerHTML = (header ? `<div class="item err">${esc(header)}</div>` : '')
-      + items.map((it, i) => (it.hdr || it.err ? it : (it.no = ++no, it))).map((it, i) => it.hdr ? `<div class="item hdr">${esc(it.label)}</div>` : `<div class="item${it.err ? ' err' : ''}" data-i="${i}"><span class="k">${it.err ? '' : it.no}</span><span>${esc(it.label)}</span>${it.sub ? `<span class="s">${esc(it.sub)}</span>` : ''}</div>`).join('');
+      + items.map((it, i) => (it.hdr || it.err ? it : (it.no = ++no, it))).map((it, i) => it.hdr ? `<div class="item hdr">${esc(it.label)}</div>` : `<div class="item${it.err ? ' err' : ''}" data-i="${i}"><span class="k">${it.err ? "" : it.no}</span><span>${esc(it.label)}</span>${it.sub ? `<span class="s">${esc(it.sub)}</span>` : ''}</div>`).join('');
     el.hidden = false;
   }
   function hideSuggest() { $('#suggest').hidden = true; app.suggest = { items: [], sel: -1 }; }

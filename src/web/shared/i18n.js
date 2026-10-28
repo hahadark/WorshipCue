@@ -30,7 +30,7 @@
     // '✓ 편집칸 보이기' · '■ 송출 배경 끄기' 처럼 앞에 표시가 붙은 글
     const mk = out == null && /^([✓■●▶◀⚡]\s*)([\s\S]+)$/.exec(core);
     if (mk) { const r = tr(mk[2]); if (r != null) out = mk[1] + r; }
-    // 이어 붙인 글: 'A · B' · 'A: B' · 'A — B' · 'A (B)' · '1. A' → 나눠서 각각 (한국어 조각이 모두 사전에 있을 때만)
+    // 이어 붙인 글: 'A · B' · 'A: B' · 'A — B' · 'A (B)' · '1. A' → 나눠서 각각 (사전에 없는 조각은 그대로)
     if (out == null) out = composite(core);
     if (out == null) {
       if (!pats) pats = D.patterns.map(([src, en, order]) => {
@@ -41,8 +41,14 @@
         if (p.lit && !core.includes(p.lit)) continue;
         const m = p.re.exec(core);
         if (!m) continue;
-        // 자리에 들어간 글도 사전에 있으면 바꾼다 (예: '켜짐')
-        out = p.en.replace(/\{(\d)\}/g, (_, k) => { const v = m[p.order.indexOf(+k) + 1] ?? ''; const w = /^(\s*)([\s\S]*?)(\s*)$/.exec(v); const x = HANGUL.test(w[2]) ? tr(w[2]) : null; return x == null ? v : w[1] + x + w[3]; });
+        // 자리에 들어간 글도 사전에 있으면 바꾼다 (예: '켜짐'). 따옴표 안 자리(“{1}”)는 사용자 글이니 그대로
+        out = p.en.replace(/\{(\d)\}/g, (_, k) => {
+          const v = m[p.order.indexOf(+k) + 1] ?? '';
+          const w = /^(\s*)([\s\S]*?)(\s*)$/.exec(v);
+          const quoted = p.en.includes(`“{${k}}”`) || p.en.includes(`'{${k}}'`) || p.en.includes(`"{${k}}"`);
+          const x = HANGUL.test(w[2]) && !quoted ? tr(w[2]) : null;
+          return x == null ? v : w[1] + x + w[3];
+        });
         break;
       }
     }
@@ -52,7 +58,8 @@
   }
 
   function composite(s) {
-    const all = parts => { const r = parts.map(p => (HANGUL.test(p) ? tr(p.trim()) : p)); return r.every(x => x != null) ? r : null; };
+    // 조각마다 사전에서 찾는다. 하나라도 번역되면 나머지(사용자 글 등)는 그대로 두고 잇는다
+    const all = parts => { const r = parts.map(p => (HANGUL.test(p) ? tr(p.trim()) : p)); return r.some((x, i) => x != null && x !== parts[i]) ? r.map((x, i) => (x == null ? parts[i] : x)) : null; };
     for (const sep of [' · ', ': ', ' — ']) {
       if (!s.includes(sep)) continue;
       const r = all(s.split(sep));

@@ -43,7 +43,7 @@
     <!-- 큐시트: 예배 순서를 미리 만들어 두고 차례로 송출 -->
     <div id="cuePanel" class="cue-panel">
       <div class="cue-head">
-        <select id="cueSel" title="큐시트 고르기"></select>
+        <select id="cueSel" title="큐시트 고르기" data-noi18n></select>
         <button id="cueMenu" title="큐시트 관리: 새로 만들기 · 다음 주로 복제 · 서식 · 메모 · 내보내기·가져오기 · 휴지통">📋</button>
       </div>
       <!-- 예배 진행 시계: 시작 시각 · 지금 순서 · 늦음/이름 -->
@@ -118,7 +118,7 @@
     <div id="panelPreview" class="pane preview">
       <div class="pane-head">
         <b class="badge pv">미리보기</b>
-        <span id="pvInfo" class="pane-info"></span>
+        <span id="pvInfo" class="pane-info" data-noi18n></span>
         <span class="view-tabs" data-pane="pv">
           <button data-view="main" class="on">예배당</button><button data-view="overlay">OBS</button>
         </span>
@@ -135,7 +135,7 @@
     <div id="panelLive" class="pane live">
       <div class="pane-head">
         <b class="badge onair">LIVE</b>
-        <span id="lvInfo" class="pane-info"></span>
+        <span id="lvInfo" class="pane-info" data-noi18n></span>
         <span id="lvHidden" class="hidden-badge" hidden>숨김 중</span>
         <span class="view-tabs" data-pane="lv">
           <button data-view="main" class="on">예배당</button><button data-view="overlay">OBS</button>

@@ -124,7 +124,7 @@
       <div class="cue-item ${i === st.sel ? 'sel' : ''} ${i === pvIdx ? 'pv' : ''} ${i === airIdx ? 'air' : ''} ${i === airIdx && !live.visible ? 'hid' : ''}" draggable="true" data-i="${i}">
         <span class="cue-no">${i + 1}</span>
         <span class="cue-ico" title="${TYPE[it.type]}">${ICON[it.type]}</span>
-        <span class="cue-body"><b>${esc(it.title)}</b>${themeOf(it) ? `<span class="cue-theme" title="이 순서만 다른 테마">🎨 ${esc(themeName(it))}</span>` : ''}<span class="cue-detail">${esc(detail(it))}</span>${it.note ? `<span class="cue-note">📝 ${esc(it.note)}</span>` : ''}</span>
+        <span class="cue-body" data-noi18n><b>${esc(it.title)}</b>${themeOf(it) ? `<span class="cue-theme" title="이 순서만 다른 테마">🎨 ${esc(themeName(it))}</span>` : ''}<span class="cue-detail">${esc(detail(it))}</span>${it.note ? `<span class="cue-note">📝 ${esc(it.note)}</span>` : ''}</span>
         ${plan[i] && timesOn() ? `<span class="cue-time" title="예정 시작${it.duration ? ' · ' + it.duration + '분' : ''}">${plan[i]}${it.duration ? `<small>${it.duration}분</small>` : ''}</span>` : ''}
         <button class="cue-edit" data-edit="${i}" title="이 순서 고치기 (F2)">✎</button>
       </div>`).join('') : '<div class="empty">아래 버튼으로 예배 순서를 추가하세요.</div>';
