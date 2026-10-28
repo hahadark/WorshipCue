@@ -37,6 +37,8 @@ jobs:
           v=$(node -p "require('./package.json').version")
           if [ "v$v" != "${{ inputs.tag }}" ]; then echo "package.json version $v does not match tag ${{ inputs.tag }}"; exit 1; fi
       - run: npm test
+      - name: Smoke test (real app, offscreen)
+        run: npm run test:e2e
       - name: Build (Korean)
         run: npx electron-builder --win --publish never
       - name: Build (English)

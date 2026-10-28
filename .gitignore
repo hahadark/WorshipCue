@@ -20,3 +20,5 @@ promo/
 # 사용 통계 집계 화면 열쇠 (저장소에 올리지 않음)
 telemetry/.stats-key
 telemetry/.wrangler/
+# 실제 프로그램 점검 결과 (npm run test:e2e)
+tests/e2e/out/

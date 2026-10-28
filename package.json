@@ -11,6 +11,7 @@
     "start": "electron .",
     "headless": "node src/headless.js",
     "test": "node --test tests/core.test.js",
+    "test:e2e": "node tests/e2e/run.js",
     "import": "node tools/import.js",
     "dist": "electron-builder --win",
     "dist:personal": "electron-builder --win --config build-personal.json",

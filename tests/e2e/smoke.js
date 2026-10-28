@@ -1,0 +1,98 @@
+'use strict';
+// 조작 화면 점검 (run.js 가 Electron 으로 띄운다): 숨은 창에 /control/ 을 열고 실제 화면 상태를 본다
+const { app, BrowserWindow } = require('electron');
+const fs = require('fs');
+const path = require('path');
+app.commandLine.appendSwitch('use-fake-device-for-media-stream'); // 카메라 점검용 가짜 카메라
+app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
+const [port, OUT] = process.argv.slice(-2);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const R = { log: [], fails: [], console: [] };
+const ok = (cond, name, detail) => { if (cond) R.log.push('✓ ' + name); else R.fails.push(name + (detail ? ` — ${typeof detail === 'string' ? detail : JSON.stringify(detail)}` : '')); };
+
+app.on('window-all-closed', () => {});
+app.whenReady().then(async () => {
+  let w;
+  try {
+    w = new BrowserWindow({ width: 1600, height: 1000, show: false, webPreferences: { offscreen: true } });
+    w.webContents.on('console-message', e => { if (e.level === 'error' || /Uncaught|TypeError|ReferenceError/.test(e.message)) R.console.push(e.message.slice(0, 300)); });
+    const ev = c => w.webContents.executeJavaScript(`(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); const $ = s => document.querySelector(s); const $$ = s => [...document.querySelectorAll(s)]; try { ${c} } catch (e) { return { jsErr: String(e.stack).slice(0, 400) }; } })()`);
+    const shot = name => w.webContents.capturePage().then(i => fs.writeFileSync(path.join(OUT, name + '.png'), i.toPNG()));
+    const load = async () => { await w.loadURL(`http://127.0.0.1:${port}/control/`); await wait(3500); await ev(`if (!$('#modal').hidden) $('#modalClose').click(); return 1;`); };
+    await load();
+
+    // ---- 1. 화면이 뜨고 기본 요소가 있다
+    const basics = await ev(`return { q: !!$('#q'), cue: !!$('#cueList'), pv: !!$('#pvScreen'), lv: !!$('#lvScreen'), ver: $('#version') && $('#version').options.length };`);
+    ok(basics.q && basics.cue && basics.pv && basics.lv, '조작 화면 기본 요소', basics);
+    ok(basics.ver >= 1, '성경 번역본 목록', basics);
+
+    // ---- 2. 성경: 검색 → 미리보기 → 송출 → 지우기
+    const bible = await ev(`$('#q').focus(); $('#q').value = '요 3:16'; $('#q').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(1500);
+      const pv = $('#pvScreen').innerText.replace(/\\s+/g, ' ');
+      await window.BC.sendPreview(); await wait(800);
+      const lv = $('#lvScreen').innerText.replace(/\\s+/g, ' ');
+      await window.BC.cmd('clearAll', {}); await wait(600);
+      return { pv, lv, after: window.BC.state.live.visible };`);
+    ok(/하나님이 세상을/.test(bible.pv || ''), '성경 검색 → 미리보기', bible);
+    ok(/하나님이 세상을/.test(bible.lv || ''), '송출 (F9)', bible);
+    ok(bible.after === false, '모두 지우기', bible);
+
+    // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
+    await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
+    const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);
+      return { done: ($('#aiResult .ai-done b') || {}).textContent, items: $$('#aiResult li').map(x => x.innerText.replace(/\\s+/g, ' ')) };`);
+    ok(/점검 예배.*5개/.test(quick.done || ''), '주보 순서 붙여 넣기 → 큐시트', quick);
+    ok(quick.items && quick.items[1] === '은혜 아니면' && /요 3:16/.test(quick.items[2] || ''), '순서 알아보기 (찬양·장절)', quick);
+    await shot('quick');
+    await ev(`$('#aiOpen').click(); await wait(1000); return 1;`);
+
+    // ---- 4. 베들레헴 찬송가 (있을 때만)
+    const books = await ev(`return (await window.BC.cmd('hymnalBooks', {})).result;`);
+    if (Array.isArray(books) && books.some(b => b.lyrics)) {
+      const h = await ev(`const r = await window.BC.cmd('hymnalGet', { book: '새찬송가', number: 1 }); return r.ok ? { kind: r.result.kind, title: r.result.title, lyrics: (r.result.lyrics || '').slice(0, 20) } : { err: r.error };`);
+      ok(h.kind === 'hymn' && /^1장 /.test(h.title || ''), '베들레헴 찬송가 가사', h);
+    } else R.log.push('– 베들레헴 찬송가 없음 (건너뜀)');
+
+    // ---- 5. 카메라: 격자 썸네일은 📷 표시만, 미리보기는 잠시 뒤 정지 화면 → 카메라 놓기
+    await ev(`window.WC_CAM_PREVIEW_MS = 3000; return 1;`);
+    const dev = await ev(`const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach(t => t.stop()); return (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput').map(d => d.deviceId);`);
+    if (Array.isArray(dev) && dev.length) {
+      const cam = await ev(`const c = (await window.BC.cmd('saveCue', { cue: { name: '카메라 점검', items: [{ type: 'camera', deviceId: ${JSON.stringify(dev[0])}, label: '가짜', title: '📷 가짜' }, { type: 'title', title: '다음' }] } })).result;
+        window.BCCue.openCue(c.id); await wait(800); $$('#cueList .cue-item')[0].click(); await wait(2000);
+        const live = { video: !!$('#pvScreen video[data-cam]'), grid: $$('.sg-screen video[data-cam]').length, still: $$('.sg-screen .bc-cam-still').length, open: window.BCRender.openCameras().length };
+        await wait(8000);
+        const later = { frozen: !!$('#pvScreen .bc-cam-frozen'), open: window.BCRender.openCameras().length, holders: $$('video[data-cam]').length };
+        $$('#cueList .cue-item')[1].click(); await wait(500);
+        return { live, later };`);
+      ok(cam.live && cam.live.video && cam.live.open === 1, '카메라 미리보기 (산 영상)', cam);
+      ok(cam.live && cam.live.grid === 0, '격자 썸네일은 산 영상이 아님', cam);
+      ok(cam.later && cam.later.frozen && cam.later.open === 0 && cam.later.holders === 0, '미리보기 정지 화면 → 카메라 놓기 (붙든 곳 없음)', cam);
+    } else R.log.push('– 가짜 카메라 없음 (건너뜀)');
+
+    // ---- 6. 도킹(OBS·리모컨) '■ 끄기'
+    const before = await ev(`$('#q').focus(); $('#q').value = '시 23:1'; $('#q').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(1500); await window.BC.sendPreview(); await wait(800); return window.BC.state.live.visible;`);
+    const d = new BrowserWindow({ width: 420, height: 900, show: false, webPreferences: { offscreen: true } });
+    await d.loadURL(`http://127.0.0.1:${port}/dock`);
+    await wait(2500);
+    const off = await d.webContents.executeJavaScript(`(() => { const b = document.getElementById('dOff'); if (!b) return false; b.click(); return true; })()`);
+    await wait(1500);
+    const offState = await ev(`return window.BC.state.live.visible;`);
+    ok(before === true && off && offState === false, "도킹 '■ 끄기'", { before, off, offState });
+    d.destroy();
+
+    // ---- 7. 영어 화면: UI 는 영어, 사용자 글은 그대로
+    await ev(`await window.BC.cmd('saveCue', { cue: { name: '찬송', items: [{ type: 'title', title: '설교', subtitle: '축도' }] } }); await window.BC.cmd('updateSettings', { patch: { uiLang: 'en' } }); return 1;`);
+    await wait(400);
+    await load();
+    const en = await ev(`const o = $$('#cueSel option').find(o => /찬송/.test(o.textContent)); if (o) { $('#cueSel').value = o.value; $('#cueSel').dispatchEvent(new Event('change', { bubbles: true })); } await wait(800);
+      return { lang: document.documentElement.dataset.lang, menu: $$('.menubar button, #menubar button').slice(0, 3).map(b => b.textContent.trim()), cueSel: o && o.textContent, row: ($('#cueList .cue-item') || {}).innerText };`);
+    ok(en.lang === 'en' && /File|Cue/.test((en.menu || []).join(' ')), '영어 화면 (UI 번역)', en);
+    ok(/찬송/.test(en.cueSel || '') && /설교/.test(en.row || '') && /축도/.test(en.row || ''), '영어 화면에서 사용자 글은 그대로', en);
+    await shot('en');
+    await ev(`await window.BC.cmd('updateSettings', { patch: { uiLang: 'ko' } }); return 1;`);
+
+    ok(R.console.length === 0, '화면 오류(console) 없음', R.console);
+  } catch (e) { R.fails.push('점검 중 오류: ' + String(e.stack).slice(0, 500)); }
+  fs.writeFileSync(path.join(OUT, 'smoke.json'), JSON.stringify(R, null, 1));
+  app.exit(0);
+});

@@ -531,6 +531,7 @@
     clearTimeout(camFreezeTimer);
     if (!scr.querySelector('video[data-cam]')) return;
     camFreezeTimer = setTimeout(() => {
+      if (!scr.isConnected) return;
       scr.querySelectorAll('video[data-cam]').forEach(v => {
         const c = document.createElement('canvas');
         c.width = v.videoWidth || 16; c.height = v.videoHeight || 9;
@@ -544,7 +545,7 @@
         box.onclick = e => { e.stopPropagation(); renderPreview(); };
         v.replaceWith(box);
       });
-    }, CAM_PREVIEW_MS);
+    }, window.WC_CAM_PREVIEW_MS || CAM_PREVIEW_MS); // 시험(e2e)에서는 짧게
   }
 
   function renderPreview() {
