@@ -18,6 +18,7 @@ const { normalizeCue, newId, sampleItems } = require('./cues');
 const { Hymns } = require('./hymns');
 const { SongInbox, onlineSearchUrl } = require('./songinbox');
 const { HymnLyrics, countHymns, FILE: HYMN_FILE } = require('./hymnlyrics');
+const { Hymnal } = require('./hymnal');
 
 /** 모두 지우기로 숨긴 배경은 다시 송출하면 돌아온다 (배경 끄기로 직접 끈 것은 그대로) */
 function unclearBg(core) { if (core.layers.bgByClear) { core.layers.hideBg = false; core.layers.bgByClear = false; } }
@@ -53,6 +54,7 @@ class WorshipCueCore extends EventEmitter {
     this.hymns = new Hymns(this);
     this.songInbox = new SongInbox(this);
     this.hymnLyrics = new HymnLyrics(this);
+    this.hymnal = new Hymnal(this); // 베들레헴 찬송가 (가사 · 악보 · 교독문)
     this.library = new Library(this);
     this.stage = { timer: { running: false, endAt: 0, remaining: 0, duration: 0 }, message: '' };
     // 화면 지우기 층: 배경 숨김 · 로고 화면 · 오버레이 끄기 전 켜져 있던 것
@@ -699,7 +701,7 @@ WorshipCueCore.prototype.commands = {
   // ---- 베들레헴 성경 폴더에서 한꺼번에 가져오기 ----
   findBethlehem(a) {
     const extra = a.dir ? [String(a.dir)] : [];
-    return findDirs(extra).map(dir => ({ dir, bibles: listBibles(dir), hymns: countHymns(path.join(dir, HYMN_FILE)) }));
+    return findDirs(extra).map(dir => ({ dir, bibles: listBibles(dir), hymns: countHymns(path.join(dir, HYMN_FILE)), hymnal: Hymnal.scan(dir) }));
   },
   importBethlehem(a) {
     const dir = String(a.dir || '');
@@ -719,16 +721,30 @@ WorshipCueCore.prototype.commands = {
     return results;
   },
   /** 베들레헴의 새찬송가 가사 DB 를 데이터 폴더로 복사 (베들레헴을 지워도 OBS 자막 가사를 쓸 수 있게) */
+  /** 베들레헴 찬송가(새찬송가 · 찬미가)의 가사 DB 와 악보를 데이터 폴더로 복사 */
   importBethlehemHymns(a) {
-    const count = this.hymnLyrics.importFrom(String(a.dir || ''));
-    this.logger.info(`베들레헴에서 새찬송가 가사 ${count}곡을 가져옴`);
-    return { count };
+    const dir = String(a.dir || '');
+    this.hymnLyrics.close();
+    const done = this.hymnal.importFrom(dir, a.books);
+    if (!done.length) throw new Error('찬송가 파일(새찬송가.hdb · .cmp)을 찾지 못했습니다.');
+    const count = countHymns(require('path').join(this.hymnal.dir, HYMN_FILE));
+    this.logger.info(`베들레헴에서 찬송가를 가져옴: ${done.map(d => d.book + (d.scores ? '(악보)' : '')).join(', ')}`);
+    return { count, done };
   },
+  hymnalBooks() { return this.hymnal.books(); },
+  /** 베들레헴 찬송가 한 장 → 큐시트에 넣을 모양 (찬송: 가사 · 순서 · 악보 주소 / 교독문: 공지 글) */
+  hymnalGet(a) { return this.hymnal.get(String(a.book || '새찬송가'), Number(a.number)); },
   // ---- 찬송가·교독문 폴더 ----
   listHymnFolders() { return this.hymns.folders(); },
   addHymnFolder(a) { const r = this.hymns.addFolder(a.path, a.name); this.settingsChanged('settings'); return r; },
   removeHymnFolder(a) { this.hymns.removeFolder(String(a.path)); this.settingsChanged('settings'); return {}; },
-  searchHymns(a) { return this.hymns.search(a.query, a.folder || null); },
+  searchHymns(a) {
+    const own = this.hymns.search(a.query, a.folder || null);
+    if (a.folder) return own;
+    let bh = [];
+    try { bh = this.hymnal.search(a.query, 60); } catch { /* 베들레헴 없음 */ }
+    return [...own, ...bh.map(h => ({ bethlehem: true, book: h.book, number: h.number, title: h.kind === 'reading' ? h.label : h.title, label: h.label, kind: h.kind, scores: h.scores, folder: `${h.book} (베들레헴)` }))].slice(0, 300);
+  },
   loadHymn(a) { return this.hymns.load(String(a.file)); },
   setHymnFolderRender(a) { this.hymns.setFolderRender(String(a.path), a.render); this.settingsChanged('settings'); return {}; },
   // ---- 온라인 찬양 PPT: 브라우저로 검색 페이지를 열고, 다운로드 폴더를 지켜본다 ----

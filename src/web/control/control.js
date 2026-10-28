@@ -975,6 +975,7 @@
     const add = (type, extra, label) => () => { window.BCCue.addItem(type, extra); showMsg(`'${label}' 을(를) 큐시트에 넣었습니다.`, 'ok', 1500); };
     for (const s of (songs.ok ? songs.result : []).slice(0, 4)) out.push({ label: '🎵 ' + s.title, sub: s.first, act: async () => { const r = await cmd('getSong', { id: s.id }); if (r.ok) add('song', { songId: s.id, title: r.result.title, lyrics: r.result.lyrics }, s.title)(); } });
     for (const h of (hymns.ok ? hymns.result : []).slice(0, 4)) {
+      if (h.bethlehem) { out.push({ label: '🎼 ' + (h.label || h.title), sub: h.folder, act: async () => { const d = await window.BCCue.addBethlehem(h); if (d) showMsg(`'${d.title}' 을(를) 큐시트에 넣었습니다.`, 'ok', 1500); } }); continue; }
       const title = h.number != null && !/^교독문/.test(h.title) ? `${h.number}장 ${h.title}` : h.title;
       out.push({ label: '🎼 ' + title, sub: h.folder, act: add('hymn', { title, file: h.file, number: h.number, background: 'default' }, title) });
     }

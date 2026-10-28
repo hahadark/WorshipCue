@@ -275,7 +275,7 @@
     }
     else if (it.type === 'song') slides = SL.buildText({ title: it.title, showTitle: it.showTitle, chunks: SL.arrange(SL.lyricsChunks(it.lyrics), songOrder(it)).chunks }, opts);
     else if (it.type === 'text') slides = SL.buildText({ title: it.title, showTitle: true, chunks: SL.textChunks(it.body) }, opts);
-    else if (it.type === 'image' && it.image) slides = [{ kind: 'image', image: it.image, ref: it.title, label: '이미지', parts: [] }];
+    else if (it.type === 'image' && it.image) slides = [it.score ? { kind: 'score', image: it.image, bg: it.scoreBg || '#ffffff', ref: it.title, label: '악보', parts: [] } : { kind: 'image', image: it.image, ref: it.title, label: '이미지', parts: [] }];
     else if (it.type === 'camera') slides = [{ kind: 'camera', camera: { deviceId: it.deviceId || '', label: it.label || '', fit: it.fit || 'cover' }, ref: it.title, label: '카메라', parts: [] }];
     else if (it.type === 'slideshow') {
       // 그림들 + 광고 글 (--- 로 나눔). 하나도 없으면 배경만 (카운트다운만 띄울 때)
@@ -940,11 +940,30 @@
 
   // ---------------- 찬송가 고르기 ----------------
   /** replace: 바꿀 순서 번호 (없으면 새로 넣기). 창을 연 채 여러 곡을 차례로 넣을 수 있다 */
+  // ---------------- 베들레헴 찬송가 (가사 슬라이드 · 악보 그림 · 교독문) ----------------
+  const hymnalMode = () => { try { return localStorage.getItem('wc-hymnal-mode') === 'score' ? 'score' : 'lyrics'; } catch { return 'lyrics'; } };
+  /** 찾기 결과 h({ bethlehem, book, number, kind }) → 큐시트 순서 (replace = 바꿀 순서 번호) */
+  async function addBethlehem(h, { replace = -1, mode = hymnalMode() } = {}) {
+    const r = await cmd('hymnalGet', { book: h.book, number: h.number });
+    if (!r.ok) { app.showMsg(r.error, 'error', 4000); return false; }
+    const d = r.result;
+    let type, extra;
+    if (d.kind === 'reading') { type = 'text'; extra = { title: d.title, body: d.body }; }
+    else if (mode === 'score' && d.score) { type = 'image'; extra = { title: d.title, image: d.score, score: true }; }
+    else { type = 'song'; extra = { title: d.title, lyrics: d.lyrics, order: d.order || '', credit: d.credit || '' }; }
+    if (replace >= 0 && st.cue && st.cue.items[replace]) {
+      const old = st.cue.items[replace];
+      st.cue.items[replace] = { id: old.id, note: old.note || '', type, ...extra };
+      save(); forceEditor(); render(); previewItem(replace);
+    } else addItem(type, extra);
+    return d;
+  }
   async function openHymnPicker({ replace = -1 } = {}) {
     const s = app.state.settings;
     const bgName = b => ({ original: '찬송가 원래 배경', template: '템플릿 배경' }[b] || '지정한 이미지');
     app.openModal(replace >= 0 ? '🎼 다른 찬송가·PPT로 바꾸기' : '🎼 찬송가·찬양 PPT 넣기', `<div class="hymn-pick">
       <div class="row-flex"><select id="hFolder"></select><input type="text" id="hQ" placeholder="번호 또는 제목 (예: 10, 전능왕, 은혜 아니면)" style="flex:1;font-size:16px"><span id="hCount" class="muted"></span><button id="hOnline" title="내 폴더에 없는 찬양 PPT를 온라인에서 찾아 받기">🌐 온라인에서 찾기</button></div>
+      <div class="row-flex hymnal-mode" id="hMode" hidden><span class="muted">베들레헴 찬송가 넣는 방식</span><span class="view-tabs"><button data-hm="lyrics" title="절·후렴을 글 슬라이드로 (템플릿 모양 · OBS 자막에도)">📝 가사 슬라이드</button><button data-hm="score" title="악보 그림 한 장">🎼 악보 그림</button></span><span class="muted">교독문은 인도자·회중(굵게) 글 슬라이드</span></div>
       <div id="hInbox" class="hinbox" hidden></div>
       <div id="hList" class="hymn-list" tabindex="0"></div>
       <div class="note">클릭: 고르기 · 더블클릭 또는 Enter: ${replace >= 0 ? '바꾸기' : '큐시트에 넣기 (창을 닫지 않고 여러 곡 연달아 넣을 수 있습니다)'}</div>
@@ -984,14 +1003,25 @@
       sel = 0;
       $('#hCount').textContent = `${rows.length}${rows.length >= 300 ? '+' : ''}곡`;
       const q = $('#hQ').value.trim();
-      $('#hList').innerHTML = rows.map((h, k) => `<div class="hrow ${k === sel ? 'sel' : ''}" data-k="${k}"><span class="hno">${h.number ?? ''}</span><span class="htitle">${esc(h.title)}</span><span class="muted">${esc(h.folder)}</span></div>`).join('')
+      $('#hMode').hidden = !rows.some(h => h.bethlehem);
+      $('#hList').innerHTML = rows.map((h, k) => `<div class="hrow ${k === sel ? 'sel' : ''}${h.bethlehem ? ' bh' : ''}" data-k="${k}"><span class="hno">${h.kind === 'reading' ? '' : h.number ?? ''}</span><span class="htitle">${esc(h.title)}</span><span class="muted">${esc(h.folder)}</span></div>`).join('')
         || `<div class="empty">내 폴더에 '${esc(q)}' 이(가) 없습니다.${q ? `<br><button id="hOnline2" class="primary">🌐 온라인에서 '${esc(q)}' 찾기</button><div class="note">브라우저에서 PPT 를 받으면 자동으로 큐시트에 들어갑니다.</div>` : ''}</div>`;
       const b2 = $('#hOnline2'); if (b2) b2.onclick = online;
     };
+    const drawMode = () => $('#hMode').querySelectorAll('[data-hm]').forEach(b => b.classList.toggle('on', b.dataset.hm === hymnalMode()));
+    drawMode();
+    $('#hMode').onclick = e => { const b = e.target.closest('[data-hm]'); if (!b) return; try { localStorage.setItem('wc-hymnal-mode', b.dataset.hm); } catch { /* 무시 */ } drawMode(); };
     const mark = () => { $('#hList').querySelectorAll('.hrow').forEach(x => x.classList.toggle('sel', +x.dataset.k === sel)); $('#hList .hrow.sel')?.scrollIntoView({ block: 'nearest' }); };
     const choose = async k => {
       const h = rows[k];
       if (!h) return;
+      if (h.bethlehem) {
+        const d = await addBethlehem(h, { replace });
+        if (!d) return;
+        if (replace >= 0) app.closeModal();
+        else { app.showMsg(`'${d.title}' 을(를) ${st.sel + 1}번에 넣었습니다.`, 'ok', 1500); $('#hQ').focus(); $('#hQ').select(); }
+        return;
+      }
       const title = h.number != null && !/^교독문/.test(h.title) ? `${h.number}장 ${h.title}` : h.title;
       if (replace >= 0) {
         Object.assign(st.cue.items[replace], { title, file: h.file, number: h.number });
@@ -1092,6 +1122,7 @@
     currentId: () => (st.cue ? st.cue.id : ''),
     addItem: (type, extra) => addItem(type, extra),
     sendItem: i => { showSide('cue'); return sendItem(i); },
+    addBethlehem: (h, o) => addBethlehem(h, o || {}),
     openCue: async id => { await refreshList(); showSide('cue'); return openCue(id); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),
     selected: () => (st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null),
     selIndex: () => st.sel,

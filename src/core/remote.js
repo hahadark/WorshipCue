@@ -160,6 +160,7 @@ class RemoteServer {
       case 'next': return core.command('nextSlide');
       case 'prev': return core.command('previousSlide');
       case 'toggle': return core.command('toggleLive');
+      case 'off': return core.command('clearAll'); // 아예 끄기: 글 · 배경 · 오버레이 · 로고 · 송출 배경 (다음 송출에서 배경은 다시)
       case 'goto': return core.command('gotoSlide', { index: Number(a.index) || 0 });
       case 'cue': control(); core.emit('remote-cue', { index: Number(a.index) || 0 }); return { sent: true };
       case 'message': return core.command('stageMessage', { text: String(a.text || '') });

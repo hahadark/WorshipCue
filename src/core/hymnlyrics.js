@@ -124,7 +124,7 @@ class HymnLyrics {
     const dirs = s.bethlehemDir ? [s.bethlehemDir] : candidates();
     // 설정 → 베들레헴에서 가져오기로 데이터 폴더에 복사해 둔 것 → 개인용 빌드의 프로그램 폴더(resources)
     // (베들레헴을 지웠거나 없는 PC 에서도)
-    if (this.core.dataDir) dirs.push(this.core.dataDir);
+    if (this.core.dataDir) dirs.push(path.join(this.core.dataDir, 'hymnal'), this.core.dataDir);
     if (process.resourcesPath) dirs.push(process.resourcesPath);
     for (const d of dirs) {
       const f = /\.hdb$/i.test(d) ? d : path.join(d, FILE);

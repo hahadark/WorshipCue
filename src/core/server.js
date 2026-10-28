@@ -140,7 +140,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
     if (fromUrl) res.setHeader('Set-Cookie', `${LAN_COOKIE}=${encodeURIComponent(want)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`);
     if (req.method === 'GET') {
       if (p === '/events') return ['main', 'overlay', 'stage'].includes(url.searchParams.get('client'));
-      return /^\/outputs\/(main|overlay|stage)$/.test(p) || /^\/outputs\/[\w.-]+\.(js|css)$/.test(p) || p.startsWith('/shared/') || p.startsWith('/media/') || p === '/lib/file' || p.startsWith('/hymn/');
+      return /^\/outputs\/(main|overlay|stage)$/.test(p) || /^\/outputs\/[\w.-]+\.(js|css)$/.test(p) || p.startsWith('/shared/') || p.startsWith('/media/') || p === '/lib/file' || p.startsWith('/hymn/') || p.startsWith('/hymnal/score/');
     }
     return req.method === 'POST' && (p === '/api/ack' || p === '/api/command');
   }
@@ -171,6 +171,15 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
         const fp = core.hymns.cachePath(key, file);
         if (!fp) { res.writeHead(404); return res.end(); }
         return serveFile(res, fp, core.hymns.cacheDir);
+      }
+      // 베들레헴 찬송가 악보 그림
+      if (p.startsWith('/hymnal/score/')) {
+        const m = /^\/hymnal\/score\/([^/]+)\/(\d{1,4})\.png$/.exec(p);
+        let png = null;
+        try { if (m) png = core.hymnal.score(decodeURIComponent(m[1]), Number(m[2])); } catch { png = null; }
+        if (!png) { res.writeHead(404); return res.end(); }
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'max-age=86400' });
+        return res.end(png);
       }
       // 스트림덱·Companion 등 외부 단추: 열쇠(key)가 맞아야 동작 (다른 웹사이트가 함부로 못 누르게)
       if (p.startsWith('/api/trigger/')) {

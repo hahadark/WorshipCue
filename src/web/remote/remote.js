@@ -68,6 +68,7 @@
   $('bNext').onclick = $('xNext').onclick = () => act({ action: 'next' });
   $('bPrev').onclick = $('xPrev').onclick = () => act({ action: 'prev' });
   $('xHide').onclick = $('dHide').onclick = () => act({ action: 'toggle' });
+  $('xOff').onclick = $('dOff').onclick = () => act({ action: 'off' });
   $('dPip').onclick = () => act({ action: 'obsPip' });
   $('dFull').onclick = () => act({ action: 'obsFull' });
   $('labels').onclick = e => { const b = e.target.closest('[data-goto]'); if (b) act({ action: 'goto', index: +b.dataset.goto }); };

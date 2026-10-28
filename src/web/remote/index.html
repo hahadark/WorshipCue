@@ -41,7 +41,8 @@
   .login input { width: 100%; font-size: 28px; text-align: center; letter-spacing: 8px; margin: 12px 0; }
   .login button { width: 100%; font-size: 18px; background: var(--accent); border-color: var(--accent); }
   .err { color: #ff8a8a; margin-top: 8px; min-height: 1.4em; }
-  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: #0b0d10ee; border-top: 1px solid var(--line); padding: 10px 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: #0b0d10ee; border-top: 1px solid var(--line); padding: 10px 12px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+  .off { background: #4a1418; border-color: #c0392b; }
   .bar button { font-size: 18px; font-weight: 800; padding: 14px 0; }
   .bar .nx { background: #1f3a63; border-color: #3d7bff; }
   .warn { background: #3a2c08; border-color: #806a20; }
@@ -73,7 +74,7 @@
     <div class="row labels" id="labels"></div>
   </div>
   <div class="big"><button id="bPrev">◀ 이전</button><button id="bNext" class="next">다음 ▶</button></div>
-  <div class="big dock-only"><button id="dHide">숨김</button></div>
+  <div class="big dock-only"><button id="dHide" title="글자만 숨기기 · 다시 누르면 보이기">숨김</button><button id="dOff" class="off" title="글 · 배경 · 오버레이 · 로고까지 모두 끄기 (모두 지우기)">■ 끄기</button></div>
   <div class="row obsrow dock-only" style="grid-template-columns:1fr 1fr"><button id="dPip" title="글 없는 그림·악보 슬라이드를 OBS 자막 화면 우상단에 작게">🖼 그림 우상단</button><button id="dFull" title="OBS 자막 화면에 슬라이드를 예배당 화면 모양 그대로">🖥 슬라이드 그대로</button></div>
   <div class="card" style="margin-top:12px">
     <b>큐시트</b> <span class="muted" id="cueName"></span> <span class="muted">— 누르면 송출</span>
@@ -86,7 +87,7 @@
     <div class="row"><button data-tm="30">타이머 30분</button><button data-tm="40">40분</button><button data-op="pause">❚❚</button><button data-op="resume">▶</button><button data-op="reset">지우기</button></div>
   </div>
 </div>
-<div class="bar" id="bar" hidden><button id="xPrev">◀</button><button id="xHide">숨김</button><button id="xNext" class="nx">▶</button></div>
+<div class="bar" id="bar" hidden><button id="xPrev">◀</button><button id="xHide" title="글자만 숨기기">숨김</button><button id="xOff" class="off" title="모두 끄기">■ 끄기</button><button id="xNext" class="nx">▶</button></div>
 <script src="/groups.js"></script>
 <script src="/remote.js"></script>
 </body>

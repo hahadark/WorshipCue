@@ -584,20 +584,23 @@
       const installed = new Set(app.state.versions.map(v => v.id));
       const lyr = (await cmd('hymnLyricsStatus', {})).result || {};
       $('#bhList').innerHTML = r.result.map((g, gi) => `<div class="report" style="margin-bottom:8px"><div><b>${esc(g.dir)}</b></div>
-        <div class="row-flex" style="flex-wrap:wrap;margin:6px 0">${g.bibles.map(b => `<label class="tc-toggle" style="min-width:150px"><input type="checkbox" data-g="${gi}" value="${esc(b.file)}" ${b.known ? 'checked' : ''}>${esc(b.name)}${installed.has(b.id) ? ' <span class="muted">(설치됨·교체)</span>' : ''}</label>`).join('')}${g.hymns ? `<label class="tc-toggle" style="min-width:150px" title="찬송가 악보 PPT 에는 글자가 없어 OBS 자막(가사만)에 이 가사를 씁니다. 데이터 폴더로 복사해 두면 베들레헴을 지워도 됩니다."><input type="checkbox" data-hymn="${gi}" checked>🎵 새찬송가 가사 (${g.hymns}곡)${lyr.inData ? ' <span class="muted">(있음·교체)</span>' : ''}</label>` : ''}</div>
+        <div class="row-flex" style="flex-wrap:wrap;margin:6px 0">${g.bibles.map(b => `<label class="tc-toggle" style="min-width:150px"><input type="checkbox" data-g="${gi}" value="${esc(b.file)}" ${b.known ? 'checked' : ''}>${esc(b.name)}${installed.has(b.id) ? ' <span class="muted">(설치됨·교체)</span>' : ''}</label>`).join('')}${(g.hymnal || []).map(h => `<label class="tc-toggle" style="min-width:200px" title="찾기에서 번호·제목으로 바로 넣기 (가사 슬라이드 또는 악보 그림)${h.book === '새찬송가' ? ' · 교독문 · OBS 자막 가사' : ''}. 데이터 폴더로 복사해 두면 베들레헴을 지워도 됩니다."><input type="checkbox" data-hymnbook="${gi}" value="${esc(h.book)}" checked>🎵 ${esc(h.book)} ${[h.lyrics && '가사', h.scores && '악보'].filter(Boolean).join('·')}${h.book === '새찬송가' && h.lyrics ? '·교독문' : ''}${h.book === '새찬송가' && lyr.inData ? ' <span class="muted">(있음·교체)</span>' : ''}</label>`).join('')}</div>
         <button data-bhgo="${gi}">선택한 항목 가져오기</button> <span class="note" id="bhRes${gi}"></span></div>`).join('');
       $('#bhList').querySelectorAll('[data-bhgo]').forEach(btn => btn.onclick = async () => {
         const gi = +btn.dataset.bhgo;
         const files = [...$('#bhList').querySelectorAll(`input[data-g="${gi}"]:checked`)].map(x => x.value);
-        const hymn = !!$('#bhList').querySelector(`input[data-hymn="${gi}"]:checked`);
+        const books = [...$('#bhList').querySelectorAll(`input[data-hymnbook="${gi}"]:checked`)].map(x => x.value);
+        const hymn = books.length > 0;
         if (!files.length && !hymn) return;
         btn.disabled = true;
-        // 새찬송가 가사: 파일 복사라 금방
+        // 찬송가 가사·악보: 파일 복사 (악보는 100MB 남짓이라 몇 초)
         let hymnMsg = '';
         if (hymn) {
-          const h = await cmd('importBethlehemHymns', { dir: r.result[gi].dir });
+          $('#bhRes' + gi).textContent = '찬송가 가사·악보를 복사하는 중…';
+          const h = await cmd('importBethlehemHymns', { dir: r.result[gi].dir, books });
           if (!h.ok) { btn.disabled = false; $('#bhRes' + gi).innerHTML = `<span class="err-text">${esc(h.error)}</span>`; return; }
-          hymnMsg = `새찬송가 가사 ${h.result.count}곡`;
+          hymnMsg = `찬송가 (${h.result.done.map(d => d.book + (d.scores ? ' 가사·악보' : ' 가사')).join(', ')})`;
+          $('#bhRes' + gi).textContent = '';
         }
         if (!files.length) { btn.disabled = false; app.showMsg(`베들레헴에서 ${hymnMsg}을 가져왔습니다.`, 'ok'); drawData(); return; }
         $('#bhRes' + gi).textContent = `${files.length}개 가져오는 중… (번역본마다 1~2초)`;

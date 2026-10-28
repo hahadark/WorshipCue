@@ -75,7 +75,7 @@
       const k = +r.dataset.k;
       r.onclick = () => { st.sel = k; b.querySelectorAll('[data-k]').forEach(x => x.classList.toggle('sel', x === r)); };
       r.ondblclick = () => onPick(k);
-      if (itemOf) draggable(r, itemOf(k));
+      if (itemOf) { const x = itemOf(k); if (x) draggable(r, x); }
     });
     activate = onPick;
   }
@@ -289,14 +289,14 @@
   async function drawHymns() {
     bar(`<input type="text" data-q style="flex:1"><button data-set title="찬송가 폴더·기본 배경·온라인에서 찾기">설정·온라인…</button>`);
     root().querySelector('[data-set]').onclick = () => window.BCCue && window.BCCue.openHymnPicker({});
-    searchInput('번호 또는 제목 (예: 10, 전능왕)', drawHymns);
+    searchInput('번호 또는 제목 (예: 10, 전능왕, 교독문 1)', drawHymns);
     const r = await cmd('searchHymns', { query: st.q.hymns || '' });
     st.rows = r.ok ? r.result : [];
     if (st.tab !== 'hymns') return;
-    const b = body(st.rows.length ? st.rows.map((h, k) => `<div class="lib-row" data-k="${k}"><span class="lib-no">${h.number ?? ''}</span><span class="lib-t"><b>${esc(h.title)}</b></span><span class="muted">${esc(h.folder)}</span></div>`).join('')
+    const b = body(st.rows.length ? st.rows.map((h, k) => `<div class="lib-row" data-k="${k}"><span class="lib-no">${h.kind === 'reading' ? '' : h.number ?? ''}</span><span class="lib-t"><b>${esc(h.title)}</b></span><span class="muted">${esc(h.folder)}</span></div>`).join('')
       : `<div class="empty">찾는 찬송가·PPT 가 없습니다.<br><span class="muted">'설정·온라인…' 에서 폴더를 등록하거나 온라인에서 찾을 수 있습니다.</span></div>`);
-    const item = k => { const h = st.rows[k]; const title = h.number != null && !/^교독문/.test(h.title) ? `${h.number}장 ${h.title}` : h.title; return { type: 'hymn', extra: { title, file: h.file, number: h.number, background: 'default' } }; };
-    bindRows(b, k => { const it = item(k); addToCue(it.type, it.extra, it.extra.title); }, item);
+    const item = k => { const h = st.rows[k]; if (h.bethlehem) return null; const title = h.number != null && !/^교독문/.test(h.title) ? `${h.number}장 ${h.title}` : h.title; return { type: 'hymn', extra: { title, file: h.file, number: h.number, background: 'default' } }; };
+    bindRows(b, async k => { const h = st.rows[k]; if (h.bethlehem) { const d = await window.BCCue.addBethlehem(h); if (d) app.showMsg(`'${d.title}' 을(를) 큐시트에 넣었습니다.`, 'ok', 1500); return; } const it = item(k); addToCue(it.type, it.extra, it.extra.title); }, item);
   }
 
   // ---------------- 이미지 · 음악 (폴더) ----------------
