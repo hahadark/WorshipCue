@@ -21,8 +21,9 @@
     const s = r.ok ? r.result : { hasKey: false, model: '', models: [] };
     file = null;
     if (want) mode = want;
-    if (!mode) mode = s.hasKey ? 'api' : 'chat'; // 처음: 키가 없으면 채팅 AI 부터
-    const tabs = `<div class="ai-tabs view-tabs"><button data-mode="api" class="${mode === 'api' ? 'on' : ''}">🔑 API 키로 (자동)</button><button data-mode="chat" class="${mode === 'chat' ? 'on' : ''}">💬 채팅 AI로 (키 없이)</button></div>`;
+    if (!mode) mode = s.hasKey ? 'api' : 'quick'; // 처음: 키가 없으면 '바로 만들기' 부터
+    const tabs = `<div class="ai-tabs view-tabs"><button data-mode="quick" class="${mode === 'quick' ? 'on' : ''}">⚡ 순서 붙여 넣기 (AI 없이)</button><button data-mode="api" class="${mode === 'api' ? 'on' : ''}">🔑 API 키로 (자동)</button><button data-mode="chat" class="${mode === 'chat' ? 'on' : ''}">💬 채팅 AI로 (키 없이)</button></div>`;
+    if (mode === 'quick') return openQuick(tabs);
     if (mode === 'chat') return openChat(tabs);
     app.openModal('🤖 주보로 큐시트 만들기 (AI)', tabs + `<div class="form ai-form">
       <label>오픈라우터 키</label><div class="row-flex"><input type="password" id="aiKey" placeholder="${s.hasKey ? '저장됨 — 바꿀 때만 입력' : 'sk-or-… (openrouter.ai 에서 발급)'}" style="flex:1" autocomplete="off"><button id="aiKeySave">저장</button>${s.hasKey ? '<button id="aiKeyDel" title="저장한 키 지우기">지우기</button>' : ''}<button id="aiKeyGet" title="오픈라우터 키 발급 페이지 열기">키 발급…</button></div>
@@ -65,6 +66,42 @@
       try { localStorage.setItem('wc-ai-mode', mode); } catch { /* 무시 */ }
       open();
     });
+  }
+
+  // ---------------- 순서 붙여 넣기 (AI 없이 · 규칙으로 바로) ----------------
+  const QUICK_HINT = `2026년 10월 18일 주일 예배 (11:00)
+예배로의 부름 8장*
+대표기도 김철수 장로
+성경봉독 시 23:1-6
+교독문 1
+찬양 은혜 아니면, 주님 다시 오실 때까지
+설교 “선한 목자” 홍길동 목사
+찬송 310장 / 봉헌 / 광고
+축도 홍길동 목사`;
+  async function openQuick(tabs) {
+    let draft = '';
+    try { draft = localStorage.getItem('wc-quick-order') || ''; } catch { /* 무시 */ }
+    app.openModal('📋 주보로 큐시트 만들기', tabs + `<div class="form ai-form">
+      <span></span><div class="note">AI 없이 바로 만듭니다. 주보의 예배 순서를 한 줄에 하나씩 붙여 넣으세요 (한 줄에 여러 순서는 <b>/</b> 로). 찬송가는 PPT 폴더나 베들레헴 가사로, 찬양은 라이브러리에서, 장절은 성경 DB 로 찾습니다.</div>
+      <label>예배 순서</label><textarea id="qkText" rows="12" placeholder="${esc(QUICK_HINT)}" spellcheck="false">${esc(draft)}</textarea>
+      <label>큐시트 이름</label><input type="text" id="qkName" placeholder="비우면 첫 줄 또는 날짜로">
+      <span></span><div class="row-flex"><button id="qkGo" class="primary">⚡ 큐시트 만들기</button><button id="qkEx">예시 넣기</button><span id="qkMsg" class="muted"></span></div>
+      <span></span><div class="note">알아보는 줄 — <b>찬송 288장</b> · <b>구세군 찬송가 12장</b> · <b>성경봉독 요 3:16-18</b> · <b>교독문 1</b> · <b>찬양 곡이름, 곡이름</b> · <b>설교 “제목” 설교자</b> · <b>광고</b> · 그 밖은 "순서 담당자" 제목 화면. 줄 끝 <b>*</b> 또는 <b>(일어서서)</b> 는 메모.</div>
+      <span></span><div id="aiResult"></div>
+    </div>`);
+    bindTabs();
+    $('#qkEx').onclick = () => { $('#qkText').value = QUICK_HINT; $('#qkText').focus(); };
+    $('#qkText').oninput = () => { try { localStorage.setItem('wc-quick-order', $('#qkText').value.slice(0, 20000)); } catch { /* 무시 */ } };
+    $('#qkGo').onclick = async () => {
+      const text = $('#qkText').value;
+      if (!text.trim()) return app.showMsg('예배 순서를 붙여 넣으세요.', 'info');
+      const r = await cmd('quickMakeCue', { text, name: $('#qkName').value.trim() });
+      if (!r.ok) { $('#qkMsg').innerHTML = `<span class="err-text">${esc(r.error)}</span>`; return; }
+      $('#qkMsg').textContent = '';
+      try { localStorage.removeItem('wc-quick-order'); } catch { /* 무시 */ }
+      showResult(r.result);
+    };
+    $('#qkText').focus();
   }
 
   // ---------------- 채팅 AI (키 없이) ----------------
@@ -160,7 +197,7 @@
       <ol>${cue.items.map(it => `<li>${esc(it.title)}${it.subtitle ? ` <span class="muted">— ${esc(it.subtitle)}</span>` : ''}${it.ref ? ` <span class="muted">— ${esc(it.ref)}</span>` : ''}</li>`).join('')}</ol>
       ${warnings.length ? `<div class="warn-text">확인할 것: ${warnings.map(esc).join(' · ')}</div>` : ''}
       <div class="row-flex"><button id="aiOpen" class="primary">이 큐시트 열기</button></div>
-      <div class="note">AI 가 만든 결과이니 송출 전에 순서·장절·찬송가를 한 번 확인하세요.</div></div>`;
+      <div class="note">송출 전에 순서·장절·찬송가를 한 번 확인하세요.</div></div>`;
     $('#aiOpen').onclick = () => { app.closeModal(); if (window.BCCue) window.BCCue.openCue(cue.id); };
     if (window.BCCue) window.BCCue.onCues({ id: cue.id });
   }

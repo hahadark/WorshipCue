@@ -188,6 +188,76 @@ function parseJson(text) {
   throw new Error('AI 응답을 해석하지 못했습니다.');
 }
 
+// ---------------- 규칙으로 바로 (AI 없이) ----------------
+// 붙여 넣은 예배 순서 글 → 큐시트 계획 (AI 와 같은 JSON). 줄마다 하나의 순서.
+//   "찬송 288장" · "성경봉독 요 3:16-18" · "교독문 1" · "찬양 은혜 아니면" · "설교 “선한 목자” 홍길동 목사" · "광고 …"
+//   '*' 또는 '(일어서서)' → note,  "2026-10-18" · "11:00" 이 든 줄 → 날짜·시작 시각
+const ORDER_SPLIT = /\s*(?:\/|\||·|•|→|➔)\s*/;
+const BOOKS_KO = /^(창|출|레|민|신|수|삿|룻|삼상|삼하|왕상|왕하|대상|대하|스|느|에|욥|시|잠|전|아|사|렘|애|겔|단|호|욜|암|옵|욘|미|나|합|습|학|슥|말|마|막|눅|요|행|롬|고전|고후|갈|엡|빌|골|살전|살후|딤전|딤후|딛|몬|히|약|벧전|벧후|요일|요이|요삼|유|계)/;
+/** 글 한 덩어리 → { name, serviceDate, startTime, items } (looksLikeRef(text) → bool 로 장절인지 확인) */
+function parseOrderText(text, { looksLikeRef = () => false } = {}) {
+  const plan = { name: '', serviceDate: '', startTime: '', items: [] };
+  const src = String(text || '').replace(/\r/g, '').replace(/ /g, ' ');
+  const lines = [];
+  for (const raw of src.split('\n')) {
+    const l = raw.trim();
+    if (!l) continue;
+    // 한 줄에 여러 순서 ("찬송 8장 / 기도 / 성경봉독 시 23") — 장절 안의 ':' 는 건드리지 않는다
+    for (const p of (ORDER_SPLIT.test(l) && !/^\d/.test(l) ? l.split(ORDER_SPLIT) : [l])) if (p.trim()) lines.push(p.trim());
+  }
+  for (let l of lines) {
+    // 날짜 · 시작 시각 · 큐시트 이름 (첫 줄이 제목처럼 보이면)
+    const dm = l.match(/(\d{4})[.\-/년]\s*(\d{1,2})[.\-/월]\s*(\d{1,2})일?/);
+    const tm = l.match(/(?:^|\D)([01]?\d|2[0-3])[:시]\s*([0-5]\d)분?(?!\d)/);
+    if (dm && !plan.serviceDate) plan.serviceDate = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`;
+    if (tm && !plan.startTime && !looksLikeRef(l)) plan.startTime = `${tm[1].padStart(2, '0')}:${tm[2]}`;
+    if ((dm || /예배$|예배\s*순서|주보/.test(l)) && !plan.items.length && !/찬송|성경|교독|찬양|기도|광고/.test(l)) {
+      if (!plan.name) plan.name = l.replace(/[\s|·•]*(예배\s*)?순서$/, '').replace(/\(?\s*\d{1,2}[:시]\s*[0-5]\d분?\s*\)?/, '').trim();
+      continue;
+    }
+    // 번호 매김 · 일어서기 표시
+    l = l.replace(/^(?:\d+[.)]|[①-⑳]|[-•*·]\s)\s*/, '');
+    let note = '';
+    if (/^\*|[*※]\s*$|\(일어서서\)|일어서서|[*※]\s*일어/.test(l)) { note = '*일어서서'; l = l.replace(/^\*+\s*|\s*[*※]+\s*$|\s*\(?일어서서\)?/g, '').trim(); }
+    const memo = l.match(/[(（]([^()（）]*)[)）]\s*$/); // 끝의 괄호 → 메모
+    const it = { type: 'title', title: '', subtitle: '', note };
+    let m;
+    if ((m = l.match(/교독문\s*(?:제\s*)?(\d+)\s*(?:번|장)?\s*(.*)$/))) {
+      Object.assign(it, { type: 'reading', title: '교독문', hymnNumber: +m[1], subtitle: m[2].trim() });
+    } else if ((m = l.match(/^(.*?)(새\s*찬송가|구세군\s*찬송가|구세군|통일\s*찬송가|찬송가|찬송)?\s*(?:제\s*)?(\d{1,3})\s*장\s*(.*)$/)) && (m[2] || /찬송|부름|송영|경배/.test(m[1]) || !m[1].trim())) {
+      const book = /구세군/.test(m[2] || '') ? '구세군' : '새찬송가';
+      const head = m[1].replace(/[:：\-–]\s*$/, '').trim();
+      Object.assign(it, { type: 'hymn', title: head && !/^찬송/.test(head) ? head : '찬송', hymnNumber: +m[3], hymnbook: book, subtitle: m[4].trim() });
+    } else if ((m = l.match(/^(성경\s*봉독|본문\s*말씀|본문|말씀\s*봉독|봉독|성경)\s*[:：\-–]?\s*(.+)$/)) && looksLikeRef(m[2])) {
+      Object.assign(it, { type: 'bible', title: m[1].replace(/\s+/g, ''), ref: m[2].trim() });
+    } else if (looksLikeRef(l) && BOOKS_KO.test(l.replace(/\s/g, '')) && /\d/.test(l)) {
+      Object.assign(it, { type: 'bible', title: '성경봉독', ref: l });
+    } else if ((m = l.match(/^(교회\s*소식|광고|알림|공지)\s*[:：\-–]?\s*(.*)$/))) {
+      Object.assign(it, { type: 'text', title: m[1].replace(/\s+/g, ''), body: m[2].trim() });
+    } else if ((m = l.match(/^(찬양|특송|헌금\s*송|봉헌\s*송|경배와\s*찬양|찬양\s*콘티|콘티)\s*[:：\-–]?\s*(.+)$/)) && !/찬양대|찬양팀\s*$/.test(m[2])) {
+      // "찬양 은혜 아니면, 주님 다시 오실 때까지" → 곡마다 하나
+      const songs = m[2].split(/\s*[,，、]\s*/).map(s => s.trim()).filter(Boolean);
+      for (const s of songs) plan.items.push({ type: 'song', title: m[1].replace(/\s+/g, ''), song: s, note });
+      continue;
+    } else if ((m = l.match(/^(설교|말씀)\s*[:：\-–]?\s*(.*)$/))) {
+      const t = m[2].trim();
+      const q = t.match(/^[“"'‘「『]?(.+?)[”"'’」』]\s*[,·\-–]?\s*(.*)$/);
+      Object.assign(it, { title: m[1], subtitle: q && /[“"'‘「『]/.test(t) ? `“${q[1]}” · ${q[2]}`.replace(/ · $/, '') : t });
+    } else if (/^(예배\s*후|폐회|끝)$/.test(l)) {
+      Object.assign(it, { type: 'blank', title: l });
+    } else {
+      // "대표기도  김철수 장로" · "기도 - 김철수" · "기도: 김철수" · "기도(김철수)"
+      const sp = l.match(/^(.+?)\s*(?:[:：]|\s[-–]\s|\t|\s{2,})\s*(.+)$/) || l.match(/^(\S+)\s+(\S.*)$/);
+      if (sp) Object.assign(it, { title: sp[1].trim(), subtitle: sp[2].trim() });
+      else it.title = l;
+    }
+    if (memo && it.type === 'title' && it.subtitle.endsWith(memo[0].trim())) { it.subtitle = it.subtitle.slice(0, -memo[0].length).trim(); it.note = [it.note, memo[1].trim()].filter(Boolean).join(' / '); }
+    plan.items.push(it);
+  }
+  if (!plan.name) plan.name = plan.serviceDate ? `${plan.serviceDate} 예배` : '새 예배';
+  return plan;
+}
+
 const DEFAULT_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
 /** endpoint: 오픈라우터(기본) 또는 OpenAI 호환 주소 */
@@ -217,8 +287,11 @@ async function askAI({ apiKey, model, input, fetchImpl = fetch, extra = '', endp
 /**
  * AI 가 만든 순서 → 큐시트 항목 (찬송가 파일 찾기 · 장절 확인)
  * resolveHymn(number, book) → { file, title } | null,  checkRef(ref) → passage title | null
+ * resolveHymnal(number, book) → 베들레헴 가사 { kind:'hymn', title, lyrics, order, credit } | { kind:'reading', title, body } | null (PPT 가 없을 때)
+ * resolveSong(name) → 라이브러리 찬양 { title, lyrics, order, credit } | null
  */
-function planToCue(plan, { resolveHymn, checkRef }) {
+const safe = f => { try { return f(); } catch { return null; } };
+function planToCue(plan, { resolveHymn, checkRef, resolveHymnal = () => null, resolveSong = () => null }) {
   const items = [];
   const warnings = [];
   for (const x of Array.isArray(plan.items) ? plan.items : []) {
@@ -227,12 +300,22 @@ function planToCue(plan, { resolveHymn, checkRef }) {
     if (x.type === 'hymn' && Number(x.hymnNumber)) {
       const h = resolveHymn(Number(x.hymnNumber), String(x.hymnbook || ''));
       const label = `${x.hymnNumber}장`;
+      const bh = h ? null : safe(() => resolveHymnal(Number(x.hymnNumber), String(x.hymnbook || '')));
       if (h) items.push({ ...base, type: 'hymn', title: title && !/^\d+장/.test(title) && !/^찬송/.test(title) ? `${title} · ${label} ${h.title}` : `${label} ${h.title}`, file: h.file, number: Number(x.hymnNumber), background: 'default' });
+      else if (bh && bh.kind === 'hymn') items.push({ ...base, type: 'song', title: title && !/^\d+장/.test(title) && !/^찬송/.test(title) ? `${title} · ${bh.title}` : bh.title, lyrics: bh.lyrics, order: bh.order || '', credit: bh.credit || '' });
       else { items.push({ ...base, type: 'title', title: `${title || '찬송'} · ${label}`, subtitle: '', note: [base.note, '찬송가 파일 없음 — 🎼 로 넣으세요'].filter(Boolean).join(' / ') }); warnings.push(`${label}: 찬송가 폴더에서 찾지 못함`); }
     } else if (x.type === 'bible' && x.ref) {
       const ok = checkRef(String(x.ref));
       items.push({ ...base, type: 'bible', ref: String(x.ref), title: title || '성경봉독' });
       if (!ok) warnings.push(`'${x.ref}': 장절을 확인하세요`);
+    } else if (x.type === 'reading' && Number(x.hymnNumber)) {
+      const r = safe(() => resolveHymnal(Number(x.hymnNumber), '교독문'));
+      if (r && r.kind === 'reading') items.push({ ...base, type: 'text', title: r.title, body: r.body });
+      else { items.push({ ...base, type: 'title', title: `교독문 ${x.hymnNumber}`, subtitle: String(x.subtitle || '') }); warnings.push(`교독문 ${x.hymnNumber}: 베들레헴 찬송가 가사가 없습니다 (설정 → 베들레헴에서 가져오기)`); }
+    } else if (x.type === 'song' && x.song && !x.lyrics) {
+      const sg = safe(() => resolveSong(String(x.song)));
+      if (sg) items.push({ ...base, type: 'song', title: sg.title, lyrics: sg.lyrics || '', order: sg.order || '', credit: sg.credit || '' });
+      else { items.push({ ...base, type: 'title', title: `${title || '찬양'} · ${x.song}`, subtitle: '' }); warnings.push(`'${x.song}': 라이브러리에 없는 찬양 — 🌐 가사 찾기로 넣으세요`); }
     } else if (x.type === 'text') items.push({ ...base, type: 'text', body: String(x.body || ''), title: title || '광고' });
     else if (x.type === 'song') items.push({ ...base, type: 'song', lyrics: String(x.lyrics || ''), title: title || '찬양' });
     else if (x.type === 'blank') items.push({ ...base, type: 'blank', mode: 'background', title: title || '빈 화면' });
@@ -250,4 +333,4 @@ function planToCue(plan, { resolveHymn, checkRef }) {
   };
 }
 
-module.exports = { DEFAULT_ENDPOINT, readBulletin, hwpText, askAI, planToCue, parseJson, RECOMMENDED, DEFAULT_MODEL, SYSTEM, SAMPLE, SAMPLE_NAME, chatPrompt, parseChatAnswer };
+module.exports = { parseOrderText, DEFAULT_ENDPOINT, readBulletin, hwpText, askAI, planToCue, parseJson, RECOMMENDED, DEFAULT_MODEL, SYSTEM, SAMPLE, SAMPLE_NAME, chatPrompt, parseChatAnswer };

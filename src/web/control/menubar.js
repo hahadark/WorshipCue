@@ -26,7 +26,7 @@
   const MENUS = [
     ['파일', [
       { label: '📋 큐시트 관리 (새로 · 복제 · 서식 · 휴지통)…', run: click('#cueMenu') },
-      { label: '🤖 주보로 큐시트 만들기 (AI)…', run: () => window.BCAI && window.BCAI.open() },
+      { label: '📋 주보로 큐시트 만들기 (붙여 넣기 · AI)…', run: () => window.BCAI && window.BCAI.open() },
       '-',
       { label: '📥 가져오기', sub: [
         { label: '찬양 (OpenLP · ChordPro · ProPresenter · PPT)…', run: () => { lib('songs')(); setTimeout(() => { const b = document.querySelector('#panelLibrary [data-import]'); if (b) b.click(); }, 300); } },

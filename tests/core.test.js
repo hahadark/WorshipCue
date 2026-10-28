@@ -760,7 +760,10 @@ test('채팅 AI (키 없이): 프롬프트·샘플, 붙여 넣은 답 → 큐시
   assert.equal(r.result.cue.name, '2026-10-25 주일 예배');
   assert.equal(r.result.cue.items.length, 5);
   assert.equal(r.result.cue.items[2].type, 'bible');
-  assert.ok(r.result.warnings.some(w => /21장/.test(w))); // 찬송가 폴더가 없으니 확인할 것
+  // 찬송가 PPT 폴더가 없으니: 베들레헴 가사가 있으면 가사 슬라이드로, 없으면 확인 경고
+  const h21 = r.result.cue.items[1];
+  if (h21.type === 'song') assert.match(h21.title, /^21장 /);
+  else assert.ok(r.result.warnings.some(w => /21장/.test(w)));
   assert.equal(core.command('getCue', { id: r.result.cue.id }).ok, true);
   // 파일 내용(JSON 그대로)도 된다
   assert.equal(core.command('chatAiImport', { text: JSON.stringify(plan) }).ok, true);
@@ -768,6 +771,61 @@ test('채팅 AI (키 없이): 프롬프트·샘플, 붙여 넣은 답 → 큐시
   const bad = core.command('chatAiImport', { text: '죄송하지만 파일을 읽을 수 없습니다.' });
   assert.equal(bad.ok, false);
   assert.match(bad.error, /JSON/);
+});
+
+test('규칙으로 바로 (AI 없이): 붙여 넣은 예배 순서 → 큐시트', () => {
+  const { parseOrderText, planToCue } = require('../src/core/bulletin');
+  const { looksLikeReference } = require('../src/core/parser');
+  const text = `2026년 10월 18일 주일 성결예배 (11:00)
+1. 예배로의 부름  8장*
+2. 신앙고백 - 사도신경 *
+대표기도: 김철수 장로
+성경봉독 시 23:1-6
+교독문 1
+찬양 은혜 아니면, 주님 다시 오실 때까지
+찬양 찬양대
+설교 “선한 목자” 홍길동 목사
+찬송 310장 / 봉헌 / 광고
+구세군 찬송가 12장
+축도 홍길동 목사 (일어서서)
+예배 후`;
+  const p = parseOrderText(text, { looksLikeRef: looksLikeReference });
+  assert.equal(p.serviceDate, '2026-10-18');
+  assert.equal(p.startTime, '11:00');
+  assert.match(p.name, /주일 성결예배/);
+  assert.deepEqual(p.items.map(i => i.type), ['hymn', 'title', 'title', 'bible', 'reading', 'song', 'song', 'title', 'title', 'hymn', 'title', 'text', 'hymn', 'title', 'blank']);
+  assert.deepEqual(p.items[0], { type: 'hymn', title: '예배로의 부름', subtitle: '', note: '*일어서서', hymnNumber: 8, hymnbook: '새찬송가' });
+  assert.equal(p.items[1].subtitle, '사도신경');
+  assert.equal(p.items[3].ref, '시 23:1-6');
+  assert.equal(p.items[4].hymnNumber, 1);
+  assert.equal(p.items[6].song, '주님 다시 오실 때까지');
+  assert.equal(p.items[8].subtitle, '“선한 목자” · 홍길동 목사');
+  assert.equal(p.items[12].hymnbook, '구세군');
+  assert.equal(p.items[13].note, '*일어서서');
+  // 순서 → 큐시트: 찬양은 라이브러리에서, 교독문·찬송가는 베들레헴 가사에서 (없으면 제목 순서 + 경고)
+  const song = { title: '은혜 아니면', lyrics: '가사', order: '', credit: '' };
+  const reading = { kind: 'reading', title: '교독문 1 시편 1편', body: '복 있는 사람은\n**악인의 꾀를**' };
+  const r = planToCue(p, { resolveHymn: () => null, checkRef: () => '시편 23:1-6',
+    resolveHymnal: (n, book) => (/교독문/.test(book) ? reading : n === 8 ? { kind: 'hymn', title: '8장 거룩 거룩 거룩', lyrics: '[1절]\n거룩', order: '', credit: '새찬송가 8장' } : null),
+    resolveSong: name => (name === '은혜 아니면' ? song : null) });
+  const it = r.cue.items;
+  assert.equal(it[0].type, 'song'); assert.equal(it[0].title, '예배로의 부름 · 8장 거룩 거룩 거룩'); assert.equal(it[0].note, '*일어서서');
+  assert.equal(it[4].type, 'text'); assert.equal(it[4].title, '교독문 1 시편 1편');
+  assert.equal(it[5].type, 'song'); assert.equal(it[5].title, '은혜 아니면');
+  assert.equal(it[6].type, 'title'); assert.match(it[6].title, /주님 다시 오실 때까지/);
+  assert.equal(it[9].type, 'title'); assert.match(it[9].title, /310장/);
+  assert.ok(r.warnings.some(w => /주님 다시 오실 때까지/.test(w)));
+  assert.ok(r.warnings.some(w => /310장/.test(w)));
+  // 코어: 저장까지
+  const core = newCore('quick');
+  core.command('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } });
+  assert.equal(core.command('quickMakeCue', { text: '' }).ok, false);
+  const q = core.command('quickMakeCue', { text: '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 축도' });
+  assert.equal(q.ok, true, q.error);
+  assert.deepEqual(q.result.cue.items.map(i => i.type), ['title', 'song', 'bible', 'title']);
+  assert.equal(q.result.cue.items[1].lyrics, '은혜 아니면 나 서지 못하네');
+  assert.equal(core.command('getCue', { id: q.result.cue.id }).ok, true);
+  core.store.close();
 });
 
 test('슬라이드쇼·자동 넘김·자동 동작: 저장 정리, 코어가 N초마다 넘기고 반복', async () => {

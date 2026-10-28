@@ -176,7 +176,19 @@ class WorshipCueCore extends EventEmitter {
       return hits.find(h => want.test(h.folder)) || hits.find(h => !/교독문/.test(h.folder)) || null;
     };
     const checkRef = ref => { const r = this.commands.searchReference.call(this, { query: ref }); return r && r.passage ? r.passage.title : null; };
-    const { cue, warnings } = planToCue(plan, { resolveHymn, checkRef: ref => { try { return checkRef(ref); } catch { return null; } } });
+    const resolveHymnal = (n, book) => {
+      const { BOOKS } = require('./hymnal');
+      if (/교독문/.test(book)) { const bk = BOOKS.find(x => x.id === '새찬송가'); return bk && bk.reading ? this.hymnal.get('새찬송가', bk.reading[0] + n - 1) : null; }
+      return this.hymnal.get(/찬미가/.test(book) ? '찬미가' : '새찬송가', n);
+    };
+    const resolveSong = name => {
+      const q = String(name).replace(/\s+/g, '').toLowerCase();
+      const norm = t => String(t).replace(/\s+/g, '').toLowerCase();
+      const hits = this.library.listSongs(name);
+      const s = hits.find(x => norm(x.title) === q) || hits.find(x => norm(x.title).startsWith(q)) || (hits.length === 1 ? hits[0] : null);
+      return s ? this.library.getSong(s.id) : null;
+    };
+    const { cue, warnings } = planToCue(plan, { resolveHymn, resolveHymnal, resolveSong, checkRef: ref => { try { return checkRef(ref); } catch { return null; } } });
     const saved = this.commands.saveCue.call(this, { cue });
     return { cue: saved, warnings };
   }
@@ -826,6 +838,16 @@ WorshipCueCore.prototype.commands = {
       }
     });
     return this.commands.aiSettings.call(this);
+  },
+  /** 붙여 넣은 예배 순서 글 → 규칙으로 바로 큐시트 (AI 없이) */
+  quickMakeCue(a) {
+    const { parseOrderText } = require('./bulletin');
+    const { looksLikeReference } = require('./parser');
+    const text = String((a && a.text) || '').slice(0, 100000);
+    if (!text.trim()) throw new Error('예배 순서를 붙여 넣으세요.');
+    const plan = parseOrderText(text, { looksLikeRef: looksLikeReference });
+    if (a && typeof a.name === 'string' && a.name.trim()) plan.name = a.name.trim();
+    return { ...this.planToSavedCue(plan), model: '규칙' };
   },
   /** 붙여 넣은 주보 글로 큐시트 만들기 */
   aiMakeCue(a) { return this.aiBulletin({ input: { text: String(a.text || '') }, extra: a.extra }); },
