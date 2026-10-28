@@ -184,8 +184,8 @@
     const it = item();
     const list = sources();
     const own = k => !!(it.edits && it.edits[k]);
-    $('#seList').innerHTML = `<div class="se-slide ${S.key === '*' ? 'on' : ''}" data-key="*"><div class="screen se-thumb"></div><div class="se-cap"><b>공통</b> 모든 슬라이드${own('*') ? ' <span class="se-dot" title="꾸민 것 있음">●</span>' : ''}</div></div>`
-      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}${S.multi.size > 1 && S.multi.has(x.key) ? ' msel' : ''}${x.skipped ? ' skipped' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${x.skipped ? ' <span class="muted">(건너뜀)</span>' : ''}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div>`
+    $('#seList').innerHTML = `<div class="se-slide ${S.key === '*' ? 'on' : ''}" data-key="*"><div class="screen se-thumb bc-nocam"></div><div class="se-cap"><b>공통</b> 모든 슬라이드${own('*') ? ' <span class="se-dot" title="꾸민 것 있음">●</span>' : ''}</div></div>`
+      + list.map((x, n) => `<div class="se-slide ${S.key === x.key ? 'on' : ''}${S.multi.size > 1 && S.multi.has(x.key) ? ' msel' : ''}${x.skipped ? ' skipped' : ''}" data-key="${x.key}"${window.BCGroup && window.BCGroup.color(x.label) ? ` style="--gc:${window.BCGroup.color(x.label)}"` : ''}><div class="screen se-thumb bc-nocam"></div><div class="se-cap"><b>${n + 1}</b> ${esc(x.label)}${x.skipped ? ' <span class="muted">(건너뜀)</span>' : ''}${own(x.key) ? ' <span class="se-dot" title="이 슬라이드만 꾸민 것 있음">●</span>' : ''}</div>`
         + (canOps() ? opsHtml(x) : '') + '</div>').join('')
       + (canOps() ? '<button type="button" class="se-addslide" data-op="add" title="고른 슬라이드 다음에 새 슬라이드 (Ctrl+Shift+N)">＋ 슬라이드</button>' : '');
     const t = tpl();

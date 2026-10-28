@@ -83,7 +83,7 @@
       drawnKey = key;
       const it = p.cue && window.BCCue && window.BCCue.item(p.cue.index);
       const ops = it && it.type !== 'audio' ? '<span class="sg-ops"><button class="sg-add" title="이 다음에 새 슬라이드">＋</button><button class="sg-del" title="이 슬라이드 지우기 (성경·찬송가·그림 등은 건너뛰기)">✕</button></span>' : '';
-      grid.innerHTML = p.slides.map((s, k) => `<div class="sg-cell" data-k="${k}"${s.kind !== 'bible' && window.BCGroup && window.BCGroup.color(s.label) ? ` style="--gc:${window.BCGroup.color(s.label)}"` : ''}><div class="screen sg-screen"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button>${ops}<div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('');
+      grid.innerHTML = p.slides.map((s, k) => `<div class="sg-cell" data-k="${k}"${s.kind !== 'bible' && window.BCGroup && window.BCGroup.color(s.label) ? ` style="--gc:${window.BCGroup.color(s.label)}"` : ''}><div class="screen sg-screen bc-nocam"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button>${ops}<div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('');
       grid.querySelectorAll('.sg-cell').forEach(c => {
         const s = p.slides[+c.dataset.k];
         R.renderInto(c.querySelector('.sg-screen'), s, tpl, { checker: true, versionName: p.passage.versionName });
@@ -161,7 +161,7 @@
         g.querySelector(`[data-n="${i}"]`).textContent = slides.length ? `· 슬라이드 ${slides.length}장` : '';
         const ops = it.type !== 'audio' ? '<span class="sg-ops"><button class="sg-add" title="이 다음에 새 슬라이드">＋</button><button class="sg-del" title="이 슬라이드 지우기 (성경·찬송가·그림 등은 건너뛰기)">✕</button></span>' : '';
         row.innerHTML = slides.length && mode === 'alllist' ? slides.map((s, k) => listRow(s, k, i)).join('')
-          : slides.length ? slides.map((s, k) => `<div class="sg-cell" data-i="${i}" data-k="${k}"${s.kind !== 'bible' && window.BCGroup && window.BCGroup.color(s.label) ? ` style="--gc:${window.BCGroup.color(s.label)}"` : ''}><div class="screen sg-screen"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button>${ops}<div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('')
+          : slides.length ? slides.map((s, k) => `<div class="sg-cell" data-i="${i}" data-k="${k}"${s.kind !== 'bible' && window.BCGroup && window.BCGroup.color(s.label) ? ` style="--gc:${window.BCGroup.color(s.label)}"` : ''}><div class="screen sg-screen bc-nocam"></div><button class="sg-edit" title="이 슬라이드 편집 (Ctrl+E)">✎</button>${ops}<div class="sg-label"><b>${k + 1}</b> ${esc(s.label && !/^\d+$/.test(s.label) ? s.label : s.kind === 'bible' ? (s.ref || '') : '')}</div></div>`).join('')
           : `<div class="muted cg-empty">${err ? esc(err) : it.type === 'audio' ? '🔊 음악 · 화면은 바뀌지 않습니다' : '(슬라이드 없음)'}</div>`;
         // 화면 크기를 먼저 잡아 두고(빈 화면) 보일 때 그린다
         if (mode !== 'alllist') row.querySelectorAll('.sg-cell').forEach(c => { const sc = c.querySelector('.sg-screen'); const t = app.tplFor('main', window.BCCue.tplOf(i)); sc.style.aspectRatio = `${t.width} / ${t.height}`; io.observe(c); });

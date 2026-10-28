@@ -523,6 +523,30 @@
     return t.length > 46 ? t.slice(0, 46) + '…' : t;
   }
 
+  // 미리보기의 카메라는 잠시만 산 영상으로 보여 주고, 그 뒤엔 마지막 장면(정지 그림)으로 바꿔 카메라를 놓는다
+  // (미리보기에 카메라 순서를 골라 두면 조작 PC 에서 카메라가 계속 켜져 있던 문제). 송출 중이면 LIVE 칸이 계속 쓴다
+  const CAM_PREVIEW_MS = 20000;
+  let camFreezeTimer = 0;
+  function freezePreviewCams(scr) {
+    clearTimeout(camFreezeTimer);
+    if (!scr.querySelector('video[data-cam]')) return;
+    camFreezeTimer = setTimeout(() => {
+      scr.querySelectorAll('video[data-cam]').forEach(v => {
+        const c = document.createElement('canvas');
+        c.width = v.videoWidth || 16; c.height = v.videoHeight || 9;
+        try { c.getContext('2d').drawImage(v, 0, 0); } catch { /* 아직 영상 없음 */ }
+        const box = document.createElement('div');
+        box.className = 'bc-cam-frozen';
+        box.title = '카메라 미리보기를 멈추고 카메라를 놓았습니다 (조작 PC 카메라 불 끄기). 누르면 다시 봅니다';
+        box.style.cssText = v.style.cssText;
+        c.style.cssText = `width:100%;height:100%;object-fit:${v.style.objectFit || 'cover'}`;
+        box.append(c, Object.assign(document.createElement('span'), { className: 'bc-cam-frozen-tag', textContent: '📷 정지 화면 — 누르면 다시 보기' }));
+        box.onclick = e => { e.stopPropagation(); renderPreview(); };
+        v.replaceWith(box);
+      });
+    }, CAM_PREVIEW_MS);
+  }
+
   function renderPreview() {
     const scr = $('#pvScreen');
     if (!app.state) return;
@@ -539,6 +563,7 @@
     }
     const slide = p.slides[p.index];
     R.renderInto(scr, slide, tpl, { checker: true, versionName: p.passage.versionName, overlays: overlaysFor(app.view.pv) });
+    freezePreviewCams(scr);
     $('#pvInfo').textContent = [p.passage.title, p.passage.versionName].filter(Boolean).join(' · ');
     $('#pvCount').textContent = `${p.index + 1} / ${p.slides.length}`;
     const nx = p.slides[p.index + 1];

@@ -918,3 +918,8 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 #slideGrid img, #cueGrid img, #results .srow img, #seList img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
 #cueGrid { user-select: none; }
 #cueGrid .sg-cell.msel { outline: 3px solid var(--accent); outline-offset: -1px; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
+/* 미리보기 카메라 정지 화면 (카메라를 놓은 상태) */
+.bc-cam-frozen { position: relative; cursor: pointer; }
+.bc-cam-frozen canvas { display: block; }
+.bc-cam-frozen-tag { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); background: rgba(0,0,0,.6); color: #fff; font-size: 12px; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }

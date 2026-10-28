@@ -451,9 +451,11 @@
   }
   function attachCamera(v, deviceId) {
     if (!v.dataset.cam) v.dataset.cam = deviceId || '';
-    // 크기 재기용 숨은 무대에는 붙이지 않는다
+    // 크기 재기용 숨은 무대에는 붙이지 않는다 (화면에 붙은 뒤에 본다)
     setTimeout(() => {
       if (!v.isConnected || v.closest('.bc-measure')) return;
+      // 작은 그림(격자·편집기 썸네일, .bc-nocam 안)에는 산 영상 대신 표시만 — 카메라를 붙들고 있지 않게
+      if (v.closest('.bc-nocam')) { v.replaceWith(Object.assign(document.createElement('div'), { className: 'bc-cam-off bc-cam-still', textContent: '📷' })); return; }
       cameraStream(deviceId).then(s => { v.srcObject = s; v.play().catch(() => {}); }).catch(() => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'bc-cam-off', textContent: '📷 카메라 없음' })); });
     }, 0);
   }
