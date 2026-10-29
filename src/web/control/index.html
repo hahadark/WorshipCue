@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/control/control.css">
 <script>
   // 화면 테마를 그리기 전에 적용 (깜빡임 방지) — 설정 값은 uitheme.js 가 다시 맞춘다
-  try { const u = JSON.parse(localStorage.getItem('wc-ui') || '{}'); if (u.theme && u.theme !== 'dark') document.documentElement.dataset.theme = u.theme; if (u.scale && u.scale !== 100) document.documentElement.dataset.scale = u.scale; } catch (e) { /* 처음 */ }
+  try { const u = JSON.parse(localStorage.getItem('wc-ui') || '{}'); const t = u.theme || 'manna'; if (t !== 'dark') document.documentElement.dataset.theme = t; if (u.scale && u.scale !== 100) document.documentElement.dataset.scale = u.scale; } catch (e) { /* 처음 */ }
 </script>
 </head>
 <body>
@@ -58,7 +58,7 @@
       <div class="cue-add" id="cueAdd">
         <button data-add="hymn" title="찬송가·교독문·찬양 PPT (폴더 검색 · 온라인에서 찾기)"><i data-icon="music-2"></i>찬송가·PPT</button><button data-add="bible"><i data-icon="book-open"></i>성경</button><button data-add="song"><i data-icon="music"></i>찬양</button><button data-add="weblyrics" title="웹(벅스·지니·멜론)에서 가사를 찾아 찬양 순서로 넣기 (Ctrl+L)"><i data-icon="globe"></i>가사</button>
         <button data-add="text"><i data-icon="megaphone"></i>공지</button><button data-add="title"><i data-icon="tag"></i>제목</button><button type="button" class="cue-more" title="이미지 · 영상 · 음악 · 슬라이드쇼 · 카메라 · 빈 화면"><i data-icon="plus"></i>더보기<i data-icon="chevron-down" class="ic-end"></i></button>
-        <span class="ft-hidden"><button data-add="image">🖼 이미지</button><button data-add="video">🎬 영상</button><button data-add="audio">🔊 음악</button><button data-add="slideshow">🎞 슬라이드쇼</button><button data-add="camera">📷 카메라</button><button data-add="blank">⬛ 빈 화면</button></span>
+        <span class="ft-hidden"><button data-add="image" data-ic="image">이미지</button><button data-add="video" data-ic="clapperboard">영상</button><button data-add="audio" data-ic="volume-2">음악</button><button data-add="slideshow" data-ic="images">슬라이드쇼</button><button data-add="camera" data-ic="camera">카메라</button><button data-add="blank" data-ic="square">빈 화면</button></span>
       </div>
       <div class="cue-help">클릭 = 미리보기 (화면에는 안 나감) · ← → 로 고르고 Enter(F9) = 송출 · Ctrl+↑↓ = 이전/다음 · 끌어서 순서 바꾸기</div>
     </div>

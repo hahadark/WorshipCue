@@ -159,7 +159,7 @@
     el.innerHTML = st.cue.items.length ? st.cue.items.map((it, i) => `
       <div class="cue-item ${i === st.sel ? 'sel' : ''} ${i === pvIdx ? 'pv' : ''} ${i === airIdx ? 'air' : ''} ${i === airIdx && !live.visible ? 'hid' : ''}" draggable="true" data-i="${i}">
         <span class="cue-no">${i + 1}</span>
-        <span class="cue-ico" title="${TYPE[it.type]}">${ICON[it.type]}</span>
+        <span class="cue-ico" data-t="${it.type}" title="${TYPE[it.type]}">${ICON[it.type]}</span>
         <span class="cue-body" data-noi18n><b>${esc(it.title)}</b>${themeOf(it) ? `<span class="cue-theme" title="이 순서만 다른 테마">🎨 ${esc(themeName(it))}</span>` : ''}<span class="cue-detail">${esc(detail(it))}</span>${it.note ? `<span class="cue-note">📝 ${esc(it.note)}</span>` : ''}</span>
         ${plan[i] && timesOn() ? `<span class="cue-time" title="예정 시작${it.duration ? ' · ' + it.duration + '분' : ''}">${plan[i]}${it.duration ? `<small>${it.duration}분</small>` : ''}</span>` : ''}
         <button class="cue-edit" data-edit="${i}" title="이 순서 고치기 (F2)">${window.BCIcon('pencil')}</button>
@@ -599,7 +599,7 @@
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">
         <label>추가 슬라이드</label><textarea data-k="more" rows="${it.more ? 3 : 1}" placeholder="다음 슬라이드 (첫 줄 = 제목, 둘째 줄 = 부제) · '---' 줄로 또 다음 · 비우면 한 장">${esc(it.more || '')}</textarea>`,
       image: `<label>이미지</label><div class="ce-row">${it.image ? thumbTag(it.image) : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,
-      camera: `<label>카메라</label><div class="ce-row"><span>📷 ${esc(it.label || '(고르세요)')}</span><button data-act="campick">바꾸기…</button><select data-k="fit"><option value="cover" ${it.fit !== 'contain' ? 'selected' : ''}>화면 채우기</option><option value="contain" ${it.fit === 'contain' ? 'selected' : ''}>전체 보이기</option></select><span class="note">라이브러리 '📷 카메라' 탭에서 고를 수도 있습니다</span></div>`,
+      camera: `<label>카메라</label><div class="ce-row"><span>${window.BCIcon('camera')} ${esc(it.label || '(고르세요)')}</span><button data-act="campick">바꾸기…</button><select data-k="fit"><option value="cover" ${it.fit !== 'contain' ? 'selected' : ''}>화면 채우기</option><option value="contain" ${it.fit === 'contain' ? 'selected' : ''}>전체 보이기</option></select><span class="note">라이브러리 '📷 카메라' 탭에서 고를 수도 있습니다</span></div>`,
       slideshow: `<label>그림</label><div class="ce-col"><div class="ss-list">${(it.images || []).map((u, k) => `<span class="ss-img" title="${esc(fileName(u))}">${thumbTag(u)}<span class="ss-act"><button data-ssleft="${k}" title="앞으로">◀</button><button data-ssdel="${k}" title="빼기">✕</button></span></span>`).join('') || '<span class="muted">아직 그림이 없습니다</span>'}</div>
           <div class="ce-row"><button data-act="ssadd">🖼 그림 추가…</button><span class="note">탐색기에서 그림 여러 장을 이 칸에 끌어다 놓아도 됩니다 (광고 PPT 는 그림으로 저장해서)</span></div></div>
         <label>광고 글</label><textarea data-k="body" rows="3" placeholder="그림 뒤에 이어서 나갈 글 (--- 줄로 다음 장) · 비워도 됩니다">${esc(it.body || '')}</textarea>
@@ -615,7 +615,7 @@
       <div class="form ce-form">
         <label>제목</label><input type="text" data-k="title" value="${esc(it.title)}">
         ${fields}
-        ${['song', 'text', 'title', 'bible'].includes(it.type) ? `<label>배경</label><div class="ce-row">${it.bg ? thumbTag(it.bg) : '<span class="muted">템플릿 배경</span>'}<button data-act="itembg">🖼 이미지·영상 고르기…</button>${it.bg ? '<button data-act="itembgclear">지우기</button>' : ''}</div>` : ''}
+        ${['song', 'text', 'title', 'bible'].includes(it.type) ? `<label>배경</label><div class="ce-row">${it.bg ? thumbTag(it.bg) : '<span class="muted">템플릿 배경</span>'}<button data-act="itembg">${window.BCIcon('image')}이미지·영상 고르기…</button>${it.bg ? '<button data-act="itembgclear">지우기</button>' : ''}</div>` : ''}
         ${it.type !== 'audio' ? `<label>테마</label><div class="ce-row"><select data-theme title="이 순서에만 다른 테마 (예배당·OBS 템플릿을 함께 바꿈)"><option value="">기본 (전체 설정 따름)</option>${themeOf(it) === 'custom' ? '<option value="custom" selected>직접 고른 템플릿 (아래)</option>' : ''}${themeList.map(t => `<option value="${esc(t.id)}" ${themeOf(it) === t.id ? 'selected' : ''}>🎨 ${esc(t.name)}</option>`).join('')}</select></div>` : ''}
         ${it.type !== 'audio' ? `<label>템플릿</label><div class="ce-row">${tplSelect('tplMain', '예배당', it.tplMain)}${tplSelect('tplOverlay', 'OBS', it.tplOverlay)}</div>` : ''}
         ${it.type !== 'audio' && it.type !== 'video' ? `<label>자동 넘김</label><div class="ce-row"><input type="number" data-k="autoSec" min="0" max="3600" value="${it.autoSec || ''}" placeholder="0" style="width:80px"> 초마다 <label class="tc-toggle"><input type="checkbox" data-k="autoLoop" ${it.autoLoop ? 'checked' : ''}> 끝나면 처음부터 반복</label><span class="note">0 = 끔 (F6 으로 넘김) · 숨김(F10) 중에는 멈춤</span></div>` : ''}
@@ -956,7 +956,7 @@
     if (more) { // 더보기 ▾ : 자주 안 쓰는 순서 종류
       const r = more.getBoundingClientRect();
       const kinds = [...$('#cueAdd .ft-hidden').querySelectorAll('button[data-add]')];
-      window.BCCtx.show(r.left, r.top - 4, [{ head: '순서 넣기' }, ...kinds.map(k => ({ label: k.textContent, run: () => k.click() }))]);
+      window.BCCtx.show(r.left, r.top - 4, [{ head: '순서 넣기' }, ...kinds.map(k => ({ ic: k.dataset.ic, label: k.textContent, run: () => k.click() }))]);
       return;
     }
     const b = e.target.closest('button[data-add]');

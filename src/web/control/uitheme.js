@@ -7,7 +7,8 @@
   const $ = s => document.querySelector(s);
   const app = window.BC;
   const THEMES = [
-    { id: 'dark', name: '어둡게', desc: '기본. 어두운 방송실에서 눈부시지 않게', c: ['#121519', '#1a1e25', '#eef1f6', '#4f8cff', '#e5484d'] },
+    { id: 'manna', name: '만나로', desc: '기본. 밝은 회청색 바탕에 흰 카드, 남색 머리 줄 (만나로 스튜디오·설교쇼츠 편집기와 같은 모양)', c: ['#f2f3f7', '#ffffff', '#0f172a', '#2563eb', '#e5363d'], top: '#0f1b33' },
+    { id: 'dark', name: '어둡게', desc: '어두운 방송실에서 눈부시지 않게', c: ['#121519', '#1a1e25', '#eef1f6', '#4f8cff', '#e5484d'] },
     { id: 'contrast', name: '고대비', desc: '검은 바탕에 흰 글자, 진한 테두리. 가장 또렷하게', c: ['#000000', '#0a0a0a', '#ffffff', '#3d9bff', '#ff4d55'] },
     { id: 'light', name: '밝게', desc: '낮 예배·밝은 사무실. 흰 바탕에 짙은 글자', c: ['#e9edf3', '#ffffff', '#182030', '#2f6fe0', '#d22f36'] },
     { id: 'warm', name: '따뜻하게', desc: '푸른 빛을 줄인 갈색. 오래 볼 때 눈이 편함', c: ['#191612', '#211d18', '#f4ebde', '#e3963d', '#e65a4f'] },
@@ -16,16 +17,17 @@
   const SCALES = [[90, '작게'], [100, '보통'], [110, '크게'], [120, '아주 크게']];
 
   function apply(ui) {
-    const t = THEMES.some(x => x.id === (ui && ui.theme)) ? ui.theme : 'dark';
+    const t = THEMES.some(x => x.id === (ui && ui.theme)) ? ui.theme : 'manna';
     const sc = SCALES.some(([v]) => v === Number(ui && ui.scale)) ? Number(ui.scale) : 100;
     const h = document.documentElement;
     if (t === 'dark') delete h.dataset.theme; else h.dataset.theme = t;
     if (sc === 100) delete h.dataset.scale; else h.dataset.scale = String(sc);
     try { localStorage.setItem('wc-ui', JSON.stringify({ theme: t, scale: sc })); } catch { /* 무시 */ }
-    // 화면 크기에 맞춘 미리보기·LIVE 다시 맞추기
+    // 패널 사이 간격(만나로는 카드처럼 띄움) · 화면 크기에 맞춘 미리보기·LIVE 다시 맞추기
+    if (window.BCDock && window.BCDock.applyTheme) window.BCDock.applyTheme();
     if (window.BCDock) setTimeout(() => window.BCDock.fitScreens(), 50);
   }
-  const cur = () => (app.state && app.state.settings.ui) || { theme: 'dark', scale: 100 };
+  const cur = () => (app.state && app.state.settings.ui) || { theme: 'manna', scale: 100 };
 
   async function save(patch) {
     const ui = { ...cur(), ...patch };
@@ -39,12 +41,12 @@
   function open() {
     const draw = () => {
       const u = cur();
-      $('#uiThemeBody').innerHTML = `<div class="uit-grid">${THEMES.map(t => `<button type="button" class="uit-card ${t.id === (u.theme || 'dark') ? 'on' : ''}" data-theme="${t.id}">
-          <span class="uit-mock" style="background:${t.c[0]}">
+      $('#uiThemeBody').innerHTML = `<div class="uit-grid">${THEMES.map(t => `<button type="button" class="uit-card ${t.id === (u.theme || 'manna') ? 'on' : ''}" data-theme="${t.id}">
+          <span class="uit-mock" style="background:${t.top ? `linear-gradient(${t.top} 0 18px, ${t.c[0]} 18px)` : t.c[0]}${t.top ? ';padding-top:24px' : ''}">
             <i style="background:${t.c[1]}"><b style="background:${t.c[2]}"></b><b style="background:${t.c[2]};width:60%"></b><b style="background:${t.c[3]};width:40%"></b></i>
             <i style="background:${t.c[1]}"><em style="border-color:${t.c[3]}"></em><em style="border-color:${t.c[4]}"></em></i>
           </span>
-          <span class="uit-name">${t.id === (u.theme || 'dark') ? '✓ ' : ''}${t.name}</span><span class="uit-desc">${t.desc}</span></button>`).join('')}</div>
+          <span class="uit-name">${t.id === (u.theme || 'manna') ? '✓ ' : ''}${t.name}</span><span class="uit-desc">${t.desc}</span></button>`).join('')}</div>
         <div class="uit-scale"><b>글자 크기</b><span class="view-tabs">${SCALES.map(([v, l]) => `<button type="button" data-scale="${v}" class="${v === Number(u.scale || 100) ? 'on' : ''}">${l}</button>`).join('')}</span>
         <span class="muted">조작 화면 전체를 키웁니다 (Ctrl+Shift+= / Ctrl+Shift+-)</span></div>
         <p class="note">송출 화면(예배당·OBS)의 글꼴·색은 '빠른 설정 → 테마' 에서 따로 고릅니다.</p>`;

@@ -17,7 +17,7 @@
       ${COLORS.map(([c, n]) => `<button class="dw-col" data-col="${c}" title="${n}" style="--c:${c}"></button>`).join('')}
       <span class="sep"></span>${WIDTHS.map(([w, n]) => `<button data-w="${w}">${n}</button>`).join('')}
       <button data-mk title="반투명 굵은 선 (글자 위에 칠하기)">형광펜</button>
-      <span class="sep"></span><button data-spot title="한 곳만 밝게, 나머지는 어둡게 (휠로 크기)">🔦 강조</button>
+      <span class="sep"></span><button data-spot title="한 곳만 밝게, 나머지는 어둡게 (휠로 크기)">${window.BCIcon('sparkles')}강조</button>
       <span class="sep"></span><button data-undo title="마지막 선 지우기 (Ctrl+Z)">↶</button><button data-clear title="그린 것 모두 지우기">지우기</button>
       <span class="grow"></span><button data-off class="primary" title="그리기 끝 (Esc)">완료</button>
     </div>`;

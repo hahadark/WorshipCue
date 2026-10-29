@@ -75,7 +75,7 @@ function defaults() {
     songSearchUrl: 'https://cwy0675.tistory.com/search/{q}', // 온라인에서 찾기: {q} = 검색어
     songDownloadDir: '', // 지켜볼 다운로드 폴더 (비우면 Windows 다운로드 폴더)
     imageFolders: [],    // [{ name, path }] 라이브러리 이미지 폴더
-    ui: { theme: 'dark', scale: 100 }, // 조작 화면 테마·글자 크기 (송출 디자인과 별개)
+    ui: { theme: 'manna', scale: 100 }, // 조작 화면 테마·글자 크기 (송출 디자인과 별개)
     droppedFiles: [],
     uiLang: 'ko',
     telemetry: true,     // 익명 사용 통계 (하루 한 번: 무작위 설치 번호·버전·언어·OS) — 설정 → 정보에서 끄기

@@ -185,7 +185,7 @@
       ...clearItems(),
       '-',
       { label: $('#bOutput') && !$('#bOutput').hidden ? `보조 화면 ${$('#bOutputState') ? ($('#bOutputState').textContent === '켜짐' ? '끄기' : '켜기') : '켜기·끄기'}` : '보조 화면 켜기·끄기', key: 'Ctrl+Shift+F', run: act('toggleOutputWindow') },
-      { label: '🖥 무대 화면 창 열기', run: () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720') },
+      { ic: 'monitor', label: '무대 화면 창 열기', run: () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720') },
       { label: '송출 기록', key: 'Ctrl+H', run: act('openHistory') },
       '-',
       { ic: 'brush', label: window.BCDraw && window.BCDraw.isOn() ? '그리기 끝' : '화면에 그리기·강조', run: () => window.BCDraw && window.BCDraw.toggle() },

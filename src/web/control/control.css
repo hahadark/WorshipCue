@@ -1,5 +1,7 @@
+/* 조작 화면 글꼴: Pretendard (SIL OFL 1.1 — /shared/fonts/OFL-Pretendard.txt). 송출 화면 글꼴과는 따로 */
+@font-face { font-family: 'Pretendard'; src: url('/shared/fonts/PretendardVariable.woff2') format('woff2-variations'), url('/shared/fonts/PretendardVariable.woff2') format('woff2'); font-weight: 45 920; font-style: normal; font-display: swap; }
 :root {
-  /* 기본: 어둡게 (방송실) — 글자 대비를 높였다 */
+  /* 어둡게 (방송실) — 글자 대비를 높였다. 기본 테마는 만나로(맨 아래 블록) */
   --bg: #121519; --panel: #1a1e25; --panel2: #222731; --line: #313846; --line2: #465065; --line-soft: #252b35;
   --text: #eef1f6; --text2: #d3d9e4; --muted: #a3abba; --muted2: #7c8597;
   --sunken: #0e1115; --hover: #262d3a; --sel: #2c3c5c; --menubar: #0b0d10;
@@ -12,7 +14,7 @@
   --live-line: color-mix(in srgb, var(--live) 55%, var(--panel));
   --warn-bg: color-mix(in srgb, var(--warn) 24%, var(--panel));
   --accent-bg: color-mix(in srgb, var(--accent) 24%, var(--panel));
-  --ui-font: 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', system-ui, sans-serif;
+  --ui-font: 'Pretendard', 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', system-ui, sans-serif;
   font-family: var(--ui-font);
   color-scheme: dark;
 }
@@ -1085,3 +1087,220 @@ select:hover { border-color: var(--line2); }
 /* 좁을 때는 탭 글자를 숨기고 아이콘만 (제목은 툴팁) */
 @container lib (max-width: 520px) { .lib-tabs button[data-tab] span { display: none; } .lib-tabs button[data-tab] .ic { width: 17px; height: 17px; } }
 .lib { container: lib / inline-size; }
+
+/* ================= 만나로 테마 (1.12, 기본) =================
+ * 만나로 스튜디오 · 설교쇼츠 편집기와 같은 모양: 밝은 회청색 바탕 · 흰 둥근 카드 · 남색 머리 줄 · 파란 그라데이션 단추 ·
+ * 종류마다 색이 다른 아이콘(연한 색 바탕 칩). 색은 아래 토큰으로만 쓴다. 다른 테마에는 영향 없음. */
+html[data-theme="manna"],
+html[data-theme="manna"] :is(.suggest, .mb-drop) {
+  --bg: #f2f3f7; --panel: #ffffff; --panel2: #f6f8fb; --line: #e3e8ef; --line2: #cfd8e4; --line-soft: #eef1f6;
+  --text: #0f172a; --text2: #334155; --muted: #64748b; --muted2: #94a3b8;
+  --sunken: #f4f6fa; --hover: #eef3fc; --sel: #e3ecfe; --menubar: #0c1426;
+  --hl: #2563eb; --gold: #b45309; --ok-text: #15803d; --danger-text: #dc2626;
+  --accent: #2563eb; --accent-strong: #1d4ed8; --pv: #16a34a; --live: #e5363d; --warn: #d97706; --warn-strong: #b45309;
+  --pv-bg: color-mix(in srgb, var(--pv) 11%, #fff);
+  --live-bg: color-mix(in srgb, var(--live) 9%, #fff);
+  --live-bg2: color-mix(in srgb, var(--live) 16%, #fff);
+  --live-bg3: color-mix(in srgb, var(--live) 26%, #fff);
+  --live-line: color-mix(in srgb, var(--live) 45%, #fff);
+  --warn-bg: color-mix(in srgb, var(--warn) 15%, #fff);
+  --accent-bg: color-mix(in srgb, var(--accent) 9%, #fff);
+  --navy: #0f1b33; --navy-2: #1a2a4b;
+  --grad: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  --radius: 10px; --radius-lg: 18px; --ctl-h: 34px;
+  --shadow: 0 18px 44px rgba(15,23,42,.18), 0 2px 6px rgba(15,23,42,.08);
+  --card-shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 26px -14px rgba(15,23,42,.18);
+  color-scheme: light;
+}
+html[data-theme="manna"] body { -webkit-font-smoothing: antialiased; }
+
+/* 남색 머리 줄 (메뉴 + 검색 줄): 이 안에서는 밝은 글자 토큰으로 바꿔 쓴다 */
+html[data-theme="manna"] :is(.menubar, .top) {
+  --text: #eef2fb; --text2: #cbd5e6; --muted: #a3aec6; --muted2: #7d89a3;
+  --line: rgba(255,255,255,.13); --line2: rgba(255,255,255,.26); --sunken: rgba(255,255,255,.07);
+  --hover: rgba(255,255,255,.1); --panel2: rgba(255,255,255,.08); --sel: rgba(96,165,250,.24); --hl: #8fb4ff;
+  color-scheme: dark;
+}
+html[data-theme="manna"] .menubar { background: #0c1426; border-bottom: 0; padding: 4px 8px 0; }
+html[data-theme="manna"] .mb-top { color: #c4cde1; border-radius: 8px; font-weight: 500; }
+html[data-theme="manna"] .mb-top:hover, html[data-theme="manna"] .mb-top.on { background: rgba(255,255,255,.1); color: #fff; }
+html[data-theme="manna"] .top {
+  background: radial-gradient(520px 200px at 88% -60%, rgba(59,130,246,.30), transparent 65%), linear-gradient(#0c1426, #12203d);
+  border-bottom: 0; padding: 8px 14px 12px; gap: 10px;
+}
+html[data-theme="manna"] .brand { color: #fff; }
+html[data-theme="manna"] .brand-name b { color: #8fb4ff; }
+html[data-theme="manna"] .brand-mark { filter: drop-shadow(0 6px 12px rgba(59,130,246,.45)); }
+html[data-theme="manna"] #q { background: #fff; color: #0f172a; border: 1px solid transparent; border-radius: 12px; box-shadow: 0 6px 18px -8px rgba(0,0,0,.5); }
+html[data-theme="manna"] #q::placeholder { color: #94a3b8; }
+html[data-theme="manna"] #q:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,.35); }
+html[data-theme="manna"] .top .search-ic { color: #64748b; }
+html[data-theme="manna"] .top .hgroup { border-radius: 10px; background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.14); }
+html[data-theme="manna"] .top option { color: #0f172a; background: #fff; }
+html[data-theme="manna"] .top .ws-pick .ic { color: #8fb4ff; }
+html[data-theme="manna"] .top .studio { border-radius: 999px; padding: 0 16px; font-weight: 600; }
+html[data-theme="manna"] .top .studio.on { background: rgba(34,197,94,.16); border-color: rgba(74,222,128,.5); color: #bbf7d0; }
+html[data-theme="manna"] .top .studio.off { background: rgba(245,158,11,.2); border-color: #f59e0b; color: #fde68a; }
+html[data-theme="manna"] #btnSettings { background: transparent; border-color: transparent; color: #cbd5e6; border-radius: 10px; }
+html[data-theme="manna"] #btnSettings:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+/* 메뉴 · 오른쪽 클릭 메뉴 · 검색 제안: 흰 둥근 상자 */
+html[data-theme="manna"] .mb-drop, html[data-theme="manna"] .ctx, html[data-theme="manna"] .suggest {
+  background: #fff; border: 1px solid rgba(15,23,42,.08); border-radius: 14px; box-shadow: var(--shadow);
+}
+html[data-theme="manna"] :is(.mb-item, .ctx-item) { border-radius: 8px; }
+html[data-theme="manna"] :is(.mb-ic, .ctx-ic) { color: #3b82f6; }
+html[data-theme="manna"] :is(.mb-item:hover .mb-ic, .ctx-item:hover .ctx-ic, .ctx-item.focus .ctx-ic) { color: #1d4ed8; }
+html[data-theme="manna"] :is(.mb-head, .ctx-head) { font-size: 11px; letter-spacing: 1.2px; color: #8a90a8; }
+
+/* 단추 · 입력칸 */
+/* :where() 로 우선순위를 낮춰, 클래스가 붙은 단추(메뉴 항목 등)의 자기 모양은 그대로 둔다 */
+:where(html[data-theme="manna"]) button { background: #fff; border-color: var(--line2); border-radius: var(--radius); }
+:where(html[data-theme="manna"]) button:hover { background: #f5f8ff; border-color: #b9c8de; }
+html[data-theme="manna"] button.primary { background: var(--grad); border-color: transparent; color: #fff; font-weight: 700; box-shadow: 0 8px 18px -8px rgba(37,99,235,.6); }
+html[data-theme="manna"] button.primary:hover { background: linear-gradient(135deg, #2563eb, #1e40af); }
+html[data-theme="manna"] button.ghost { background: transparent; border-color: transparent; }
+html[data-theme="manna"] button.ghost:hover { background: var(--hover); }
+html[data-theme="manna"] button.danger { color: #dc2626; border-color: #f5c2c2; }
+html[data-theme="manna"] button.danger:hover { background: #fef2f2; border-color: #ef9a9a; }
+:where(html[data-theme="manna"]) :where(select, input[type=text], input[type=number], input[type=password], input[type=time], input[type=date], textarea) { background-color: #fff; border-color: var(--line2); border-radius: var(--radius); }
+html[data-theme="manna"] .top :is(select, input[type=text]):not(#q) { background-color: transparent; }
+html[data-theme="manna"] :is(select, input, textarea):focus { border-color: #60a5fa; }
+html[data-theme="manna"] input[type=checkbox], html[data-theme="manna"] input[type=radio], html[data-theme="manna"] input[type=range] { accent-color: var(--accent); }
+html[data-theme="manna"] .hgroup { border-radius: var(--radius); background: #fff; }
+html[data-theme="manna"] .hgroup select { background-color: transparent; }
+
+/* 분절 탭: 회색 홈 안에 고른 것만 남색 (쇼츠 편집기의 카드 탭) */
+html[data-theme="manna"] .view-tabs { background: #eef1f6; border-radius: 10px; padding: 3px; gap: 2px; }
+html[data-theme="manna"] .view-tabs button { background: transparent; border: 0; border-radius: 8px; color: var(--muted); font-weight: 600; padding: 4px 11px; }
+html[data-theme="manna"] .view-tabs button + button { margin-left: 0; }
+html[data-theme="manna"] .view-tabs button:hover { color: var(--text); background: rgba(255,255,255,.7); }
+html[data-theme="manna"] .view-tabs button.on { background: var(--navy); color: #fff; box-shadow: 0 4px 10px -4px rgba(15,27,51,.5); }
+html[data-theme="manna"] .side-tabs { margin: 10px 10px 6px; }
+html[data-theme="manna"] .side-tabs button { padding: 6px 4px; }
+
+/* 독: 패널마다 흰 둥근 카드, 사이 간격 (간격은 dock.js) */
+html[data-theme="manna"] .dock { margin: 10px 10px 0; }
+html[data-theme="manna"] .dockview-theme-abyss.wc-dock {
+  --dv-background-color: var(--bg);
+  --dv-group-view-background-color: #fff;
+  --dv-tabs-and-actions-container-background-color: #fff;
+  --dv-activegroup-visiblepanel-tab-background-color: #fff;
+  --dv-activegroup-hiddenpanel-tab-background-color: #fff;
+  --dv-inactivegroup-visiblepanel-tab-background-color: #fff;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: #fff;
+  --dv-activegroup-visiblepanel-tab-color: var(--text);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--text);
+  --dv-activegroup-hiddenpanel-tab-color: var(--muted);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--muted);
+  --dv-separator-border: transparent;
+  --dv-paneview-header-border-color: var(--line);
+  --dv-tab-divider-color: transparent;
+  --dv-tabs-and-actions-container-height: 38px;
+  --dv-tabs-and-actions-container-font-size: 13px;
+  --dv-floating-border: 1px solid var(--line);
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+html[data-theme="manna"] .wc-dock .dv-groupview { border-radius: 16px; overflow: hidden; box-shadow: var(--card-shadow); outline: 1px solid rgba(15,23,42,.06); outline-offset: -1px; }
+html[data-theme="manna"] .wc-dock .dv-tabs-and-actions-container { border-bottom: 1px solid var(--line-soft); padding: 0 6px; }
+html[data-theme="manna"] .wc-dock .dv-tab { font-weight: 600; padding: 0 10px; position: relative; }
+html[data-theme="manna"] .wc-dock .dv-tab.dv-active-tab::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); }
+html[data-theme="manna"] .wc-dock .dv-inactive-group .dv-tab.dv-active-tab::after { background: #c7d4ea; }
+html[data-theme="manna"] .dock-body, html[data-theme="manna"] .dock-body > .books, html[data-theme="manna"] .dock-body > .center, html[data-theme="manna"] .dock-body > .quick { background: #fff; }
+html[data-theme="manna"] .dv-resize-container { border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+
+/* 큐시트 */
+html[data-theme="manna"] .cue-head { margin: 4px 10px 6px; gap: 6px; }
+html[data-theme="manna"] .cue-clock { border-bottom-color: var(--line-soft); }
+html[data-theme="manna"] .cue-list { padding: 4px 8px; }
+html[data-theme="manna"] .cue-item { border-radius: 12px; padding: 8px 8px; gap: 8px; border-left-width: 3px; margin-bottom: 3px; }
+html[data-theme="manna"] .cue-item:hover { background: #f5f8fd; }
+html[data-theme="manna"] .cue-item.sel { background: var(--sel); border-color: transparent; }
+html[data-theme="manna"] .cue-item.pv { border-left-color: var(--pv); }
+html[data-theme="manna"] .cue-item.air { background: var(--live-bg); box-shadow: inset -3px 0 0 var(--live); }
+html[data-theme="manna"] .cue-ico { width: 30px; height: 30px; border-radius: 9px; color: var(--tc, var(--muted)); background: color-mix(in srgb, var(--tc, var(--muted)) 12%, #fff); }
+html[data-theme="manna"] .cue-ico .ic { width: 17px; height: 17px; }
+html[data-theme="manna"] .cue-item.sel .cue-ico { background: #fff; color: var(--tc, var(--text2)); }
+html[data-theme="manna"] .cue-item.air .cue-ico { color: #fff; background: var(--live); }
+html[data-theme="manna"] .cue-add { gap: 6px; padding: 10px; border-top: 1px solid var(--line-soft); }
+html[data-theme="manna"] .cue-add button { border-radius: 10px; font-weight: 600; color: var(--text2); padding: 7px 4px; }
+html[data-theme="manna"] .cue-add button .ic { color: var(--tc, var(--muted)); }
+html[data-theme="manna"] .cue-add button:hover .ic { color: var(--tc, var(--text)); }
+html[data-theme="manna"] .cue-help { color: var(--muted2); }
+html[data-theme="manna"] .ce-ico { background: color-mix(in srgb, var(--accent) 10%, #fff); color: var(--accent); border-radius: 9px; }
+
+/* 종류별 아이콘 색 (만나로 스튜디오의 색 아이콘처럼) */
+html[data-theme="manna"] :is([data-t="bible"], [data-add="bible"]) { --tc: #2563eb; }
+html[data-theme="manna"] :is([data-t="hymn"], [data-add="hymn"], [data-t="score"], [data-tab="hymns"]) { --tc: #4f46e5; }
+html[data-theme="manna"] :is([data-t="song"], [data-add="song"], [data-tab="songs"]) { --tc: #7c3aed; }
+html[data-theme="manna"] :is([data-t="weblyrics"], [data-add="weblyrics"]) { --tc: #0891b2; }
+html[data-theme="manna"] :is([data-t="text"], [data-add="text"]) { --tc: #d97706; }
+html[data-theme="manna"] :is([data-t="title"], [data-add="title"]) { --tc: #0f766e; }
+html[data-theme="manna"] :is([data-t="image"], [data-add="image"], [data-tab="images"]) { --tc: #0d9488; }
+html[data-theme="manna"] :is([data-t="video"], [data-add="video"]) { --tc: #db2777; }
+html[data-theme="manna"] :is([data-t="audio"], [data-add="audio"], [data-tab="audio"]) { --tc: #ea580c; }
+html[data-theme="manna"] :is([data-t="slideshow"], [data-add="slideshow"]) { --tc: #0e7490; }
+html[data-theme="manna"] :is([data-t="camera"], [data-add="camera"], [data-tab="cameras"]) { --tc: #e11d48; }
+html[data-theme="manna"] :is([data-t="ppt"], [data-t="folder"]) { --tc: #c2410c; }
+html[data-theme="manna"] :is([data-t="color"], [data-tab="templates"]) { --tc: #c026d3; }
+html[data-theme="manna"] [data-tab="overlays"] { --tc: #2563eb; }
+html[data-theme="manna"] :is([data-t="blank"], [data-add="blank"]) { --tc: #64748b; }
+
+/* 라이브러리 */
+html[data-theme="manna"] .lib-tabs { border-bottom-color: var(--line-soft); padding: 0 8px; }
+html[data-theme="manna"] .lib-tabs button[data-tab] { height: 40px; font-weight: 600; font-size: 13px; color: var(--muted); border-bottom-width: 3px; }
+html[data-theme="manna"] .lib-tabs button[data-tab] .ic { color: var(--tc, var(--muted)); opacity: .75; }
+html[data-theme="manna"] .lib-tabs button[data-tab]:hover { background: transparent; color: var(--text); }
+html[data-theme="manna"] .lib-tabs button[data-tab].on { color: var(--text); border-bottom-color: var(--accent); }
+html[data-theme="manna"] .lib-tabs button[data-tab].on .ic { color: var(--tc, var(--accent)); opacity: 1; }
+html[data-theme="manna"] .lib-bar { background: #fff; padding: 9px 10px; }
+html[data-theme="manna"] .lib-bar button .ic { color: var(--accent); }
+
+/* 가운데: 본문 · 검색 결과 */
+html[data-theme="manna"] .center-head { border-bottom-color: var(--line-soft); padding: 10px 14px; }
+html[data-theme="manna"] #resultTitle { font-weight: 700; letter-spacing: -.2px; }
+html[data-theme="manna"] .results .row { border-radius: 10px; margin: 1px 8px; padding-left: 10px; border-left-width: 3px; }
+html[data-theme="manna"] .results .row:hover, html[data-theme="manna"] .results .srow:hover { background: #f5f8fd; }
+html[data-theme="manna"] .results .srow { border-bottom-color: var(--line-soft); }
+html[data-theme="manna"] .results mark { background: #fff1c2; }
+html[data-theme="manna"] .quick-head { border-bottom-color: var(--line-soft); }
+html[data-theme="manna"] .quick-flow { border-bottom-color: var(--line); }
+
+/* 미리보기 · LIVE */
+html[data-theme="manna"] .pane { border-bottom-color: var(--line-soft); padding: 10px 14px 12px; }
+html[data-theme="manna"] .badge { border-radius: 999px; padding: 3px 11px; font-weight: 800; }
+html[data-theme="manna"] .badge.pv { background: linear-gradient(135deg, #22c55e, #15803d); }
+html[data-theme="manna"] .badge.onair { background: linear-gradient(135deg, #f43f5e, #dc2626); box-shadow: 0 6px 14px -6px rgba(220,38,38,.7); }
+html[data-theme="manna"] .hidden-badge { border-radius: 999px; }
+html[data-theme="manna"] .screen { border-radius: 12px; box-shadow: 0 10px 24px -12px rgba(15,23,42,.45); }
+html[data-theme="manna"] .thumbs button { border-radius: 8px; }
+html[data-theme="manna"] .lv-layers .ly-ic { color: var(--accent); }
+
+/* 아래 송출 줄 */
+html[data-theme="manna"] .bottom { background: #fff; border-top: 1px solid rgba(15,23,42,.06); box-shadow: 0 -8px 24px -18px rgba(15,23,42,.25); padding: 10px 14px; margin-top: 10px; }
+html[data-theme="manna"] .big { height: 42px; border-radius: 12px; font-weight: 700; }
+html[data-theme="manna"] .big .ic { color: var(--accent); }
+html[data-theme="manna"] .big.send { background: linear-gradient(135deg, #f43f5e, #dc2626); border-color: transparent; color: #fff; box-shadow: 0 10px 22px -10px rgba(220,38,38,.75); padding: 0 18px 0 16px; }
+html[data-theme="manna"] .big.send .ic { color: #fff; }
+html[data-theme="manna"] .big.send:hover { background: linear-gradient(135deg, #e11d48, #b91c1c); }
+html[data-theme="manna"] .clear-group button { height: 42px; border-radius: 12px; }
+html[data-theme="manna"] .status .st { border-radius: 999px; }
+
+/* 창 · 알림 */
+html[data-theme="manna"] .modal { background: rgba(15,23,42,.42); backdrop-filter: blur(2px); }
+html[data-theme="manna"] .modal-box { border-radius: var(--radius-lg); border-color: rgba(15,23,42,.08); box-shadow: 0 30px 70px -20px rgba(15,23,42,.45); }
+html[data-theme="manna"] .modal-head { padding: 14px 20px; border-bottom-color: var(--line-soft); }
+html[data-theme="manna"] .modal-head b { font-size: 16px; letter-spacing: -.2px; }
+html[data-theme="manna"] .modal-body { padding: 18px 20px; }
+html[data-theme="manna"] .msg { border-radius: 12px; box-shadow: var(--shadow); }
+html[data-theme="manna"] :is(.theme-card, .uit-card) { border-radius: 14px; background: #fff; }
+html[data-theme="manna"] .uit-mock { border-radius: 10px; }
+
+/* 스크롤바 */
+html[data-theme="manna"] * { scrollbar-color: #cfd7e3 transparent; }
+html[data-theme="manna"] *::-webkit-scrollbar-thumb { background: #cfd7e3; background-clip: padding-box; }
+html[data-theme="manna"] *::-webkit-scrollbar-thumb:hover { background: #b6c1d1; background-clip: padding-box; }
+html[data-theme="manna"] .md-now { background: #fff; border-bottom-color: var(--line-soft); }
+.md-now:empty { display: none; } /* 재생 중인 것이 없으면 빈 띠를 숨긴다 */
+.ce-row button > .ic:first-child, .stg-row button > .ic:first-child, .draw-bar button > .ic:first-child { margin-right: .35em; }

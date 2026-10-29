@@ -632,8 +632,8 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.dockLocked === 'boolean') d.dockLocked = p.dockLocked;
       if (typeof p.parallelVersionId === 'string' && (!p.parallelVersionId || this.store.getVersion(p.parallelVersionId))) d.parallelVersionId = p.parallelVersionId;
       if (p.ui && typeof p.ui === 'object') {
-        d.ui = { theme: 'dark', scale: 100, ...(d.ui || {}) };
-        if (['dark', 'contrast', 'light', 'warm', 'navy'].includes(p.ui.theme)) d.ui.theme = p.ui.theme;
+        d.ui = { theme: 'manna', scale: 100, ...(d.ui || {}) };
+        if (['manna', 'dark', 'contrast', 'light', 'warm', 'navy'].includes(p.ui.theme)) d.ui.theme = p.ui.theme;
         if ([90, 100, 110, 120].includes(Number(p.ui.scale))) d.ui.scale = Number(p.ui.scale);
       }
       if (typeof p.dockLayout === 'string' && p.dockLayout.length <= 300000) d.dockLayout = p.dockLayout;

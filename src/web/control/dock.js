@@ -294,6 +294,7 @@
       createComponent,
       createRightHeaderActionComponent: headerActions,
       className: 'dockview-theme-abyss wc-dock',
+      theme: dockTheme(),
       disableFloatingGroups: false,
       floatingGroupBounds: 'boundedWithinViewport',
       // 탭 뒤에 가려진 패널도 내용(DOM)을 그대로 둔다 (조작 코드가 늘 찾을 수 있게)
@@ -380,8 +381,22 @@
     $('#dkReset').onclick = () => { resetLayout(); app.closeModal(); app.showMsg('기본 배치로 되돌렸습니다.', 'ok', 1500); };
   }
 
+  /** 독 테마: 만나로 화면은 패널을 카드처럼 띄워 둔다 (색은 control.css) */
+  function dockTheme() {
+    const spaced = document.documentElement.dataset.theme === 'manna';
+    return { name: spaced ? 'wc-spaced' : 'wc', className: 'dockview-theme-abyss wc-dock', gap: spaced ? 10 : 0 };
+  }
+  function applyTheme() {
+    if (!api) return;
+    const th = dockTheme();
+    if (lastGap === th.gap) return;
+    lastGap = th.gap;
+    api.updateOptions({ theme: th });
+  }
+  let lastGap = null;
+
   window.BCDock = {
-    init, show, hide, isOpen, openMenu, fitScreens, resetLayout, panels: PANELS,
+    init, show, hide, isOpen, openMenu, fitScreens, resetLayout, applyTheme, panels: PANELS,
     workspaces: allWorkspaces, activeWorkspace, applyWorkspace, saveAsWorkspace, overwriteWorkspace, manageWorkspaces,
   };
 })();
