@@ -2,6 +2,8 @@
 // Electron 데스크톱 셸: 조작 창 + 예배당 전체 화면 창(Output Manager) + 전역 단축키
 
 const path = require('path');
+// 창·작업 표시줄 아이콘 (소스에서 바로 실행할 때도 Electron 기본 아이콘 대신 WorshipCue 아이콘)
+const APP_ICON = path.join(__dirname, 'icon.png');
 const { app, BrowserWindow, screen, globalShortcut, dialog, Menu, powerSaveBlocker, session, shell, safeStorage } = require('electron');
 const { WorshipCueCore } = require('../core/core');
 const { startServer } = require('../core/server');
@@ -186,7 +188,7 @@ if (!app.requestSingleInstanceLock()) {
   function createSplash() {
     splash = new BrowserWindow({
       width: 560, height: 330, frame: false, transparent: true, resizable: false, movable: true, center: true,
-      skipTaskbar: false, alwaysOnTop: true, show: false, title: 'WorshipCue', backgroundColor: '#00000000',
+      skipTaskbar: false, alwaysOnTop: true, show: false, title: 'WorshipCue', backgroundColor: '#00000000', icon: APP_ICON,
       webPreferences: { contextIsolation: true, sandbox: true },
     });
     splash.loadFile(path.join(WEB_DIR, 'splash', 'index.html'));
@@ -320,7 +322,7 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionCheckHandler((wc, permission, origin) => permission === 'local-fonts' || permission === 'clipboard-sanitized-write' || (permission === 'media' && localPage(origin + '/')));
 
     controlWin = new BrowserWindow({
-      width: 1500, height: 920, minWidth: 1100, minHeight: 700, backgroundColor: '#14171c', title: 'WorshipCue',
+      width: 1500, height: 920, minWidth: 1100, minHeight: 700, backgroundColor: '#f2f3f7', title: 'WorshipCue', icon: APP_ICON,
       show: false,
       webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false, preload: path.join(__dirname, 'preload.js') },
     });
@@ -348,7 +350,7 @@ if (!app.requestSingleInstanceLock()) {
     // 외부 링크·새 창 차단
     controlWin.webContents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith(`http://127.0.0.1:${port}/outputs/stage`)) {
-        return { action: 'allow', overrideBrowserWindowOptions: { width: 1280, height: 720, title: T('WorshipCue 무대 화면'), backgroundColor: '#000000', autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } } };
+        return { action: 'allow', overrideBrowserWindowOptions: { width: 1280, height: 720, title: T('WorshipCue 무대 화면'), backgroundColor: '#000000', icon: APP_ICON, autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } } };
       }
       return { action: 'deny' };
     });
