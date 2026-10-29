@@ -381,10 +381,11 @@
     $('#dkReset').onclick = () => { resetLayout(); app.closeModal(); app.showMsg('기본 배치로 되돌렸습니다.', 'ok', 1500); };
   }
 
-  /** 독 테마: 만나로 화면은 패널을 카드처럼 띄워 둔다 (색은 control.css) */
+  /** 독 테마: 패널을 카드처럼 띄워 둔다 (만나로 10px · 그 밖 8px · 고대비는 붙여서). 색은 control.css */
   function dockTheme() {
-    const spaced = document.documentElement.dataset.theme === 'manna';
-    return { name: spaced ? 'wc-spaced' : 'wc', className: 'dockview-theme-abyss wc-dock', gap: spaced ? 10 : 0 };
+    const th = document.documentElement.dataset.theme || 'dark';
+    const gap = th === 'contrast' ? 0 : th === 'manna' ? 10 : 8;
+    return { name: gap ? 'wc-spaced' : 'wc', className: 'dockview-theme-abyss wc-dock', gap };
   }
   function applyTheme() {
     if (!api) return;

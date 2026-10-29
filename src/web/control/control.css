@@ -1230,22 +1230,22 @@ html[data-theme="manna"] .cue-add button:hover .ic { color: var(--tc, var(--text
 html[data-theme="manna"] .cue-help { color: var(--muted2); }
 html[data-theme="manna"] .ce-ico { background: color-mix(in srgb, var(--accent) 10%, #fff); color: var(--accent); border-radius: 9px; }
 
-/* 종류별 아이콘 색 (만나로 스튜디오의 색 아이콘처럼) */
-html[data-theme="manna"] :is([data-t="bible"], [data-add="bible"]) { --tc: #2563eb; }
-html[data-theme="manna"] :is([data-t="hymn"], [data-add="hymn"], [data-t="score"], [data-tab="hymns"]) { --tc: #4f46e5; }
-html[data-theme="manna"] :is([data-t="song"], [data-add="song"], [data-tab="songs"]) { --tc: #7c3aed; }
-html[data-theme="manna"] :is([data-t="weblyrics"], [data-add="weblyrics"]) { --tc: #0891b2; }
-html[data-theme="manna"] :is([data-t="text"], [data-add="text"]) { --tc: #d97706; }
-html[data-theme="manna"] :is([data-t="title"], [data-add="title"]) { --tc: #0f766e; }
-html[data-theme="manna"] :is([data-t="image"], [data-add="image"], [data-tab="images"]) { --tc: #0d9488; }
-html[data-theme="manna"] :is([data-t="video"], [data-add="video"]) { --tc: #db2777; }
-html[data-theme="manna"] :is([data-t="audio"], [data-add="audio"], [data-tab="audio"]) { --tc: #ea580c; }
-html[data-theme="manna"] :is([data-t="slideshow"], [data-add="slideshow"]) { --tc: #0e7490; }
-html[data-theme="manna"] :is([data-t="camera"], [data-add="camera"], [data-tab="cameras"]) { --tc: #e11d48; }
-html[data-theme="manna"] :is([data-t="ppt"], [data-t="folder"]) { --tc: #c2410c; }
-html[data-theme="manna"] :is([data-t="color"], [data-tab="templates"]) { --tc: #c026d3; }
-html[data-theme="manna"] [data-tab="overlays"] { --tc: #2563eb; }
-html[data-theme="manna"] :is([data-t="blank"], [data-add="blank"]) { --tc: #64748b; }
+/* 종류별 아이콘 색 (만나로 스튜디오의 색 아이콘처럼) — 모든 테마 공통 팔레트. 어두운 테마에서는 --tc-p 만큼만 섞고 나머지는 흰색으로 밝힌다 */
+:is([data-t="bible"], [data-add="bible"]) { --tc: #2563eb; }
+:is([data-t="hymn"], [data-add="hymn"], [data-t="score"], [data-tab="hymns"]) { --tc: #4f46e5; }
+:is([data-t="song"], [data-add="song"], [data-tab="songs"]) { --tc: #7c3aed; }
+:is([data-t="weblyrics"], [data-add="weblyrics"]) { --tc: #0891b2; }
+:is([data-t="text"], [data-add="text"]) { --tc: #d97706; }
+:is([data-t="title"], [data-add="title"]) { --tc: #0f766e; }
+:is([data-t="image"], [data-add="image"], [data-tab="images"]) { --tc: #0d9488; }
+:is([data-t="video"], [data-add="video"]) { --tc: #db2777; }
+:is([data-t="audio"], [data-add="audio"], [data-tab="audio"]) { --tc: #ea580c; }
+:is([data-t="slideshow"], [data-add="slideshow"]) { --tc: #0e7490; }
+:is([data-t="camera"], [data-add="camera"], [data-tab="cameras"]) { --tc: #e11d48; }
+:is([data-t="ppt"], [data-t="folder"]) { --tc: #c2410c; }
+:is([data-t="color"], [data-tab="templates"]) { --tc: #c026d3; }
+[data-tab="overlays"] { --tc: #2563eb; }
+:is([data-t="blank"], [data-add="blank"]) { --tc: #64748b; }
 
 /* 라이브러리 */
 html[data-theme="manna"] .lib-tabs { border-bottom-color: var(--line-soft); padding: 0 8px; }
@@ -1304,3 +1304,46 @@ html[data-theme="manna"] *::-webkit-scrollbar-thumb:hover { background: #b6c1d1;
 html[data-theme="manna"] .md-now { background: #fff; border-bottom-color: var(--line-soft); }
 .md-now:empty { display: none; } /* 재생 중인 것이 없으면 빈 띠를 숨긴다 */
 .ce-row button > .ic:first-child, .stg-row button > .ic:first-child, .draw-bar button > .ic:first-child { margin-right: .35em; }
+
+/* ================= 카드 배치 · 종류별 색 아이콘 (1.12, 고대비를 뺀 모든 테마) =================
+ * 만나로에서 가져온 두 가지를 어두운 테마에도: 패널을 둥근 카드로 띄우기(간격은 dock.js) · 순서 종류마다 색 아이콘.
+ * :where() 로 우선순위를 낮춰 두어 만나로 블록의 더 구체적인 규칙이 그대로 이긴다. */
+:root { --tc-p: 62%; } /* 어두운 테마: 팔레트 색 62% + 흰색 → 어두운 바탕에서 또렷하게 */
+html[data-theme="light"], html[data-theme="manna"] { --tc-p: 100%; }
+:where(html:not([data-theme="contrast"])) :is(.cue-ico, .cue-add button[data-add] .ic, .lib-tabs button[data-tab] .ic) {
+  --ink: color-mix(in srgb, var(--tc, var(--muted)) var(--tc-p), #fff);
+}
+/* 큐시트 순서 아이콘: 연한 색 바탕 칩 */
+:where(html:not([data-theme="contrast"])) .cue-ico { width: 28px; height: 28px; border-radius: 8px; color: var(--ink); background: color-mix(in srgb, var(--tc, var(--muted)) 18%, var(--panel)); }
+:where(html:not([data-theme="contrast"])) .cue-item.sel .cue-ico, :where(html:not([data-theme="contrast"])) .cue-item.pv .cue-ico { color: var(--ink); background: color-mix(in srgb, var(--tc, var(--muted)) 26%, var(--sel)); }
+:where(html:not([data-theme="contrast"])) .cue-item.air .cue-ico { color: #fff; background: var(--live); }
+:where(html:not([data-theme="contrast"])) .cue-item { border-radius: 10px; }
+/* 순서 넣기 단추 · 라이브러리 탭 아이콘 */
+:where(html:not([data-theme="contrast"])) .cue-add button[data-add] .ic, :where(html:not([data-theme="contrast"])) .cue-add button[data-add]:hover .ic { color: var(--ink); }
+:where(html:not([data-theme="contrast"])) .lib-tabs button[data-tab] .ic { color: var(--ink); opacity: .8; }
+:where(html:not([data-theme="contrast"])) .lib-tabs button[data-tab].on .ic { color: var(--ink); opacity: 1; }
+
+/* 독: 패널마다 둥근 카드 */
+:where(html:not([data-theme="contrast"])) .dock { margin: 8px 8px 0; }
+:where(html:not([data-theme="contrast"])) .dockview-theme-abyss.wc-dock {
+  --dv-background-color: var(--bg);
+  --dv-group-view-background-color: var(--panel);
+  --dv-tabs-and-actions-container-background-color: var(--panel);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--panel);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--panel);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--panel);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--panel);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--text);
+  --dv-separator-border: transparent;
+  --dv-tab-divider-color: transparent;
+  --dv-tabs-and-actions-container-height: 34px;
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+:where(html:not([data-theme="contrast"])) .wc-dock .dv-groupview { border-radius: 12px; overflow: hidden; outline: 1px solid var(--line-soft); outline-offset: -1px; }
+:where(html:not([data-theme="contrast"])) .wc-dock .dv-tabs-and-actions-container { border-bottom: 1px solid var(--line-soft); padding: 0 4px; }
+:where(html:not([data-theme="contrast"])) .wc-dock .dv-tab { position: relative; font-weight: 600; }
+:where(html:not([data-theme="contrast"])) .wc-dock .dv-tab.dv-active-tab::after { content: ''; position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); }
+:where(html:not([data-theme="contrast"])) .wc-dock .dv-inactive-group .dv-tab.dv-active-tab::after { background: var(--line2); }
+:where(html:not([data-theme="contrast"])) .dock-body { background: var(--panel); }
+:where(html:not([data-theme="contrast"])) .bottom { margin-top: 8px; }
