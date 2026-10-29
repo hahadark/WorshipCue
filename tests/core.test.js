@@ -784,7 +784,9 @@ test('사용 기록: 송출하면 남고, 5분 안 같은 것은 한 번, 제목
   const r = core.command('usageLog', {}).result;
   assert.deepEqual(r.rows.map(x => [x.kind, x.title, x.credit, x.cue]), [['bible', '요한복음 3:16', '', ''], ['song', '은혜 아니면', '작사 홍길동', '주일 예배']]);
   assert.deepEqual(core.command('usageLog', { kinds: ['song'] }).result.summary.map(s => [s.title, s.count]), [['은혜 아니면', 1]]);
-  const today = new Date().toISOString().slice(0, 10);
+  // from·to 는 이 PC 의 날짜(한국 시간)로 본다 — toISOString(UTC) 날짜를 쓰면 자정~오전 9시에 하루가 어긋난다
+  const nd = new Date();
+  const today = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`;
   assert.equal(core.command('usageLog', { from: '2000-01-01', to: '2000-12-31' }).result.rows.length, 0);
   assert.equal(core.command('usageLog', { from: today, to: today }).result.rows.length, 2);
   const csv = core.command('usageCsv', { kinds: ['song'], mode: 'summary' }).result;
