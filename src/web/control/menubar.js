@@ -112,6 +112,8 @@
       { label: '🎬 미디어 (영상·음악 바로 재생)', run: () => window.BCDock && window.BCDock.show('media') },
       { label: '⏱ 무대·설교 타이머', run: () => window.BCDock && window.BCDock.show('stage') },
       { label: '🎛 스트림덱 · 외부 단추 연결…', run: () => window.BCTrigger && window.BCTrigger.open() },
+      { label: '📊 사용 기록 (저작권 보고)…', run: () => window.BCUsage && window.BCUsage.open() },
+      { label: '📊 사용 기록 (저작권 보고)…', run: () => window.BCUsage && window.BCUsage.open() },
       '-',
       { label: '📱 휴대폰 리모컨', sub: () => [
         { label: '열기 (QR · 주소 · PIN)…', run: () => window.BCRemote && window.BCRemote.open() },

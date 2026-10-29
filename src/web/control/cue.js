@@ -75,6 +75,7 @@
     if (!r.ok) return app.showMsg(r.error, 'error');
     st.cue = r.result;
     st.sel = Math.min(st.sel, st.cue.items.length - 1);
+    st.snap = JSON.stringify(st.cue); st.undo = []; st.redo = []; // 실행 취소는 큐시트마다 새로
     $('#cueSel').value = id;
     cmd('setActiveCue', { id });
     render();
@@ -82,7 +83,42 @@
   }
 
   /** 바뀐 내용을 곧바로 저장 (연속 변경은 모아서) */
+  // ---------------- 실행 취소 (Ctrl+Z · 다시 실행 Ctrl+Y) ----------------
+  // 저장할 때마다 바로 전 모습을 쌓아 둔다. 큐시트를 바꾸면 비운다
+  function pushUndo() {
+    const now = JSON.stringify(st.cue);
+    if (st.snap && st.snap !== now && st.cue && JSON.parse(st.snap).id === st.cue.id) {
+      (st.undo = st.undo || []).push(st.snap);
+      if (st.undo.length > 50) st.undo.shift();
+      st.redo = [];
+    }
+    st.snap = now;
+  }
+  function undo(redo = false) {
+    const from = redo ? st.redo : st.undo;
+    if (!from || !from.length || !st.cue) return false;
+    const to = redo ? st.undo : st.redo;
+    to.push(JSON.stringify(st.cue));
+    st.cue = JSON.parse(from.pop());
+    st.snap = JSON.stringify(st.cue);
+    st.sel = Math.min(st.sel, st.cue.items.length - 1);
+    save(); forceEditor(); render();
+    app.showMsg(redo ? '다시 실행' : `실행 취소 (${st.undo.length}번 더 가능)`, 'ok', 1200);
+    return true;
+  }
+  window.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k !== 'z' && k !== 'y') return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return; // 글 칸은 브라우저의 되돌리기
+    if (!$('#modal').hidden || (window.BCSlideEdit && window.BCSlideEdit.isOpen())) return; // 창·슬라이드 편집기는 제 것을 쓴다
+    if (!st.cue) return;
+    e.preventDefault();
+    if (undo(k === 'y' || e.shiftKey) === false) app.showMsg(k === 'y' || e.shiftKey ? '다시 실행할 것이 없습니다.' : '되돌릴 것이 없습니다.', 'info', 1200);
+  }, true);
+
   function save() {
+    pushUndo();
     clearTimeout(st.saving);
     st.saving = setTimeout(async () => {
       st.lastSave = Date.now();
@@ -226,7 +262,7 @@
     const it = st.cue.items[i];
     const prevIdx = keepIndex && app.preview && app.preview.cue && app.preview.cue.index === i ? app.preview.index : 0;
     st.sel = i;
-    const cue = { id: st.cue.id, index: i, title: it.title, note: it.note || '', ...(it.autoSec >= 2 ? { auto: { sec: it.autoSec, loop: !!it.autoLoop } } : {}) };
+    const cue = { id: st.cue.id, index: i, title: it.title, note: it.note || '', type: it.type, credit: it.credit || '', ...(it.autoSec >= 2 ? { auto: { sec: it.autoSec, loop: !!it.autoLoop } } : {}) };
     const tpl = itemTpl(it);
     if (it.type === 'audio') { // 음악: 화면은 그대로, 가운데에 정보만
       showAudioInfo(i, it);

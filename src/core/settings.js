@@ -66,6 +66,7 @@ function defaults() {
     globalShortcuts: false,
     reservedKeys: '', // OBS 등 다른 프로그램에서 쓰는 단축키(충돌 검사용), 쉼표 구분
     history: [],
+    syncDir: '', // 여러 PC 동기화 폴더 (원드라이브 등) — 비우면 안 함
     guide: { bethlehemDone: false },
     activeCueId: '',     // 열어 둔 큐시트
     cueAdvance: true,    // 항목의 마지막 슬라이드에서 F6 → 다음 순서로

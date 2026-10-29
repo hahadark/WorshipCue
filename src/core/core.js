@@ -23,6 +23,8 @@ const { Hymnal } = require('./hymnal');
 /** 모두 지우기로 숨긴 배경은 다시 송출하면 돌아온다 (배경 끄기로 직접 끈 것은 그대로) */
 function unclearBg(core) { if (core.layers.bgByClear) { core.layers.hideBg = false; core.layers.bgByClear = false; } }
 const { Library } = require('./library');
+const { UsageLog } = require('./usagelog');
+const { Sync } = require('./sync');
 const { BOOKS, getBook } = require('./books');
 const { formatTitle } = require('./db');
 
@@ -46,6 +48,7 @@ class WorshipCueCore extends EventEmitter {
     this.mediaDir = path.join(dataDir, 'media');
     fs.mkdirSync(this.mediaDir, { recursive: true });
     this.logger = new Logger(path.join(dataDir, 'logs'), { echo: logEcho });
+    Sync.applyPendingRestore(dataDir, this.logger); // 예약된 '백업에서 되돌리기' (DB·설정을 열기 전에)
     this.settings = new Settings(dataDir, this.logger, { uiLang });
     const dbFile = path.join(dataDir, 'bible.db');
     installSeedDb(dbFile, seedDb, this.logger);
@@ -56,6 +59,8 @@ class WorshipCueCore extends EventEmitter {
     this.hymnLyrics = new HymnLyrics(this);
     this.hymnal = new Hymnal(this); // 베들레헴 찬송가 (가사 · 악보 · 교독문)
     this.library = new Library(this);
+    this.usage = new UsageLog(this); // 사용 기록 (저작권 보고)
+    this.sync = new Sync(this); // 여러 PC 동기화 · 자동 백업
     this.stage = { timer: { running: false, endAt: 0, remaining: 0, duration: 0 }, message: '' };
     // 화면 지우기 층: 배경 숨김 · 로고 화면 · 오버레이 끄기 전 켜져 있던 것
     this.layers = { hideBg: false, logo: false, savedOverlays: [], media: null }; // media = 배경 미디어 (카메라·그림·영상, 슬라이드와 따로)
@@ -425,6 +430,10 @@ WorshipCueCore.prototype.commands = {
     unclearBg(this);
     this.holdObs(false); // 새로 송출하면 OBS 도 다시 보인다
     const r = this.presentation.sendLive(a && a.slides ? a : null);
+    try {
+      const L = this.presentation.live;
+      if (L) { const cue = L.passage.cueId ? this.store.getCue(L.passage.cueId) : null; this.usage.record(L.passage, cue ? cue.name : ''); }
+    } catch (e) { this.logger.warn('사용 기록 실패: ' + e.message); }
     this.addHistory();
     // 송출을 시작하면 보조 화면(예배당 모니터) 출력을 자동으로 켠다
     const out = this.settings.get().output;
@@ -862,6 +871,33 @@ WorshipCueCore.prototype.commands = {
     const { plan, isSample } = parseChatAnswer(String((a && a.text) || '').slice(0, 300000));
     if (isSample) throw new Error('샘플 파일 내용 그대로입니다. 채팅 AI 가 주보로 새로 만든 답을 붙여 넣으세요.');
     return { ...this.planToSavedCue(plan), model: '채팅 AI' };
+  },
+  // ---- 사용 기록 (저작권 보고) ----
+  usageLog(a) { const o = { from: String((a && a.from) || ''), to: String((a && a.to) || ''), kinds: a && Array.isArray(a.kinds) ? a.kinds : null, q: String((a && a.q) || '') }; return { rows: this.usage.list(o), summary: this.usage.summary(o) }; },
+  usageCsv(a) { const o = { from: String((a && a.from) || ''), to: String((a && a.to) || ''), kinds: a && Array.isArray(a.kinds) ? a.kinds : null }; const mode = a && a.mode === 'summary' ? 'summary' : 'rows'; return { csv: this.usage.csv(o, mode), name: `WorshipCue-사용기록${mode === 'summary' ? '-제목별' : ''}${o.from ? '-' + o.from : ''}${o.to ? '~' + o.to : ''}.csv` }; },
+  clearUsageLog(a) { return { removed: this.usage.clear(String((a && a.before) || '')) }; },
+  // ---- 여러 PC 동기화 · 백업 ----
+  syncInfo() { return this.sync.info(); },
+  setSyncDir(a) {
+    const dir = String((a && a.dir) || '').trim();
+    if (dir && !fs.existsSync(dir)) throw new Error('폴더가 없습니다: ' + dir);
+    this.settings.update(d => { d.syncDir = dir; });
+    this.settingsChanged('settings');
+    let got = null;
+    if (dir) { got = this.sync.importNow(); if (got.none) this.sync.exportNow(); }
+    return { ...this.sync.info(), got };
+  },
+  syncNow() { const got = this.sync.importNow(); const put = this.sync.exportNow(); return { ...this.sync.info(), got, put }; },
+  backups() { return { list: this.sync.backups(), pending: this.sync.restorePending(), dir: this.sync.backupDir() }; },
+  backupNow() { return this.sync.backupNow(); },
+  restoreBackup(a) { return this.sync.restore(String((a && a.day) || '')); },
+  cancelRestore() { return this.sync.cancelRestore(); },
+  openPath(a) {
+    const p = String((a && a.path) || '');
+    if (!this.desktop || !this.desktop.openPath) throw new Error('폴더 열기는 데스크톱 프로그램에서만 됩니다.');
+    if (!p.startsWith(this.dataDir) && p !== this.sync.dir()) throw new Error('열 수 없는 경로입니다.');
+    this.desktop.openPath(p);
+    return {};
   },
   // ---- 휴대폰 리모컨 ----
   remoteStatus() { return this.remote ? this.remote.status() : { enabled: false, running: false, urls: [], error: '리모컨을 쓸 수 없습니다.' }; },

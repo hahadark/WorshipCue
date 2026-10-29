@@ -91,6 +91,17 @@ app.whenReady().then(async () => {
     await shot('en');
     await ev(`await window.BC.cmd('updateSettings', { patch: { uiLang: 'ko' } }); return 1;`);
 
+    // ---- 8. 사용 기록 창 · 설정의 동기화·백업 · 큐 편집 실행 취소
+    const usage = await ev(`if (!$('#modal').hidden) $('#modalClose').click(); await wait(300); window.BCUsage.open(); await wait(1000); const r = { list: !!$('#ugList'), rows: (await window.BC.cmd('usageLog', { kinds: ['bible'] })).result.rows.length }; $('#modalClose').click(); await wait(300); return r;`);
+    ok(usage.list && usage.rows >= 1, '사용 기록 창 (송출한 본문이 보임)', usage);
+    const setData = await ev(`window.BCSettings.open('data'); await wait(1000); const r = { sync: !!$('#syDir'), backup: !!$('#bkNow'), info: ($('#syInfo') || {}).textContent }; $('#modalClose').click(); await wait(300); return r;`);
+    ok(setData.sync && setData.backup && /동기화 안 함/.test(setData.info || ''), '설정 → 동기화·백업 칸', setData);
+    const undo = await ev(`const c = (await window.BC.cmd('saveCue', { cue: { name: '되돌리기', items: [{ type: 'title', title: '하나' }] } })).result;
+      window.BCCue.openCue(c.id); await wait(800); window.BCCue.addItem('title', { title: '둘' }); await wait(500);
+      const n1 = $$('#cueList .cue-item').length; document.body.focus(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })); await wait(600);
+      const n2 = $$('#cueList .cue-item').length; window.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', ctrlKey: true, bubbles: true })); await wait(600);
+      return { n1, n2, n3: $$('#cueList .cue-item').length };`);
+    ok(undo.n1 === 2 && undo.n2 === 1 && undo.n3 === 2, '큐 편집 실행 취소 (Ctrl+Z) · 다시 실행 (Ctrl+Y)', undo);
     ok(R.console.length === 0, '화면 오류(console) 없음', R.console);
   } catch (e) { R.fails.push('점검 중 오류: ' + String(e.stack).slice(0, 500)); }
   fs.writeFileSync(path.join(OUT, 'smoke.json'), JSON.stringify(R, null, 1));

@@ -556,7 +556,62 @@
         ${app.state.commentaries.map(c => `<tr><td>${esc(c.id)}</td><td><b>${esc(c.name)}</b></td><td>${c.entry_count.toLocaleString()}</td><td>${esc(c.source)}</td><td><button data-cdel="${esc(c.id)}">삭제</button></td></tr>`).join('')}</table>` : '<div class="note">설치된 주석서가 없습니다.</div>'}
       <div class="note" style="margin-top:6px">EPUB 주석서를 가져오면 본문 속 "1:1 태초에." 같은 절 표시를 찾아 절 단위로 나눕니다. 스캔본을 글자로 바꾼 책은 오타·단 섞임이 남을 수 있습니다.</div>
       <div class="row-flex" style="margin:10px 0"><input type="file" id="cFile" accept=".epub"><span id="cBusy" class="note"></span></div>
-      <div id="cReport"></div>`;
+      <div id="cReport"></div>
+      <h4 style="color:var(--hl);margin-top:22px">여러 PC 동기화</h4>
+      <div class="note">원드라이브·구글 드라이브처럼 PC 사이에 맞춰지는 폴더를 고르면 <b>찬양 라이브러리 · 큐시트 · 오버레이</b>를 그 폴더의 파일(WorshipCue-sync.json)로 주고받습니다.
+        집에서 준비하고 교회 PC 에서 띄우는 용도. 같은 항목은 더 최근에 고친 쪽을 씁니다. 시작할 때 읽고, 바뀌면 1분 안에 씁니다.</div>
+      <div class="row-flex" style="margin:8px 0"><input type="text" id="syDir" placeholder="예: D:\\OneDrive\\WorshipCue" style="width:360px"><button id="syPick">📁 폴더 고르기…</button><button id="sySet" class="primary">저장</button><button id="syNow">지금 동기화</button><button id="syOff">끄기</button></div>
+      <div id="syInfo" class="note"></div>
+      <h4 style="color:var(--hl);margin-top:22px">자동 백업</h4>
+      <div class="note">하루 한 번 찬양·큐시트·기록이 든 DB 와 설정을 <b>데이터 폴더\\backups</b> 에 복사합니다 (10일치). 되돌리면 다음에 다시 시작할 때 적용되고, 지금 것은 bible.pre-restore.db 로 남습니다.</div>
+      <div class="row-flex" style="margin:8px 0"><button id="bkNow">지금 백업</button><button id="bkOpen">📂 백업 폴더 열기</button><span id="bkMsg" class="note"></span></div>
+      <div id="bkList"></div>`;
+    // ---- 동기화
+    const syDraw = async () => {
+      const r = await cmd('syncInfo');
+      if (!r.ok) return;
+      const i = r.result;
+      $('#syDir').value = i.dir || '';
+      const t = s => (s ? s.replace('T', ' ').slice(0, 16) : '—');
+      $('#syInfo').innerHTML = i.dir ? `${i.error ? `<span class="err-text">${esc(i.error)}</span><br>` : ''}파일: ${i.exists ? `있음 (${t(i.fileAt)})` : '아직 없음'} · 마지막으로 읽음 ${t(i.lastImport)} · 씀 ${t(i.lastExport)}${i.remoteHost ? ` · 마지막에 쓴 PC: <b>${esc(i.remoteHost)}</b> (${t(i.remoteAt)})` : ''} · 이 PC: ${esc(i.host)}` : '동기화 안 함';
+    };
+    syDraw();
+    $('#syPick').onclick = async () => { const r = await cmd('pickFolder', { title: '동기화 폴더 고르기' }); if (r.ok && r.result) $('#syDir').value = r.result; };
+    const sySet = async dir => {
+      const r = await cmd('setSyncDir', { dir });
+      if (!r.ok) return app.showMsg(r.error, 'error', 4000);
+      const g = r.result.got;
+      app.showMsg(dir ? (g && !g.none ? `동기화 켬 — 찬양 ${g.songs} · 큐시트 ${g.cues} 받음` : '동기화 켬 — 이 PC 의 내용을 폴더에 썼습니다') : '동기화를 껐습니다.', 'ok', 3000);
+      syDraw();
+    };
+    $('#sySet').onclick = () => sySet($('#syDir').value.trim());
+    $('#syOff').onclick = () => sySet('');
+    $('#syNow').onclick = async () => {
+      const r = await cmd('syncNow');
+      if (!r.ok) return app.showMsg(r.error, 'error', 4000);
+      app.showMsg(`동기화 — 찬양 ${r.result.got.songs} · 큐시트 ${r.result.got.cues} 받음, 찬양 ${r.result.put.songs} · 큐시트 ${r.result.put.cues} 씀`, 'ok', 3000);
+      syDraw();
+    };
+    // ---- 백업
+    const bkDraw = async () => {
+      const r = await cmd('backups');
+      if (!r.ok) return;
+      const { list, pending } = r.result;
+      $('#bkList').innerHTML = (pending ? `<div class="warn-text note">되돌리기가 예약되어 있습니다 — 다시 시작하면 적용됩니다. <button id="bkCancel">예약 취소</button></div>` : '')
+        + (list.length ? `<table class="list"><tr><th>날짜</th><th>크기</th><th></th></tr>${list.map(b => `<tr><td>${esc(b.day)}</td><td>${(b.size / 1048576).toFixed(1)} MB</td><td><button data-restore="${esc(b.day)}">이 백업으로 되돌리기…</button></td></tr>`).join('')}</table>` : '<div class="note">아직 백업이 없습니다 (시작 20초 뒤에 하루 한 번 만듭니다).</div>');
+      $('#bkList').querySelectorAll('[data-restore]').forEach(b => b.onclick = async () => {
+        if (!confirm(`${b.dataset.restore} 백업으로 되돌릴까요?\n\n그 뒤에 고친 찬양·큐시트·기록은 사라집니다 (지금 것은 bible.pre-restore.db 로 남김). 다시 시작하면 적용됩니다.`)) return;
+        const x = await cmd('restoreBackup', { day: b.dataset.restore });
+        if (!x.ok) return app.showMsg(x.error, 'error', 4000);
+        app.showMsg('되돌리기를 예약했습니다. 프로그램을 다시 시작하세요.', 'ok', 5000);
+        bkDraw();
+      });
+      const c = $('#bkCancel');
+      if (c) c.onclick = async () => { await cmd('cancelRestore'); bkDraw(); };
+    };
+    bkDraw();
+    $('#bkNow').onclick = async () => { const r = await cmd('backupNow'); if (!r.ok) return app.showMsg(r.error, 'error', 4000); app.showMsg('백업했습니다: ' + r.result.day, 'ok', 2000); bkDraw(); };
+    $('#bkOpen').onclick = async () => { const r = await cmd('backups'); if (r.ok) cmd('openPath', { path: r.result.dir }); };
     $('#setBody').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       if (!confirm(`'${b.dataset.del}' 번역본을 삭제할까요? 되돌릴 수 없습니다.`)) return;
       const x = await cmd('deleteVersion', { id: b.dataset.del });

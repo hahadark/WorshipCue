@@ -13,6 +13,10 @@
     {
       "from": "data-personal/새찬송가.hdb",
       "to": "새찬송가.hdb"
+    },
+    {
+      "from": "data-personal/새찬송가.cmp",
+      "to": "새찬송가.cmp"
     }
   ],
   "win": {

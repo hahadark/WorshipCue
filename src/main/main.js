@@ -279,6 +279,9 @@ if (!app.requestSingleInstanceLock()) {
 
     setupUpdater(core); // 자동 업데이트 (설치판) · 새 버전 알림 (포터블·맥)
     setupTelemetry(core); // 익명 사용 통계 (하루 한 번, 설정에서 끄기)
+    core.sync.start(); // 여러 PC 동기화 (설정한 폴더가 있을 때)
+    const bk = setTimeout(() => { try { core.sync.backupDaily(); } catch (e) { core.logger.warn('자동 백업 실패: ' + e.message); } }, 20000); // 하루 한 번 백업
+    if (bk.unref) bk.unref();
     core.desktop = {
       listDisplays, status, setOutput,
       globalShortcutStatus: () => globalStatus,
@@ -288,6 +291,7 @@ if (!app.requestSingleInstanceLock()) {
         return r.canceled || !r.filePaths.length ? '' : r.filePaths[0];
       },
       downloadsDir: app.getPath('downloads'),
+      openPath: p => shell.openPath(p),
       // API 키 같은 비밀값: Windows 보호(DPAPI)로 암호화
       canEncrypt: () => safeStorage.isEncryptionAvailable(),
       encrypt: s => safeStorage.encryptString(String(s)).toString('base64'),
@@ -382,7 +386,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
-    if (core) { core.settings.saveNow(); core.logger.info('WorshipCue 종료'); core.store.close(); }
+    if (core) { try { core.sync.stop(); } catch { /* 무시 */ } core.settings.saveNow(); core.logger.info('WorshipCue 종료'); core.store.close(); }
   });
   process.on('uncaughtException', e => { try { core && core.logger.error('예외: ' + (e && e.stack || e)); } catch { /* 무시 */ } });
   app.on('window-all-closed', () => app.quit());

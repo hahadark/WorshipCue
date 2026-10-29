@@ -773,6 +773,79 @@ test('채팅 AI (키 없이): 프롬프트·샘플, 붙여 넣은 답 → 큐시
   assert.match(bad.error, /JSON/);
 });
 
+test('사용 기록: 송출하면 남고, 5분 안 같은 것은 한 번, 제목별 횟수·CSV', () => {
+  const core = newCore('usage');
+  const passage = (title, extra = {}) => ({ title, versionId: 'test', versionName: '테스트역', query: title, ...extra });
+  const slides = [{ kind: 'text', ref: 'x', label: '', parts: [{ text: '가사' }] }];
+  const cue = core.command('saveCue', { cue: { name: '주일 예배', items: [{ type: 'song', title: '은혜 아니면', credit: '작사 홍길동' }] } }).result;
+  core.command('sendLive', { passage: passage('은혜 아니면', { cueId: cue.id, cueIndex: 0, itemTitle: '은혜 아니면', itemType: 'song', credit: '작사 홍길동' }), slides, index: 0 });
+  core.command('sendLive', { passage: passage('은혜 아니면', { cueId: cue.id, cueIndex: 0, itemTitle: '은혜 아니면', itemType: 'song', credit: '작사 홍길동' }), slides, index: 0 }); // 5분 안 → 한 번만
+  core.command('sendLive', { passage: passage('요한복음 3:16', { book: { id: 43, name: '요한복음', short: '요' } }), slides, index: 0 });
+  const r = core.command('usageLog', {}).result;
+  assert.deepEqual(r.rows.map(x => [x.kind, x.title, x.credit, x.cue]), [['bible', '요한복음 3:16', '', ''], ['song', '은혜 아니면', '작사 홍길동', '주일 예배']]);
+  assert.deepEqual(core.command('usageLog', { kinds: ['song'] }).result.summary.map(s => [s.title, s.count]), [['은혜 아니면', 1]]);
+  const today = new Date().toISOString().slice(0, 10);
+  assert.equal(core.command('usageLog', { from: '2000-01-01', to: '2000-12-31' }).result.rows.length, 0);
+  assert.equal(core.command('usageLog', { from: today, to: today }).result.rows.length, 2);
+  const csv = core.command('usageCsv', { kinds: ['song'], mode: 'summary' }).result;
+  assert.match(csv.csv, /^﻿종류,제목,저작권·출처,횟수/);
+  assert.match(csv.csv, /찬양,은혜 아니면,작사 홍길동,1,/);
+  assert.match(csv.name, /사용기록-제목별/);
+  assert.equal(core.command('clearUsageLog', {}).result.removed, 2);
+  core.store.close();
+});
+
+test('여러 PC 동기화: 한쪽에서 쓴 찬양·큐시트를 다른 쪽이 받고, 최신 수정이 이긴다', () => {
+  const dir = path.join(tmp, 'sync-folder');
+  const a = newCore('syncA');
+  const b = newCore('syncB');
+  const song = a.command('saveSong', { song: { title: '은혜 아니면', lyrics: '가사 A' } }).result;
+  const cue = a.command('saveCue', { cue: { name: '주일 예배', items: [{ type: 'title', title: '묵도' }] } }).result;
+  const ra = a.command('setSyncDir', { dir });
+  assert.equal(ra.ok, false); // 없는 폴더
+  fs.mkdirSync(dir, { recursive: true });
+  assert.equal(a.command('setSyncDir', { dir }).ok, true);
+  assert.ok(fs.existsSync(path.join(dir, 'WorshipCue-sync.json')));
+  // B: 폴더를 설정하면 받는다
+  const rb = b.command('setSyncDir', { dir }).result;
+  assert.equal(rb.got.songs, 1); assert.equal(rb.got.cues, 1);
+  assert.equal(b.command('getSong', { id: song.id }).result.lyrics, '가사 A');
+  assert.equal(b.command('getCue', { id: cue.id }).result.name, '주일 예배');
+  // B 가 고치고 씀 → A 가 받음 (B 쪽이 최신)
+  b.command('saveSong', { song: { ...song, lyrics: '가사 B' } });
+  assert.equal(b.sync.exportIfChanged(), true);
+  assert.equal(a.command('syncNow').result.got.songs, 1);
+  assert.equal(a.command('getSong', { id: song.id }).result.lyrics, '가사 B');
+  // 다시 읽어도 같은 것은 받지 않는다
+  assert.equal(a.sync.importNow().songs, 0);
+  // 끄기
+  assert.equal(a.command('setSyncDir', { dir: '' }).result.dir, '');
+  a.store.close(); b.store.close();
+});
+
+test('자동 백업과 되돌리기: 백업 파일이 생기고, 예약한 되돌리기는 다음 시작 때 적용', () => {
+  const name = 'backup';
+  let core = newCore(name);
+  core.command('saveSong', { song: { title: '백업 전 찬양', lyrics: '가사' } });
+  const b = core.command('backupNow').result;
+  assert.match(b.day, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(fs.existsSync(b.db) && b.size > 0);
+  assert.equal(core.command('backups').result.list.length, 1);
+  assert.equal(core.sync.backupDaily(), null); // 오늘 것이 있으면 안 만든다
+  const after = core.command('saveSong', { song: { title: '백업 뒤 찬양', lyrics: '가사' } }).result;
+  assert.equal(core.command('restoreBackup', { day: b.day }).result.restartNeeded, true);
+  assert.equal(core.command('backups').result.pending, true);
+  assert.equal(core.command('restoreBackup', { day: '1999-01-01' }).ok, false);
+  core.store.close();
+  // 다시 시작 → 백업 상태로
+  core = new WorshipCueCore({ dataDir: path.join(tmp, name) });
+  assert.equal(core.command('getSong', { id: after.id }).ok, false);
+  assert.equal(core.command('listSongs', { query: '백업 전' }).result.length, 1);
+  assert.ok(fs.existsSync(path.join(tmp, name, 'bible.pre-restore.db')));
+  assert.equal(core.command('backups').result.pending, false);
+  core.store.close();
+});
+
 test('규칙으로 바로 (AI 없이): 붙여 넣은 예배 순서 → 큐시트', () => {
   const { parseOrderText, planToCue } = require('../src/core/bulletin');
   const { looksLikeReference } = require('../src/core/parser');

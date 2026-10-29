@@ -60,6 +60,8 @@ function validatePassage(p) {
     // 큐시트에서 보낸 경우: 어느 큐시트의 몇 번째 항목인지
     cueId: p.cueId ? String(p.cueId) : '',
     cueIndex: Number.isInteger(p.cueIndex) ? p.cueIndex : -1,
+    itemType: String(p.itemType || '').slice(0, 20), // 순서 종류 (song · hymn · …) — 사용 기록용
+    credit: String(p.credit || '').slice(0, 300), // 저작권·출처 — 사용 기록용
     itemTitle: String(p.itemTitle || ''),
     note: String(p.note || '').slice(0, 1000), // 큐시트 순서 메모 (무대 화면에 보임)
     // 이 순서에만 쓰는 템플릿 (비우면 출력의 기본 템플릿)
