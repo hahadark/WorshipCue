@@ -9,7 +9,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const app = window.BC;
   const cmd = (...a) => app.cmd(...a);
-  const ICON = { camera: '📷', slideshow: '🎞', video: '🎬', audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
+  const ICON = new Proxy({}, { get: (_, t) => window.BCIcon.type(t) }); // 종류별 아이콘 (svg)
   const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
   const S = { view: 'all', sort: 'date', q: '', sel: '', checked: new Set(), list: [], trash: [] };
   try { Object.assign(S, JSON.parse(localStorage.getItem('wc-cuemgr') || '{}'), { checked: new Set(), sel: '' }); } catch { /* 처음 */ }

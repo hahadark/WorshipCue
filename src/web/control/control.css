@@ -923,3 +923,144 @@ html[lang="en"] .cm-form { grid-template-columns: 110px 1fr; }
 .bc-cam-frozen { position: relative; cursor: pointer; }
 .bc-cam-frozen canvas { display: block; }
 .bc-cam-frozen-tag { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); background: rgba(0,0,0,.6); color: #fff; font-size: 12px; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+
+/* ================= 조작 화면 디자인 정돈 (1.11) =================
+ * 한 벌의 선 아이콘(Lucide) · 8px 간격 · 단추 등급(기본/주요/아이콘) · 얇은 스크롤바 · 묶음 칸(hgroup)
+ * 위쪽 규칙보다 뒤에 두어 우선 적용된다. */
+:root { --radius: 6px; --radius-lg: 10px; --shadow: 0 12px 32px rgba(0,0,0,.45), 0 1px 3px rgba(0,0,0,.3); --ctl-h: 34px; }
+html[data-theme="light"] { --shadow: 0 12px 32px rgba(20,30,50,.18), 0 1px 3px rgba(20,30,50,.12); }
+
+/* 아이콘 */
+.ic { width: 1.15em; height: 1.15em; flex: none; vertical-align: -0.22em; }
+button > .ic:first-child, .mb-item .ic, .view-tabs .ic { margin-right: .4em; }
+.ic-end { margin-left: .3em; margin-right: 0 !important; }
+.icon-btn { display: inline-grid; place-items: center; width: var(--ctl-h); height: var(--ctl-h); padding: 0; }
+.icon-btn .ic { margin: 0; width: 18px; height: 18px; }
+.ic-lg { width: 1.4em; height: 1.4em; }
+
+/* 얇은 스크롤바 (Windows 기본 막대 대신) */
+* { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--line2); border: 3px solid transparent; background-clip: padding-box; border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted2); background-clip: padding-box; }
+*::-webkit-scrollbar-track, *::-webkit-scrollbar-corner { background: transparent; }
+
+/* 단추 등급 */
+button { display: inline-flex; align-items: center; justify-content: center; gap: 2px; line-height: 1.3; transition: background .12s ease, border-color .12s ease, color .12s ease; }
+button:active { transform: translateY(0.5px); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.primary:hover { background: color-mix(in srgb, var(--accent) 85%, #fff); border-color: color-mix(in srgb, var(--accent) 85%, #fff); }
+button.ghost { background: transparent; border-color: transparent; }
+button.ghost:hover { background: var(--hover); border-color: transparent; }
+select { padding-right: 24px; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 13px) 55%, calc(100% - 9px) 55%; background-size: 4px 4px; background-repeat: no-repeat; }
+select:hover { border-color: var(--line2); }
+
+/* 분절 탭(view-tabs): 고른 것은 또렷하게 */
+.view-tabs { display: inline-flex; }
+.view-tabs button { display: inline-flex; align-items: center; margin: 0; }
+.view-tabs button + button { margin-left: -1px; }
+.view-tabs button.on { background: var(--sel); border-color: var(--line2); color: var(--text); font-weight: 600; position: relative; z-index: 1; }
+
+/* 상단: 로고 · 검색 · 묶음 칸 */
+.top { gap: 10px; padding: 8px 12px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; margin-right: 2px; color: var(--text); font-weight: 700; letter-spacing: .2px; user-select: none; }
+.brand-mark { width: 26px; height: 26px; flex: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+.brand-name b { color: var(--hl); font-weight: 800; }
+.search-wrap .search-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; width: 18px; height: 18px; margin: 0; }
+#q { font-size: 17px; padding: 8px 12px 8px 38px; border-width: 1px; height: 40px; border-radius: 8px; }
+#q:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.hgroup { display: inline-flex; align-items: stretch; height: var(--ctl-h); border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); overflow: hidden; }
+.hgroup:hover { border-color: var(--line2); }
+.hgroup select { border: 0; border-radius: 0; height: 100%; background-color: transparent; }
+.hgroup select + select { border-left: 1px solid var(--line); }
+.hgroup select:focus-visible { outline-offset: -2px; }
+.ws-pick { padding-left: 8px; gap: 2px; align-items: center; color: var(--muted); }
+.ws-pick .ic { width: 16px; height: 16px; margin: 0; }
+.ws-pick select { max-width: 150px; }
+.studio { height: var(--ctl-h); white-space: nowrap; }
+.studio.on { border-color: var(--pv); color: var(--ok-text); background: var(--pv-bg); }
+#btnStudio { font-weight: 600; }
+
+/* 메뉴바 */
+.menubar { padding: 3px 6px; gap: 0; }
+.mb-top { padding: 4px 11px; font-weight: 500; }
+.mb-drop { min-width: 290px; padding: 6px; border-radius: 8px; box-shadow: var(--shadow); }
+.mb-item { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 9px; padding: 6px 10px 6px 8px; width: 100%; }
+.mb-item > span { text-align: left; white-space: nowrap; }
+.mb-ic { display: grid; place-items: center; color: var(--muted); font-style: normal; }
+.mb-ic .ic { width: 16px; height: 16px; margin: 0; }
+.mb-item:hover .mb-ic, .mb-item.on .mb-ic { color: var(--text); }
+.mb-item kbd { margin-left: 12px; border: 0; background: transparent; font-size: 11px; padding: 0; }
+.mb-arrow { display: grid; color: var(--muted); }
+.mb-arrow .ic { width: 14px; height: 14px; margin: 0; }
+.mb-head { padding: 6px 10px 2px; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .4px; }
+.mb-sep { margin: 5px 4px; }
+
+/* 큐시트: 순서 넣기 단추 · 도움말 */
+.cue-add { gap: 5px; padding: 8px; }
+.cue-add button { padding: 6px 4px; font-size: 12px; gap: 0; white-space: nowrap; }
+.cue-add button .ic { width: 15px; height: 15px; margin-right: 5px; color: var(--muted); }
+.cue-add button:hover .ic { color: var(--text); }
+.cue-add .cue-more .ic-end { width: 13px; height: 13px; margin-left: 2px; }
+.cue-help { font-size: 11.5px; color: var(--muted2); padding: 0 10px 8px; }
+.cue-ico { display: grid; place-items: center; width: 22px; height: 22px; color: var(--muted); flex: none; }
+.cue-ico .ic { width: 16px; height: 16px; margin: 0; }
+.cue-item.sel .cue-ico, .cue-item.pv .cue-ico { color: var(--text2); }
+.cue-item.air .cue-ico { color: var(--danger-text); }
+.ce-ico { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; background: var(--sunken); color: var(--hl); }
+.ce-ico .ic { width: 16px; height: 16px; margin: 0; }
+.cm-ico { display: inline-grid; place-items: center; width: 1.5em; vertical-align: -0.25em; color: var(--muted); }
+.cm-ico .ic { margin: 0; }
+
+/* 라이브러리 탭 */
+.lib-tabs { gap: 2px; padding: 8px 8px 0; flex-wrap: wrap; }
+.lib-tabs button { padding: 4px 10px; font-size: 12.5px; }
+.lib-tabs button .ic { width: 14px; height: 14px; margin-right: 5px; color: var(--muted); }
+.lib-tabs button.on .ic { color: var(--hl); }
+
+/* 미리보기 · LIVE 머리 */
+.pane-head { gap: 8px; margin-bottom: 8px; }
+.badge { font-size: 11.5px; letter-spacing: .5px; padding: 2px 9px; border-radius: 4px; }
+.badge.onair { box-shadow: 0 0 0 1px color-mix(in srgb, var(--live) 50%, transparent), 0 0 10px color-mix(in srgb, var(--live) 45%, transparent); }
+.screen { border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,.35); }
+.dock-body .pane { scrollbar-gutter: stable; }
+.lv-layers .ly { gap: 5px; }
+.lv-layers .ly-ic { display: grid; color: var(--muted); }
+.lv-layers .ly-ic .ic { width: 14px; height: 14px; margin: 0; }
+.lv-layers .ly-on .ly-ic { color: var(--danger-text); }
+.status .st .ic { width: 14px; height: 14px; margin: 0 2px 0 0; }
+
+/* 아래 송출 줄 */
+.bottom { padding: 8px 12px; gap: 10px; }
+.ft-group { display: inline-flex; gap: 6px; align-items: center; }
+.big { height: 40px; padding: 0 16px; gap: 4px; }
+.big .ic { width: 18px; height: 18px; margin: 0 2px; }
+.big kbd { margin-left: 6px; }
+.big.send { background: var(--live); border-color: var(--live); color: #fff; font-weight: 700; padding-right: 14px; }
+.big.send:hover { background: color-mix(in srgb, var(--live) 85%, #fff); border-color: color-mix(in srgb, var(--live) 85%, #fff); }
+.big.send kbd { color: rgba(255,255,255,.8); border-color: rgba(255,255,255,.4); }
+.clear-group button { height: 40px; padding: 0 12px; }
+.output-toggle { gap: 6px; }
+.sep { height: 24px; }
+.status { gap: 14px; }
+
+/* 가운데 머리 줄 · 모달 */
+.center-head { padding: 8px 12px; gap: 8px; align-items: center; }
+#resultTitle { font-size: 15px; }
+.modal-box { border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+.modal-head { padding: 10px 16px; }
+.modal-head b { font-size: 15px; }
+#modalClose { width: 30px; height: 30px; padding: 0; border-radius: 6px; background: transparent; border-color: transparent; }
+#modalClose:hover { background: var(--hover); }
+.tabs button.on { font-weight: 600; }
+.quick-head { padding: 7px 12px; }
+.suggest { border-radius: 8px; box-shadow: var(--shadow); }
+/* 오른쪽 클릭 메뉴: 메뉴바와 같은 모양 (아이콘 칸 · 단축키) */
+.ctx { padding: 6px; box-shadow: var(--shadow); }
+.ctx-item { display: grid; grid-template-columns: 18px 1fr auto; gap: 9px; padding: 6px 10px 6px 8px; width: 100%; }
+.ctx-item > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctx-ic { display: grid; place-items: center; color: var(--muted); font-style: normal; }
+.ctx-ic .ic { width: 16px; height: 16px; margin: 0; }
+.ctx-item:hover .ctx-ic, .ctx-item.focus .ctx-ic { color: var(--text); }
+.ctx-head { color: var(--muted); letter-spacing: .4px; padding: 6px 10px 2px; }

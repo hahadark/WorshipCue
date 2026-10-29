@@ -58,7 +58,7 @@
   function init() {
     const tools = $('#panelLive .pane-tools');
     if (!tools) return;
-    tools.insertAdjacentHTML('beforeend', '<button id="drawBtn" title="LIVE 화면에 그리기·강조 — 예배당·OBS 화면에 같이 보입니다">✎ 그리기</button>');
+    tools.insertAdjacentHTML('beforeend', '<button id="drawBtn" title="LIVE 화면에 그리기·강조 — 예배당·OBS 화면에 같이 보입니다">' + window.BCIcon('brush') + '그리기</button>');
     tools.insertAdjacentHTML('afterend', bar());
     $('#lvScreen').insertAdjacentHTML('beforeend', '<div id="drawCap" class="draw-cap bc-keep" hidden></div>');
     $('#drawBtn').onclick = () => set(!S.on);

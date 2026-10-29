@@ -757,7 +757,9 @@
       <div class="note">프로그램은 성경 본문을 포함하지 않으며, 사용자가 사용 권한을 확인한 데이터를 가져와 사용합니다.<br>
         · 개역한글판은 대한성서공회 안내상 저작재산권 보호기간이 만료된 번역본입니다.<br>
         · 개역개정·새번역 등 보호 대상 번역본은 권리자의 사용 허가를 받은 뒤 사용하세요.<br>
-        · 온라인 영상 송출, 프로그램 재배포 등 사용 범위는 각 번역본의 이용 조건을 별도로 확인하세요.</div>`;
+        · 온라인 영상 송출, 프로그램 재배포 등 사용 범위는 각 번역본의 이용 조건을 별도로 확인하세요.</div>
+      <h4 style="color:var(--hl)">함께 쓰는 공개 라이브러리</h4>
+      <div class="note">dockview-core 8.4.0 (MIT) — 패널 배치 · qrcode-generator 2.0.4 (MIT) — 리모컨 QR 코드 · Lucide 아이콘 (ISC, lucide.dev) — 화면 아이콘</div>`;
     drawUpdate();
     cmd('updateStatus').then(r => { if (r.ok) { app.update = r.result; drawUpdate(); } });
   }

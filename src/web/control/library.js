@@ -11,7 +11,7 @@
   const cmd = (...a) => app.cmd(...a);
   const R = window.BCRender;
 
-  const TABS = [['songs', '찬양'], ['hymns', '찬송가·PPT'], ['images', '이미지·영상'], ['cameras', '📷 카메라'], ['audio', '음악'], ['overlays', '오버레이'], ['templates', '템플릿']];
+  const TABS = [['songs', '찬양', 'music'], ['hymns', '찬송가·PPT', 'music-2'], ['images', '이미지·영상', 'image'], ['cameras', '카메라', 'camera'], ['audio', '음악', 'volume-2'], ['overlays', '오버레이', 'layers'], ['templates', '템플릿', 'palette']];
   const st = { tab: 'songs', q: {}, rows: [], sel: 0, folder: { image: '', audio: '' } };
   let searchTimer = null;
 
@@ -19,7 +19,7 @@
 
   function init() {
     const el = root();
-    el.innerHTML = `<div class="lib-tabs view-tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${k === st.tab ? 'on' : ''}">${l}</button>`).join('')}</div>
+    el.innerHTML = `<div class="lib-tabs view-tabs">${TABS.map(([k, l, ic]) => `<button data-tab="${k}" class="${k === st.tab ? 'on' : ''}">${window.BCIcon(ic)}${l}</button>`).join('')}</div>
       <div class="lib-bar"></div>
       <div class="lib-body" tabindex="0"></div>
       <div class="lib-player" hidden></div>`;
@@ -87,7 +87,7 @@
 
   // ---------------- 찬양 ----------------
   async function drawSongs() {
-    bar(`<input type="text" data-q style="flex:1"><button data-new title="새 찬양 가사 입력">＋ 새 찬양</button><button data-web title="벅스 · 지니 · 멜론에서 가사를 찾아 찬양 슬라이드로 (한 곡씩)">🌐 가사 찾기</button><button data-import title="파일 · 폴더 통째로 · 여러 곡 붙여넣기 (파일·폴더를 이 탭에 끌어다 놓아도 됩니다)">📥 가져오기 ▾</button>`);
+    bar(`<input type="text" data-q style="flex:1"><button data-new title="새 찬양 가사 입력">${window.BCIcon('plus')}새 찬양</button><button data-web title="벅스 · 지니 · 멜론에서 가사를 찾아 찬양 슬라이드로 (한 곡씩)">${window.BCIcon('globe')}가사 찾기</button><button data-import title="파일 · 폴더 통째로 · 여러 곡 붙여넣기 (파일·폴더를 이 탭에 끌어다 놓아도 됩니다)">${window.BCIcon('download')}가져오기 ▾</button>`);
     root().querySelector('[data-new]').onclick = () => editSong(null);
     root().querySelector('[data-web]').onclick = () => webLyrics(st.q.songs || '');
     root().querySelector('[data-import]').onclick = e => {

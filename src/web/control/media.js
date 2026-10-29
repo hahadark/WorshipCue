@@ -18,7 +18,7 @@
     if (!el) return;
     el.innerHTML = `<div class="md">
       <div class="md-now" id="mdNow"></div>
-      <div class="md-bar"><span class="view-tabs" id="mdTabs"><button data-mt="video" class="on">🎬 영상</button><button data-mt="audio">🔊 음악</button></span>
+      <div class="md-bar"><span class="view-tabs" id="mdTabs"><button data-mt="video" class="on">${window.BCIcon('clapperboard')}영상</button><button data-mt="audio">${window.BCIcon('volume-2')}음악</button></span>
         <input type="text" id="mdQ" placeholder="파일 이름으로 찾기" style="flex:1"><button id="mdFolders" title="라이브러리 폴더 등록·빼기">폴더…</button></div>
       <div class="md-list" id="mdList"></div></div>`;
     $('#mdTabs').onclick = e => { const b = e.target.closest('[data-mt]'); if (!b) return; st.tab = b.dataset.mt; $('#mdTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); load(); };

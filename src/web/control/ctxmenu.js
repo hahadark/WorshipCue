@@ -11,7 +11,8 @@
   const Cue = () => window.BCCue;
   const act = name => () => app.runAction && app.runAction(name);
   const click = sel => () => { const el = $(sel); if (el) el.click(); };
-  const TYPES = [['hymn', '🎼 찬송가·PPT'], ['bible', '📖 성경'], ['song', '🎵 찬양'], ['text', '📢 공지'], ['title', '🏷 제목'], ['image', '🖼 이미지'], ['video', '🎬 영상'], ['slideshow', '🎞 슬라이드쇼'], ['camera', '📷 카메라'], ['audio', '🔊 음악'], ['blank', '⬛ 빈 화면']];
+  const TYPES = [['hymn', '찬송가·PPT'], ['bible', '성경'], ['song', '찬양'], ['text', '공지'], ['title', '제목'], ['image', '이미지'], ['video', '영상'], ['slideshow', '슬라이드쇼'], ['camera', '카메라'], ['audio', '음악'], ['blank', '빈 화면']];
+  const TIC = t => window.BCIcon && window.BCIcon.type ? ({ hymn: 'music-2', bible: 'book-open', song: 'music', text: 'megaphone', title: 'tag', image: 'image', video: 'clapperboard', slideshow: 'images', camera: 'camera', audio: 'volume-2', blank: 'square' })[t] : '';
   const EDITABLE = ['song', 'text', 'title', 'bible', 'hymn', 'image', 'video', 'slideshow', 'camera', 'blank'];
   let el = null;
   let items = [];
@@ -38,7 +39,7 @@
     }
     el.innerHTML = items.map((it, k) => it === '-' ? '<div class="ctx-sep"></div>'
       : it.head ? `<div class="ctx-head">${esc(it.head)}</div>`
-        : `<button type="button" class="ctx-item ${it.danger ? 'danger' : ''}" data-k="${k}" ${it.disabled ? 'disabled' : ''} role="menuitem"><span>${esc(it.label)}</span>${it.key ? `<kbd>${esc(it.key)}</kbd>` : ''}</button>`).join('');
+        : `<button type="button" class="ctx-item ${it.danger ? 'danger' : ''}" data-k="${k}" ${it.disabled ? 'disabled' : ''} role="menuitem"><i class="ctx-ic">${it.ic ? window.BCIcon(it.ic) : ''}</i><span>${esc(it.label)}</span>${it.key ? `<kbd>${esc(it.key)}</kbd>` : '<i></i>'}</button>`).join('');
     el.hidden = false;
     el.style.left = '0px'; el.style.top = '0px';
     const r = el.getBoundingClientRect();
@@ -71,8 +72,8 @@
       { label: '미리보기', key: '클릭', run: A('preview') },
       { label: '▶ 송출', key: '더블클릭', run: A('send') },
       '-',
-      { label: '✎ 편집칸에서 고치기', key: 'F2', run: A('edit') },
-      { label: '✎ 슬라이드 편집', key: 'Ctrl+E', run: () => window.BCSlideEdit && window.BCSlideEdit.open(i), disabled: !can },
+      { ic: 'pencil', label: '편집칸에서 고치기', key: 'F2', run: A('edit') },
+      { ic: 'square-pen', label: '슬라이드 편집', key: 'Ctrl+E', run: () => window.BCSlideEdit && window.BCSlideEdit.open(i), disabled: !can },
       { label: '제목 바꾸기…', run: A('rename') },
       { label: `메모${it.note ? ' 고치기' : ' 달기'}…`, run: A('note') },
       ...(Cue().timesOn() ? [{ label: '예정 시간…', run: A('duration') }] : []),
@@ -88,13 +89,13 @@
       { label: '지우기', key: 'Delete', run: A('del'), danger: true },
       '-',
       { head: '이 다음에 넣기' },
-      ...TYPES.map(([t, l]) => ({ label: l, run: () => Cue().itemAction(i, 'addAfter', t) })),
+      ...TYPES.map(([t, l]) => ({ label: l, ic: TIC(t), run: () => Cue().itemAction(i, 'addAfter', t) })),
     ];
   }
   function cueEmptyMenu() {
     return [
       { head: '순서 넣기' },
-      ...TYPES.map(([t, l]) => ({ label: l, run: click(`#cueAdd [data-add="${t}"]`) })),
+      ...TYPES.map(([t, l]) => ({ label: l, ic: TIC(t), run: click(`#cueAdd [data-add="${t}"]`) })),
       '-',
       { label: '🤖 주보로 큐시트 만들기…', run: () => window.BCAI && window.BCAI.open() },
       { label: '큐시트 관리 (새로·복제·내보내기)…', run: click('#cueMenu') },
@@ -117,12 +118,12 @@
       { label: '미리보기', key: '클릭', run: () => app.setPreviewIndex(k) },
       { label: '▶ 바로 송출', key: '더블클릭', run: async () => { app.setPreviewIndex(k); await app.sendPreview(); } },
       '-',
-      { label: '✎ 이 슬라이드 편집', key: 'Ctrl+E', run: () => window.BCSlideEdit.openPreviewSlide(k), disabled: !(it && EDITABLE.includes(it.type)) },
+      { ic: 'square-pen', label: '이 슬라이드 편집', key: 'Ctrl+E', run: () => window.BCSlideEdit.openPreviewSlide(k), disabled: !(it && EDITABLE.includes(it.type)) },
       ...(it && EDITABLE.includes(it.type) ? [
         { label: '＋ 이 다음에 새 슬라이드', run: () => window.BCSlideEdit.quickOp(k, 'add') },
         { label: '⧉ 이 슬라이드 복제', run: () => window.BCSlideEdit.quickOp(k, 'dup'), disabled: !['song', 'text', 'title'].includes(it.type) && !(s && s.xid) },
         { label: ['song', 'text', 'title'].includes(it.type) || (s && s.xid) ? '✕ 이 슬라이드 지우기' : '⊘ 이 슬라이드 건너뛰기', run: () => window.BCSlideEdit.quickOp(k, 'del'), danger: true }] : []),
-      ...(it ? [{ label: '✎ 이 순서 편집칸', key: 'F2', run: () => Cue().itemAction(p.cue.index, 'edit') }] : []),
+      ...(it ? [{ ic: 'pencil', label: '이 순서 편집칸', key: 'F2', run: () => Cue().itemAction(p.cue.index, 'edit') }] : []),
       ...(it && app.bgInfo && (app.bgInfo(p.cue.index).itemBg || app.bgInfo(p.cue.index).tpl) ? ['-', ...app.bgMenuItems(p.cue.index).filter(x => x !== '-' && !x.head && !/잠깐|다시 켜기|송출 배경/.test(x.label))] : []),
       '-', ...[['list', '목록'], ['grid', '격자'], ['all', '전체 격자 (모든 순서)'], ['alllist', '전체 목록 (모든 순서)']].filter(([v]) => !window.BCGrid || window.BCGrid.mode() !== v).map(([v, l]) => ({ label: l + ' 로 보기', run: click(`#slideView [data-sv="${v}"]`) })),
     ];
@@ -170,7 +171,7 @@
       '-',
       { label: '다음 순서 미리보기', key: 'Ctrl+↓', run: act('cueNext') },
       { label: '이전 순서 미리보기', key: 'Ctrl+↑', run: act('cuePrev') },
-      ...(app.preview && app.preview.cue ? [{ label: '✎ 이 슬라이드 편집', key: 'Ctrl+E', run: () => window.BCSlideEdit.openPreviewSlide(app.preview.index) }] : []),
+      ...(app.preview && app.preview.cue ? [{ ic: 'square-pen', label: '이 슬라이드 편집', key: 'Ctrl+E', run: () => window.BCSlideEdit.openPreviewSlide(app.preview.index) }] : []),
       '-',
       { label: '미리보기 끄기 (바로 송출)', run: click('#btnStudio') },
     ];
@@ -187,7 +188,7 @@
       { label: '🖥 무대 화면 창 열기', run: () => window.open('/outputs/stage?window=1', 'wc-stage', 'width=1280,height=720') },
       { label: '송출 기록', key: 'Ctrl+H', run: act('openHistory') },
       '-',
-      { label: window.BCDraw && window.BCDraw.isOn() ? '✎ 그리기 끝' : '✎ 화면에 그리기·강조', run: () => window.BCDraw && window.BCDraw.toggle() },
+      { ic: 'brush', label: window.BCDraw && window.BCDraw.isOn() ? '그리기 끝' : '화면에 그리기·강조', run: () => window.BCDraw && window.BCDraw.toggle() },
       { label: '그린 것 지우기', run: () => app.cmd('drawClear'), disabled: !(app.drawState && ((app.drawState.strokes || []).length || app.drawState.spot)) },
     ];
   }

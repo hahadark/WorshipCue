@@ -13,22 +13,28 @@
 </head>
 <body>
 <header class="top">
-  <div class="brand">WorshipCue</div>
+  <div class="brand" title="WorshipCue">
+    <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a93ff"/><stop offset=".55" stop-color="#3566e0"/><stop offset="1" stop-color="#1e3f9e"/></linearGradient><linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd25a"/><stop offset="1" stop-color="#f0a21a"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bg1)"/><rect x="12.5" y="16.4" width="25" height="5.2" rx="2.6" fill="#fff"/><rect x="12.5" y="29.4" width="25" height="5.2" rx="2.6" fill="#fff" opacity=".62"/><rect x="12.5" y="42.4" width="25" height="5.2" rx="2.6" fill="#fff" opacity=".36"/><path d="M42 26.5 Q42 24.5 43.8 25.5 L52 30.6 Q53.6 31.6 52 32.6 L43.8 37.7 Q42 38.7 42 36.7 Z" fill="url(#bg2)"/></svg>
+    <span class="brand-name">Worship<b>Cue</b></span>
+  </div>
   <div class="search-wrap">
+    <i class="search-ic" data-icon="search"></i>
     <input id="q" type="text" autocomplete="off" spellcheck="false"
       placeholder="검색 — 요3:16 · 사랑 · 31장 · 찬양 제목 · 이미지 이름   (Ctrl+K)">
     <div id="suggest" class="suggest" hidden></div>
   </div>
-  <select id="mode" title="검색 방식">
-    <option value="auto">자동</option>
-    <option value="reference">장절</option>
-    <option value="text">본문</option>
-  </select>
-  <select id="version" title="성경 번역본"></select>
-  <select id="version2" title="병행 번역본: 두 번역을 함께 송출 (예: 개역개정 + NIV)"></select>
+  <div class="hgroup" title="성경 검색: 방식 · 번역본 · 병행 번역본">
+    <select id="mode" title="검색 방식">
+      <option value="auto">자동</option>
+      <option value="reference">장절</option>
+      <option value="text">본문</option>
+    </select>
+    <select id="version" title="성경 번역본"></select>
+    <select id="version2" title="병행 번역본: 두 번역을 함께 송출 (예: 개역개정 + NIV)"></select>
+  </div>
   <button id="btnStudio" class="studio on" title="미리보기를 끄면 클릭한 본문·순서가 바로 송출됩니다 (OBS 스튜디오 모드 끄기와 같음)">미리보기 켜짐</button>
-  <label class="ws-pick" title="작업공간: 상황별 패널 배치 (Ctrl+Alt+1~9)"><span>작업공간</span><select id="wsSel"></select></label>
-  <button id="btnSettings" title="설정">⚙</button>
+  <label class="ws-pick hgroup" title="작업공간: 상황별 패널 배치 (Ctrl+Alt+1~9)"><i class="ws-ic" data-icon="layout-panel-left"></i><select id="wsSel"></select></label>
+  <button id="btnSettings" class="icon-btn" title="설정 (Ctrl+,)"><i data-icon="settings"></i></button>
 </header>
 <div id="msg" class="msg" hidden></div>
 <div id="conn" class="conn" hidden>프로그램 코어와 연결이 끊겼습니다. 다시 연결하는 중…</div>
@@ -44,14 +50,14 @@
     <div id="cuePanel" class="cue-panel">
       <div class="cue-head">
         <select id="cueSel" title="큐시트 고르기" data-noi18n></select>
-        <button id="cueMenu" title="큐시트 관리: 새로 만들기 · 다음 주로 복제 · 서식 · 메모 · 내보내기·가져오기 · 휴지통">📋</button>
+        <button id="cueMenu" title="큐시트 관리: 새로 만들기 · 다음 주로 복제 · 서식 · 메모 · 내보내기·가져오기 · 휴지통" class="icon-btn"><i data-icon="folder-open"></i></button>
       </div>
       <!-- 예배 진행 시계: 시작 시각 · 지금 순서 · 늦음/이름 -->
       <div id="cueClock" class="cue-clock"></div>
       <div id="cueList" class="cue-list" tabindex="0"></div>
       <div class="cue-add" id="cueAdd">
-        <button data-add="hymn" title="찬송가·교독문·찬양 PPT (폴더 검색 · 온라인에서 찾기)">🎼 찬송가·PPT</button><button data-add="bible">📖 성경</button><button data-add="song">🎵 찬양</button><button data-add="weblyrics" title="웹(벅스·지니·멜론)에서 가사를 찾아 찬양 순서로 넣기 (Ctrl+L)">🌐 가사</button>
-        <button data-add="text">📢 공지</button><button data-add="title">🏷 제목</button><button type="button" class="cue-more" title="이미지 · 영상 · 음악 · 슬라이드쇼 · 카메라 · 빈 화면">＋ 더보기 ▾</button>
+        <button data-add="hymn" title="찬송가·교독문·찬양 PPT (폴더 검색 · 온라인에서 찾기)"><i data-icon="music-2"></i>찬송가·PPT</button><button data-add="bible"><i data-icon="book-open"></i>성경</button><button data-add="song"><i data-icon="music"></i>찬양</button><button data-add="weblyrics" title="웹(벅스·지니·멜론)에서 가사를 찾아 찬양 순서로 넣기 (Ctrl+L)"><i data-icon="globe"></i>가사</button>
+        <button data-add="text"><i data-icon="megaphone"></i>공지</button><button data-add="title"><i data-icon="tag"></i>제목</button><button type="button" class="cue-more" title="이미지 · 영상 · 음악 · 슬라이드쇼 · 카메라 · 빈 화면"><i data-icon="plus"></i>더보기<i data-icon="chevron-down" class="ic-end"></i></button>
         <span class="ft-hidden"><button data-add="image">🖼 이미지</button><button data-add="video">🎬 영상</button><button data-add="audio">🔊 음악</button><button data-add="slideshow">🎞 슬라이드쇼</button><button data-add="camera">📷 카메라</button><button data-add="blank">⬛ 빈 화면</button></span>
       </div>
       <div class="cue-help">클릭 = 미리보기 (화면에는 안 나감) · ← → 로 고르고 Enter(F9) = 송출 · Ctrl+↑↓ = 이전/다음 · 끌어서 순서 바꾸기</div>
@@ -159,9 +165,9 @@
 
 <footer class="bottom">
   <span class="ft-group ft-nav">
-  <button id="bPrev" class="big">◀ 이전 <kbd>F5</kbd></button>
-  <button id="bNext" class="big">다음 ▶ <kbd>F6</kbd></button>
-  <button id="bSend" class="big send">송출 <kbd>F9</kbd></button>
+  <button id="bPrev" class="big"><i data-icon="skip-back"></i>이전 <kbd>F5</kbd></button>
+  <button id="bNext" class="big">다음 <i data-icon="skip-forward"></i><kbd>F6</kbd></button>
+  <button id="bSend" class="big send"><i data-icon="play"></i>송출 <kbd>F9</kbd></button>
   </span>
   <span class="ft-group clear-group" title="지우기: 필요한 층만 골라 지웁니다">
   <button id="bClear" title="글자(슬라이드)만 숨기기·다시 보이기 (F10)">글자 숨김 <kbd>F10</kbd></button>
@@ -183,6 +189,7 @@
 </div>
 
 <script src="/shared/vendor/dockview-core.min.js"></script>
+<script src="/shared/icons.js"></script>
 <script src="/shared/render.js"></script>
 <script src="/shared/groups.js"></script>
 <script src="/shared/slides.js"></script>

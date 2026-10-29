@@ -12,8 +12,8 @@
   const $ = s => document.querySelector(s);
   const cmd = app.cmd;
 
-  const ICON = { camera: '📷', slideshow: '🎞', video: '🎬', audio: '🔊', hymn: '🎼', bible: '📖', song: '🎵', text: '📢', title: '🏷', image: '🖼', blank: '⬛' };
   const TYPE = { camera: '카메라', slideshow: '슬라이드쇼', video: '영상', audio: '음악', hymn: '찬송가·PPT', bible: '성경', song: '찬양', text: '공지', title: '제목', image: '이미지', blank: '빈 화면' };
+  const ICON = Object.fromEntries(Object.keys(TYPE).map(t => [t, window.BCIcon.type(t)])); // 종류별 아이콘 (svg)
   let editorOn = true;
   try { editorOn = localStorage.getItem('wc-cue-editor') !== '0'; } catch { /* 무시 */ }
   const st = { list: [], cue: null, sel: -1, dragFrom: -1, saving: null, lastSave: 0, editTimer: null, hymnMeta: new Map(), songs: new Map(), songTimer: null };
@@ -162,7 +162,7 @@
         <span class="cue-ico" title="${TYPE[it.type]}">${ICON[it.type]}</span>
         <span class="cue-body" data-noi18n><b>${esc(it.title)}</b>${themeOf(it) ? `<span class="cue-theme" title="이 순서만 다른 테마">🎨 ${esc(themeName(it))}</span>` : ''}<span class="cue-detail">${esc(detail(it))}</span>${it.note ? `<span class="cue-note">📝 ${esc(it.note)}</span>` : ''}</span>
         ${plan[i] && timesOn() ? `<span class="cue-time" title="예정 시작${it.duration ? ' · ' + it.duration + '분' : ''}">${plan[i]}${it.duration ? `<small>${it.duration}분</small>` : ''}</span>` : ''}
-        <button class="cue-edit" data-edit="${i}" title="이 순서 고치기 (F2)">✎</button>
+        <button class="cue-edit" data-edit="${i}" title="이 순서 고치기 (F2)">${window.BCIcon('pencil')}</button>
       </div>`).join('') : '<div class="empty">아래 버튼으로 예배 순서를 추가하세요.</div>';
     el.querySelector('.cue-item.sel')?.scrollIntoView({ block: 'nearest' });
     noteLive();
@@ -609,7 +609,7 @@
     box.innerHTML = `<div class="ce-head"><span class="ce-ico">${ICON[it.type]}</span><b>${i + 1}번 ${TYPE[it.type]}</b>
         <span class="grow"></span><span id="cueSaved" class="muted"></span>
         <button data-act="up" title="위로 (Alt+↑)">▲</button><button data-act="down" title="아래로 (Alt+↓)">▼</button>
-        ${it.type !== 'audio' ? '<button data-act="slideedit" class="primary" title="슬라이드마다 글상자 위치·꾸미기, 글·그림·도형 덧붙이기 (Ctrl+E)">✎ 슬라이드 편집</button>' : ''}
+        ${it.type !== 'audio' ? '<button data-act="slideedit" class="primary" title="슬라이드마다 글상자 위치·꾸미기, 글·그림·도형 덧붙이기 (Ctrl+E)">' + window.BCIcon('square-pen') + '슬라이드 편집</button>' : ''}
         <button data-act="dup" title="이 순서 복제">복제</button><button data-act="del" title="이 순서 지우기 (Delete)">지우기</button>
         <button data-act="close" title="편집칸 닫기">✕</button></div>
       <div class="form ce-form">
@@ -771,7 +771,7 @@
     if (!b) {
       const tabs = $('#centerTabs');
       if (!tabs) return;
-      tabs.insertAdjacentHTML('afterend', '<button id="ceToggle" class="ce-toggle" title="큐시트 순서 편집칸 보이기·숨기기 (Ctrl+Shift+E)">✎ 편집칸</button>');
+      tabs.insertAdjacentHTML('afterend', '<button id="ceToggle" class="ce-toggle" title="큐시트 순서 편집칸 보이기·숨기기 (Ctrl+Shift+E)">' + window.BCIcon('pencil') + '편집칸</button>');
       b = $('#ceToggle');
       b.onclick = () => { setEditor(!editorOn); if (editorOn) focusTitle(); };
     }
@@ -1163,6 +1163,8 @@
     selected: () => (st.cue && st.sel >= 0 ? st.cue.items[st.sel] : null),
     selIndex: () => st.sel,
     timesOn: () => timesOn(),
+    /** 실행 취소 · 다시 실행 (되돌릴 것이 없으면 false) */
+    undo: redo => undo(!!redo),
     /** 예배 진행 시계 켜기·끄기 */
     setTimes: async on => { await cmd('updateSettings', { patch: { cueTimes: !!on } }); app.state.settings.cueTimes = !!on; render(); renderClock(); forceEditor(); app.showMsg(on ? '예배 진행 시계를 켰습니다 (⏰ 시작 시각 · 순서별 예정 시간).' : '예배 진행 시계를 껐습니다. 큐시트 관리·설정에서 다시 켤 수 있습니다.', 'info', 3000); },
     pickCam: done => pickCam(done),

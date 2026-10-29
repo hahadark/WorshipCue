@@ -1169,30 +1169,31 @@
     $('#bMore').textContent = more.length ? `${more.join(' · ')} ▾` : '지우기 ▾';
   }
   // ---------------- 지금 화면 (층마다 끄기) ----------------
-  const LY_ICON = { camera: '📷', video: '🎞', image: '🖼', color: '🎨' };
+  const LY_ICON = { camera: 'camera', video: 'clapperboard', image: 'image', color: 'palette' }; // 배경 종류 → 아이콘
   const LY_SRC = { media: '송출 배경', slide: '순서 배경', template: '템플릿 배경' };
-  const LY_KIND = { text: '📝', video: '🎬', camera: '📷', image: '🖼', score: '🎼', blank: '⬛', slideshow: '🎞', title: '🏷' };
+  const LY_KIND = { text: 'text', video: 'clapperboard', camera: 'camera', image: 'image', score: 'music-2', blank: 'square', slideshow: 'images', title: 'tag' };
   let lyHtml = '';
   function renderScreenLayers() {
     const box = $('#lvLayers');
     if (!box || !app.state) return;
     const S = app.state.screen || {};
-    const chip = (act, cls, text, btn, title) => `<button type="button" class="ly ly-${cls}" data-ly="${act}" title="${esc(title)}"><span class="ly-t">${esc(text)}</span><span class="ly-x">${esc(btn)}</span></button>`;
+    const chip = (act, cls, text, btn, title, ic) => `<button type="button" class="ly ly-${cls}" data-ly="${act}" title="${esc(title)}">${ic ? `<span class="ly-ic">${window.BCIcon(ic)}</span>` : ''}<span class="ly-t">${esc(text)}</span><span class="ly-x">${esc(btn)}</span></button>`;
     const out = [];
     const c = S.content;
     if (c) {
-      const name = `${LY_KIND[c.kind] || '📝'} ${c.title || ''}${c.count > 1 ? ` ${c.index + 1}/${c.count}` : ''}`;
-      out.push(c.visible ? chip(c.kind === 'video' ? 'video' : 'content', 'on', name, '✕', c.kind === 'video' ? '영상 멈추고 지우기' : '슬라이드 지우기 (F10)') : chip('content', 'off', `${name} · 숨김`, '보이기', '슬라이드 다시 보이기 (F10)'));
+      const name = `${c.title || ''}${c.count > 1 ? ` ${c.index + 1}/${c.count}` : ''}`;
+      const ic = LY_KIND[c.kind] || 'text';
+      out.push(c.visible ? chip(c.kind === 'video' ? 'video' : 'content', 'on', name, '✕', c.kind === 'video' ? '영상 멈추고 지우기' : '슬라이드 지우기 (F10)', ic) : chip('content', 'off', `${name} · 숨김`, '보이기', '슬라이드 다시 보이기 (F10)', ic));
     }
-    for (const b of S.bgs || []) if (b.src === 'media') out.push(chip('media', 'on', `${LY_ICON[b.type] || '🖼'} ${LY_SRC.media}${b.label ? ': ' + b.label : ''}`, '✕', '송출 배경 끄기 (카메라는 닫힘)'));
+    for (const b of S.bgs || []) if (b.src === 'media') out.push(chip('media', 'on', `${LY_SRC.media}${b.label ? ': ' + b.label : ''}`, '✕', '송출 배경 끄기 (카메라는 닫힘)', LY_ICON[b.type] || 'image'));
     const other = (S.bgs || []).filter(b => b.src !== 'media');
-    if (S.bgHidden) out.push(chip('bgon', 'off', '🖼 배경 꺼짐', '다시 켜기', '배경(순서·템플릿 배경)을 다시 켭니다'));
-    else for (const b of other) out.push(chip(b.src === 'slide' ? 'bgitem' : 'bgtpl', 'on', `${LY_ICON[b.type] || '🖼'} ${LY_SRC[b.src]}${b.src === 'template' && b.label ? ': ' + b.label : ''}`, '✕', b.src === 'slide' ? '이 순서에서 배경 빼기' : '템플릿 배경 빼기 (단색으로, 이 템플릿을 쓰는 모든 순서)'));
-    if (S.overlays && S.overlays.length) out.push(chip('ov', 'on', `✨ ${S.overlays.join(', ')}`, '✕', '오버레이 끄기'));
-    if (S.logo) out.push(chip('logo', 'on', '🛡 로고 화면', '✕', '로고 화면 끄기'));
-    if (S.draw) out.push(chip('draw', 'on', '✏ 그리기', '✕', '그린 것 지우기'));
+    if (S.bgHidden) out.push(chip('bgon', 'off', '배경 꺼짐', '다시 켜기', '배경(순서·템플릿 배경)을 다시 켭니다', 'image'));
+    else for (const b of other) out.push(chip(b.src === 'slide' ? 'bgitem' : 'bgtpl', 'on', `${LY_SRC[b.src]}${b.src === 'template' && b.label ? ': ' + b.label : ''}`, '✕', b.src === 'slide' ? '이 순서에서 배경 빼기' : '템플릿 배경 빼기 (단색으로, 이 템플릿을 쓰는 모든 순서)', LY_ICON[b.type] || 'image'));
+    if (S.overlays && S.overlays.length) out.push(chip('ov', 'on', S.overlays.join(', '), '✕', '오버레이 끄기', 'layers'));
+    if (S.logo) out.push(chip('logo', 'on', '로고 화면', '✕', '로고 화면 끄기', 'flag'));
+    if (S.draw) out.push(chip('draw', 'on', '그리기', '✕', '그린 것 지우기', 'brush'));
     const au = window.BCLib && window.BCLib.audio && window.BCLib.audio.info ? window.BCLib.audio.info() : null;
-    if (au && au.url && !au.paused) out.push(chip('audio', 'on', `🔊 ${au.title || '음악'}`, '✕', '음악 줄이며 멈춤'));
+    if (au && au.url && !au.paused) out.push(chip('audio', 'on', au.title || '음악', '✕', '음악 줄이며 멈춤', 'volume-2'));
     const html = `<span class="ly-h">지금 화면</span>${out.length ? out.join('') : '<span class="muted ly-empty">비어 있음</span>'}`;
     if (html === lyHtml) return;
     lyHtml = html;
@@ -1409,7 +1410,7 @@
     }
     // 송출 배경(카메라·그림·영상)이 켜져 있으면: 눌러서 끄기
     const md = st.layers && st.layers.media;
-    if (md) parts.unshift(`<span class="st st-media" data-media-off title="눌러서 송출 배경 끄기"><span class="dot err"></span>${md.type === 'camera' ? '📷' : md.type === 'video' ? '🎞' : '🖼'} 송출 배경: ${esc(md.label || '')} ✕</span>`);
+    if (md) parts.unshift(`<span class="st st-media" data-media-off title="눌러서 송출 배경 끄기"><span class="dot err"></span>${window.BCIcon(LY_ICON[md.type] || 'image')} 송출 배경: ${esc(md.label || '')} ✕</span>`);
     // 업데이트: 새 버전이 있을 때만
     const u = app.update;
     if (u && (u.state === 'ready' || u.state === 'available' || (u.state === 'downloading' && u.version))) {
