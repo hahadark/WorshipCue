@@ -1064,3 +1064,24 @@ select:hover { border-color: var(--line2); }
 .ctx-ic .ic { width: 16px; height: 16px; margin: 0; }
 .ctx-item:hover .ctx-ic, .ctx-item.focus .ctx-ic { color: var(--text); }
 .ctx-head { color: var(--muted); letter-spacing: .4px; padding: 6px 10px 2px; }
+
+/* 라이브러리 머리: 밑줄 탭 한 줄 + 접히는 검색·단추 줄 */
+.lib-tabs { display: flex; align-items: stretch; gap: 0; padding: 0 6px; border-bottom: 1px solid var(--line); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.lib-tabs::-webkit-scrollbar { display: none; }
+.lib-tabs button[data-tab] { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 9px; margin: 0; background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.lib-tabs button[data-tab] .ic { width: 15px; height: 15px; margin: 0; color: inherit; }
+.lib-tabs button[data-tab]:hover { color: var(--text); background: var(--hover); }
+.lib-tabs button[data-tab].on { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); background: transparent; }
+.lib-tabs button[data-tab].on .ic { color: var(--hl); }
+.lib-tabs .lib-fold { margin-left: auto; align-self: center; width: 28px; height: 28px; color: var(--muted); }
+.lib-tabs .lib-fold .ic { width: 15px; height: 15px; transition: transform .15s ease; }
+.lib.bar-off .lib-fold .ic { transform: rotate(180deg); }
+.lib.bar-off .lib-bar { display: none; }
+.lib-bar { gap: 6px; padding: 7px 8px; background: var(--panel2); }
+.lib-bar input[type=text], .lib-bar select { height: 30px; padding: 0 9px; }
+.lib-bar button { height: 30px; padding: 0 10px; font-size: 12.5px; white-space: nowrap; }
+.lib-bar button .ic { width: 14px; height: 14px; margin-right: 4px; color: var(--muted); }
+.lib-bar button:hover .ic { color: var(--text); }
+/* 좁을 때는 탭 글자를 숨기고 아이콘만 (제목은 툴팁) */
+@container lib (max-width: 520px) { .lib-tabs button[data-tab] span { display: none; } .lib-tabs button[data-tab] .ic { width: 17px; height: 17px; } }
+.lib { container: lib / inline-size; }

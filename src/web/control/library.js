@@ -19,11 +19,18 @@
 
   function init() {
     const el = root();
-    el.innerHTML = `<div class="lib-tabs view-tabs">${TABS.map(([k, l, ic]) => `<button data-tab="${k}" class="${k === st.tab ? 'on' : ''}">${window.BCIcon(ic)}${l}</button>`).join('')}</div>
+    // 탭 줄 오른쪽 ▾ 로 검색·단추 줄을 접는다 (기억)
+    let folded = false;
+    try { folded = localStorage.getItem('wc-lib-bar') === '0'; } catch { /* 무시 */ }
+    el.innerHTML = `<div class="lib-tabs">${TABS.map(([k, l, ic]) => `<button data-tab="${k}" class="${k === st.tab ? 'on' : ''}" title="${esc(l)}">${window.BCIcon(ic)}<span>${l}</span></button>`).join('')}<button class="lib-fold ghost icon-btn" data-fold title="검색·단추 줄 접기/펴기">${window.BCIcon('chevron-up')}</button></div>
       <div class="lib-bar"></div>
       <div class="lib-body" tabindex="0"></div>
       <div class="lib-player" hidden></div>`;
-    el.querySelector('.lib-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); };
+    el.classList.toggle('bar-off', folded);
+    el.querySelector('.lib-tabs').onclick = e => {
+      if (e.target.closest('[data-fold]')) { const off = el.classList.toggle('bar-off'); try { localStorage.setItem('wc-lib-bar', off ? '0' : '1'); } catch { /* 무시 */ } return; }
+      const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab);
+    };
     el.querySelector('.lib-body').addEventListener('keydown', onKey);
     show(st.tab);
     audio.render();
@@ -363,7 +370,7 @@
     st.cams = devs;
     const cur = app.state && app.state.layers && app.state.layers.media;
     const on = d => cur && cur.type === 'camera' && cur.deviceId === d.deviceId;
-    const b = body(devs.length ? `<div class="lib-grid">${devs.map((d, k) => `<div class="lib-cell cam-cell ${on(d) ? 'live' : ''}" data-k="${k}" title="${esc(d.label)}"><video muted autoplay playsinline data-cam="${esc(d.deviceId)}"></video><span>📷 ${esc(d.label || '카메라 ' + (k + 1))}${on(d) ? ' · <b class="live-dot">LIVE 배경</b>' : ''}</span>
+    const b = body(devs.length ? `<div class="lib-grid">${devs.map((d, k) => `<div class="lib-cell cam-cell ${on(d) ? 'live' : ''}" data-k="${k}" title="${esc(d.label)}"><video muted autoplay playsinline data-cam="${esc(d.deviceId)}"></video><span>${window.BCIcon('camera')}${esc(d.label || '카메라 ' + (k + 1))}${on(d) ? ' · <b class="live-dot">LIVE 배경</b>' : ''}</span>
         <div class="lib-cell-act"><button data-live="${k}" class="primary">${on(d) ? '■ 배경 끄기' : '▶ 송출 배경'}</button><button data-add="${k}" title="카메라 화면 가득 나오는 순서로 큐시트에 넣기">순서로</button><button data-bg="${k}" title="고른 순서(찬양·공지 등)의 배경으로">순서 배경</button><button data-tb="${k}" title="예배당 화면 템플릿 배경으로 (모든 화면)">전체 배경</button><button data-camset="${k}" title="해상도 · 프레임 · 밝기 · 좌우 반전">⚙ 화질</button></div><span class="cam-q muted" data-q="${k}"></span></div>`).join('')}</div>`
       : '<div class="empty">연결된 카메라가 없습니다.<br><span class="muted">USB 웹캠을 꽂거나, HDMI 카메라는 캡처보드로 연결하세요. OBS 의 \'가상 카메라 시작\' 도 여기 나옵니다.</span></div>');
     b.querySelectorAll('video[data-cam]').forEach(v => window.BCRender.cameraStream(v.dataset.cam).then(s => { v.srcObject = s; }).catch(() => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'cam-err', textContent: '열 수 없음 (다른 프로그램이 쓰는 중?)' })); }));
