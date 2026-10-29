@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- WorshipCue 앱 아이콘: 큐시트(세 줄)에서 지금 순서를 송출(▶) -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5a93ff"/>
+      <stop offset=".55" stop-color="#3566e0"/>
+      <stop offset="1" stop-color="#1e3f9e"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".28"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".04"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="play" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd25a"/>
+      <stop offset="1" stop-color="#f0a21a"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+    <filter id="sh2" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000" flood-opacity=".25"/>
+    </filter>
+  </defs>
+
+  <!-- 바탕 (둥근 네모) -->
+  <rect x="64" y="64" width="896" height="896" rx="212" fill="url(#bg)"/>
+  <rect x="64" y="64" width="896" height="896" rx="212" fill="url(#gloss)"/>
+  <rect x="80" y="80" width="864" height="864" rx="198" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="12"/>
+
+  <!-- 큐시트 세 줄: 지금 순서(밝음) · 다음 · 그 다음 -->
+  <g filter="url(#sh2)">
+    <rect x="200" y="262" width="400" height="84" rx="42" fill="#fff"/>
+    <rect x="200" y="470" width="400" height="84" rx="42" fill="#fff" opacity=".62"/>
+    <rect x="200" y="678" width="400" height="84" rx="42" fill="#fff" opacity=".36"/>
+  </g>
+
+  <!-- 송출 표시 (▶) — 지금 순서 줄 높이에 -->
+  <g filter="url(#sh)">
+    <path d="M672 420 Q672 388 700 404 L834 490 Q860 506 834 522 L700 608 Q672 624 672 592 Z" fill="url(#play)"/>
+  </g>
+</svg>
