@@ -322,7 +322,7 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionCheckHandler((wc, permission, origin) => permission === 'local-fonts' || permission === 'clipboard-sanitized-write' || (permission === 'media' && localPage(origin + '/')));
 
     controlWin = new BrowserWindow({
-      width: 1500, height: 920, minWidth: 1100, minHeight: 700, backgroundColor: '#f2f3f7', title: 'WorshipCue', icon: APP_ICON,
+      width: 1500, height: 920, minWidth: 1100, minHeight: 700, backgroundColor: '#14171c', title: 'WorshipCue', icon: APP_ICON,
       show: false,
       webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false, preload: path.join(__dirname, 'preload.js') },
     });

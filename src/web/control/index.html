@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/control/control.css">
 <script>
   // 화면 테마를 그리기 전에 적용 (깜빡임 방지) — 설정 값은 uitheme.js 가 다시 맞춘다
-  try { const u = JSON.parse(localStorage.getItem('wc-ui') || '{}'); const t = u.theme || 'manna'; if (t !== 'dark') document.documentElement.dataset.theme = t; if (u.scale && u.scale !== 100) document.documentElement.dataset.scale = u.scale; } catch (e) { /* 처음 */ }
+  try { const u = JSON.parse(localStorage.getItem('wc-ui') || '{}'); const t = u.theme || 'dark'; if (t !== 'dark') document.documentElement.dataset.theme = t; if (u.scale && u.scale !== 100) document.documentElement.dataset.scale = u.scale; } catch (e) { /* 처음 */ }
 </script>
 </head>
 <body>

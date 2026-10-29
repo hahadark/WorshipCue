@@ -1,7 +1,7 @@
 /* 조작 화면 글꼴: Pretendard (SIL OFL 1.1 — /shared/fonts/OFL-Pretendard.txt). 송출 화면 글꼴과는 따로 */
 @font-face { font-family: 'Pretendard'; src: url('/shared/fonts/PretendardVariable.woff2') format('woff2-variations'), url('/shared/fonts/PretendardVariable.woff2') format('woff2'); font-weight: 45 920; font-style: normal; font-display: swap; }
 :root {
-  /* 어둡게 (방송실) — 글자 대비를 높였다. 기본 테마는 만나로(맨 아래 블록) */
+  /* 기본: 어둡게 (방송실) — 글자 대비를 높였다 */
   --bg: #121519; --panel: #1a1e25; --panel2: #222731; --line: #313846; --line2: #465065; --line-soft: #252b35;
   --text: #eef1f6; --text2: #d3d9e4; --muted: #a3abba; --muted2: #7c8597;
   --sunken: #0e1115; --hover: #262d3a; --sel: #2c3c5c; --menubar: #0b0d10;
@@ -1088,7 +1088,7 @@ select:hover { border-color: var(--line2); }
 @container lib (max-width: 520px) { .lib-tabs button[data-tab] span { display: none; } .lib-tabs button[data-tab] .ic { width: 17px; height: 17px; } }
 .lib { container: lib / inline-size; }
 
-/* ================= 만나로 테마 (1.12, 기본) =================
+/* ================= 만나로 테마 (1.12, 골라 쓰는 밝은 테마) =================
  * 만나로 스튜디오 · 설교쇼츠 편집기와 같은 모양: 밝은 회청색 바탕 · 흰 둥근 카드 · 남색 머리 줄 · 파란 그라데이션 단추 ·
  * 종류마다 색이 다른 아이콘(연한 색 바탕 칩). 색은 아래 토큰으로만 쓴다. 다른 테마에는 영향 없음. */
 html[data-theme="manna"],
