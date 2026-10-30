@@ -1373,3 +1373,23 @@ html[data-theme="light"], html[data-theme="manna"] { --tc-p: 100%; }
 .pts-card b { font-size: 14px; line-height: 1.35; word-break: keep-all; }
 .pts-card span { font-size: 11px; line-height: 1.4; color: #c9d6ef; word-break: keep-all; }
 .pts-card i { position: absolute; left: 7px; top: 5px; font-style: normal; font-size: 10px; color: rgba(255,255,255,.55); }
+
+/* ---------------- 홈페이지 주보 → 큐시트 · 광고 (home.js) ---------------- */
+.modal-box:has(.hf) { height: auto; max-height: 92vh; width: min(1080px, 95vw); }
+.hf { grid-template-columns: 110px 1fr; }
+.hf button > .ic:first-child, .hf h4 > .ic:first-child { margin-right: .4em; }
+.hf-pick { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; align-items: center; margin: 6px 0 10px; }
+.hf-cols { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; }
+.hf-col h4 { margin: 4px 0 8px; display: flex; align-items: center; }
+.hf-col h4 .muted { font-weight: 400; font-size: 12px; margin-left: 6px; }
+.hf-order { margin: 0; padding: 8px 10px 8px 30px; max-height: 300px; overflow: auto; background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; line-height: 1.7; }
+.hf-order span { color: var(--text2); }
+.hf-news { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow: auto; }
+.hf-n { display: flex; gap: 8px; align-items: flex-start; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.hf-n:hover { background: var(--hover); }
+.hf-n input { margin-top: 3px; }
+.hf-n span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hf-n em { font-style: normal; font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hf-go { margin-top: 12px; }
+.hf-done { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+.hf-warn ul { margin: 4px 0 0; padding-left: 20px; font-size: 12.5px; color: var(--warn); }

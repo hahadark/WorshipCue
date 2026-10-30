@@ -1329,3 +1329,84 @@ test('설교 포인트 슬라이드: 원고·자막에서 대지 찾기, AI 답 
   assert.match(im.result.item.more, /^첫째, 하나\n일\n---\n둘째, 둘\n이$/);
   core.store.close();
 });
+
+test('홈페이지 주보 연동: JSON → 큐시트(교회 소식에 광고 슬라이드) · 광고만 · 시각', async () => {
+  const hf = require('../src/core/homefeed');
+  const feedJson = {
+    format: 'worshipcue-bulletin/1', church: '○○교회', updated: '2026-10-25',
+    bulletins: [
+      { date: '2026-10-18', sermon: { title: '지난 설교' }, services: [{ name: '주일 예배', items: [{ part: '묵도' }] }] },
+      { date: '2026-10-25', issue: '제2권 43호', sermon: { title: '나라와 권세와 영광', passage: '마태복음 6:9-13', preacher: '홍길동 사관' },
+        services: [
+          { name: '주일 성결예배', time: '오전 11:00', items: [
+            { part: '묵도', by: '사회자' },
+            { part: '예배로의 부름', content: '304장 「그 크신 하나님의 사랑」', stand: true },
+            { part: '교회소식', by: '사회자' },
+            { part: '성경봉독', content: '요한복음 3:16' },
+            { part: '설교', content: '나라와 권세와 영광', by: '홍길동 사관' },
+            { part: '찬송', content: '「은혜 아니면」', stand: true },
+            { part: '구역모임', content: '추수감사주일·순서 / 준비', by: '각 구역장' },
+          ] },
+          { name: '주일 오후예배', time: '오후 1:30', items: [{ part: '기도' }] },
+        ],
+        news: [{ title: '환영합니다!', body: '오늘 오신 분들을 환영합니다.' }, { title: '가정단 나들이', body: '10/31 토 오전 8:30 출발\n---\n회비 2만 원', link: 'https://x/news/1' }],
+        prayers: [{ title: '건축을 위한 기도', body: '견고하게 세워지도록' }],
+        events: [{ when: '10/31 (토)', title: '가정단 나들이', note: '보현산댐' }],
+      },
+    ],
+  };
+  const feed = hf.normalizeFeed(feedJson);
+  assert.equal(feed.bulletins[0].date, '2026-10-25'); // 최신순
+  assert.throws(() => hf.normalizeFeed({ hello: 1 }), /bulletins/);
+  assert.equal(hf.pickBulletin(feed, '2026-10-18').sermon.title, '지난 설교');
+  assert.equal(hf.pickBulletin(feed, '2030-01-01').date, '2026-10-25');
+  assert.equal(hf.toHHMM('오전 11:00'), '11:00');
+  assert.equal(hf.toHHMM('오후 1:30'), '13:30');
+  assert.equal(hf.toHHMM('저녁 8시'), '20:00');
+  // 광고 슬라이드: 고른 것만 · 일정 한 장 · 기도 제목 · 본문 안의 '---' 는 장을 나누지 않게
+  const b = feed.bulletins[0];
+  const body = hf.newsBody(b, { news: [1], events: true, prayers: true });
+  const pages = body.split('\n---\n');
+  assert.equal(pages.length, 3);
+  assert.equal(pages[0], '**가정단 나들이**\n10/31 토 오전 8:30 출발\n—\n회비 2만 원');
+  assert.match(pages[1], /^\*\*이번 주 일정\*\*\n10\/31 \(토\) {2}가정단 나들이 — 보현산댐$/);
+  assert.match(pages[2], /^\*\*건축을 위한 기도\*\*/);
+  // 예배 순서 → 계획: 찬송가 번호 · 성경 장절 · 설교 제목 · 교회 소식에 광고 · 곡 이름 찬송은 찬양으로 · 나누기 기호가 순서를 쪼개지 않음
+  const { looksLikeReference } = require('../src/core/parser');
+  const plan = hf.serviceToPlan(b, 0, { looksLikeRef: looksLikeReference, news: { news: 'all' } });
+  assert.equal(plan.name, '2026-10-25 주일 성결예배');
+  assert.equal(plan.startTime, '11:00');
+  assert.equal(plan.serviceDate, '2026-10-25');
+  assert.equal(plan.items.length, 7);
+  assert.deepEqual(plan.items.map(x => x.type), ['title', 'hymn', 'text', 'bible', 'title', 'song', 'title']);
+  assert.equal(plan.items[1].hymnNumber, 304);
+  assert.equal(plan.items[1].note, '*일어서서');
+  assert.equal(plan.items[2].body.split('\n---\n').length, 2);
+  assert.equal(plan.items[3].ref, '요한복음 3:16');
+  assert.equal(plan.items[4].subtitle, '“나라와 권세와 영광” · 홍길동 사관');
+  assert.equal(plan.items[5].song, '은혜 아니면');
+  assert.equal(plan.items[6].subtitle, '추수감사주일·순서 / 준비 · 각 구역장');
+  assert.equal(plan.newsPlaced, true);
+  // 코어: 주소 받기(가짜 응답) · 주소 기억 · 큐시트 만들기 · 광고만
+  const core = newCore('homefeed');
+  core.command('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } });
+  core.httpFetch = async url => ({ ok: url.endsWith('/feed.json'), status: 404, text: async () => JSON.stringify(feedJson) });
+  const bad = await core.command('homeFeed', { url: 'https://church.example/nope' });
+  assert.equal(bad.ok, false);
+  const got = await core.command('homeFeed', { url: 'https://church.example/bulletin/feed.json' });
+  assert.equal(got.ok, true, got.error);
+  assert.equal(got.result.church, '○○교회');
+  assert.equal(core.command('homeFeedInfo').result.url, 'https://church.example/bulletin/feed.json');
+  const mk = core.command('homeMakeCue', { bulletin: got.result.bulletins[0], service: 0, news: { news: [0], events: false } });
+  assert.equal(mk.ok, true, mk.error);
+  const cue = mk.result.cue;
+  assert.equal(cue.name, '2026-10-25 주일 성결예배');
+  assert.equal(cue.items.find(x => x.type === 'text').body, '**환영합니다!**\n오늘 오신 분들을 환영합니다.');
+  assert.ok(cue.items.some(x => x.type === 'song' && x.lyrics === '은혜 아니면 나 서지 못하네')); // 곡 이름 찬송은 라이브러리에서 찾음 (304장은 베들레헴 가사로)
+  const ni = core.command('homeNewsItem', { bulletin: got.result.bulletins[0], news: { news: [], events: true } });
+  assert.equal(ni.ok, true, ni.error);
+  assert.equal(ni.result.item.type, 'text');
+  assert.match(ni.result.item.body, /이번 주 일정/);
+  assert.equal(core.command('homeNewsItem', { bulletin: got.result.bulletins[0], news: { news: [] } }).ok, false);
+  core.store.close();
+});

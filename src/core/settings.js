@@ -87,6 +87,7 @@ function defaults() {
     parallelVersionId: '', // 병행 번역본 (두 번역 함께 송출, '' = 안 함)    // 바깥에서 끌어다 놓은 파일 (등록 폴더 밖이어도 열 수 있게, 최근 500개)
     audioFolders: [],    // [{ name, path }] 라이브러리 음악 폴더
     overlays: [],
+    home: { feedUrl: '' }, // 홈페이지 주보 연동: 교회 홈페이지의 주보 JSON 주소 (예: https://교회주소/bulletin/feed.json)
     ai: { model: '', keyEnc: '', key: '' }, // AI 주보 → 큐시트 (오픈라우터). 키는 Windows 보호 기능으로 암호화해 keyEnc 에
     remote: { enabled: false, pin: '', port: 37540 },
     lanOutput: { enabled: false, port: 37550, key: '' }, // 내부망 출력: 다른 PC(송출 PC 의 OBS)에서 출력 화면만 열기 (열쇠 필요) // 휴대폰 리모컨 (같은 Wi-Fi, PIN)

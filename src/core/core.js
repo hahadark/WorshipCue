@@ -878,6 +878,33 @@ WorshipCueCore.prototype.commands = {
     if (isSample) throw new Error('샘플 파일 내용 그대로입니다. 채팅 AI 가 주보로 새로 만든 답을 붙여 넣으세요.');
     return { ...this.planToSavedCue(plan), model: '채팅 AI' };
   },
+  // ---- 홈페이지 주보 연동 (교회 홈페이지의 주보 JSON → 큐시트 · 광고 슬라이드) ----
+  homeFeedInfo() { const h = this.settings.get().home || {}; return { url: h.feedUrl || '' }; },
+  /** 주보 JSON 받기 (받으면 주소를 기억) */
+  async homeFeed(a) {
+    const { fetchFeed } = require('./homefeed');
+    const url = String((a && a.url) || (this.settings.get().home || {}).feedUrl || '').trim();
+    const feed = await fetchFeed(url, this.httpFetch || fetch);
+    this.settings.update(d => { d.home = { ...(d.home || {}), feedUrl: url.slice(0, 500) }; });
+    return feed;
+  },
+  /** 주보 한 호의 예배 하나 → 큐시트 저장 (교회 소식 순서에 광고 슬라이드) */
+  homeMakeCue(a) {
+    const { normalizeFeed, serviceToPlan } = require('./homefeed');
+    const { looksLikeReference } = require('./parser');
+    const b = normalizeFeed({ bulletins: [(a && a.bulletin) || {}] }).bulletins[0];
+    const plan = serviceToPlan(b, Number((a && a.service) || 0), { looksLikeRef: looksLikeReference, news: (a && a.news) || {} });
+    const r = this.planToSavedCue(plan);
+    return { ...r, newsPlaced: plan.newsPlaced, model: '홈페이지 주보' };
+  },
+  /** 광고·일정·기도 제목 → 공지 순서 (넣는 것은 조작 화면: 실행 취소가 되게) */
+  homeNewsItem(a) {
+    const { normalizeFeed, newsBody } = require('./homefeed');
+    const b = normalizeFeed({ bulletins: [(a && a.bulletin) || {}] }).bulletins[0];
+    const body = newsBody(b, (a && a.news) || {});
+    if (!body.trim()) throw new Error('넣을 광고가 없습니다. 하나 이상 고르세요.');
+    return { item: { type: 'text', title: '교회 소식', body, note: `홈페이지 주보 ${b.date}`.trim() } };
+  },
   // ---- 설교 포인트 슬라이드 (원고 → 대지·핵심 문장 → '제목' 순서) ----
   /** 규칙으로 대지 찾기 (AI 없이). 붙여 넣은 글이 AI 답(JSON)이면 그대로 읽는다 */
   sermonPointsFind(a) {
