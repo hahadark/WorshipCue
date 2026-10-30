@@ -1410,3 +1410,62 @@ test('홈페이지 주보 연동: JSON → 큐시트(교회 소식에 광고 슬
   assert.equal(core.command('homeNewsItem', { bulletin: got.result.bulletins[0], news: { news: [] } }).ok, false);
   core.store.close();
 });
+
+test('예배 전 화면 자동 만들기: 최근 카드 묶음 · 홈페이지 묶음 문장 · QT 첫날 본문 → 슬라이드쇼', () => {
+  const ps = require('../src/core/preservice');
+  // 카드 그림 폴더: 묶음(이름_01, 이름_02)마다, 최근 것 먼저
+  const dir = path.join(tmp, 'cards');
+  fs.mkdirSync(dir, { recursive: true });
+  const touch = (n, t) => { const f = path.join(dir, n); fs.writeFileSync(f, 'x'); fs.utimesSync(f, t, t); };
+  const old = new Date('2026-10-12T10:00:00'), now = new Date('2026-10-26T10:00:00');
+  touch('묵상카드_10월11일_01.png', old); touch('묵상카드_10월11일_02.png', old);
+  touch('묵상카드_10월25일_02.png', now); touch('묵상카드_10월25일_01.png', now); touch('메모.txt', now);
+  const g = ps.cardGroups(dir);
+  assert.equal(g.length, 2);
+  assert.equal(g[0].base, '묵상카드_10월25일');
+  assert.deepEqual(g[0].files.map(f => f.name), ['묵상카드_10월25일_01.png', '묵상카드_10월25일_02.png']);
+  assert.throws(() => ps.cardGroups(path.join(tmp, 'nope')), /열 수 없습니다/);
+  // 설교쇼츠 편집기 '홈페이지 묶음': 오늘(포함) 이전의 가장 최근 날짜 폴더
+  const bdir = path.join(tmp, 'bundles');
+  for (const [d, line] of [['2026-10-18', '지난 문장'], ['2026-10-25', '복음은 하나님의 능력입니다'], ['2026-11-01', '미래 문장']]) {
+    fs.mkdirSync(path.join(bdir, d), { recursive: true });
+    fs.writeFileSync(path.join(bdir, d, 'bundle.json'), JSON.stringify({ date: d, cardLine: line }));
+  }
+  assert.equal(ps.latestBundle(bdir, '2026-10-30').cardLine, '복음은 하나님의 능력입니다');
+  assert.equal(ps.latestBundle(path.join(tmp, 'none'), '2026-10-30'), null);
+  // QT 첫날: JSON(설교쇼츠 편집기 QT 자료) · '1일째 · 제목 (장절)' 글 · 장절만
+  const ref = s => /\d+:\d+/.test(s);
+  assert.deepEqual(ps.parseQt('```json\n{"title":"주기도문 QT","days":[{"day":1,"title":"아버지","passage":"마 6:9-10"},{"day":2,"passage":"마 6:11"}]}\n```', ref), { title: '주기도문 QT', dayTitle: '아버지', ref: '마 6:9-10' });
+  assert.deepEqual(ps.parseQt('주기도문 QT\n\n1일째 · 하늘에 계신 아버지 (마태복음 6:9-10)\n묵상…\n2일째 · 양식 (마태복음 6:11)', ref), { title: '', dayTitle: '하늘에 계신 아버지', ref: '마태복음 6:9-10' });
+  assert.equal(ps.parseQt('요 3:16', ref).ref, '요 3:16');
+  assert.throws(() => ps.parseQt('본문 없음', ref), /장절을 찾지 못했습니다/);
+  // 슬라이드쇼 순서: 그림 + 글(지난주 말씀 · 주보 표지 말씀 · QT 머리 · 본문 3절씩) · 카운트다운 · 넘김 초
+  const passage = { title: '마태복음 6:9-13', verses: [9, 10, 11, 12, 13].map(v => ({ verse: v, text: `${v}절 본문` })) };
+  const it = ps.buildItem({ images: ['/lib/file?p=a.png'], cardLine: '복음은\n---\n능력', verse: { text: '영과 진리로', ref: '요 4:24' }, qt: { dayTitle: '아버지', ref: '마 6:9-13', passage }, countdown: '11:00', autoSec: 100 });
+  assert.equal(it.type, 'slideshow');
+  assert.equal(it.autoSec, 60);
+  assert.equal(it.countdown, '11:00');
+  const pages = it.body.split('\n---\n');
+  assert.deepEqual(pages.map(p => p.split('\n')[0]), ['**지난주 말씀**', '**요 4:24**', '**이번 주 QT · 첫째 날**', '**마태복음 6:9-13**', '**마태복음 6:9-13**']);
+  assert.equal(pages[0], '**지난주 말씀**\n복음은\n—\n능력'); // 글 안의 '---' 가 장을 나누지 않게
+  assert.equal(pages[3].split('\n').length, 4); // 머리 + 3절
+  assert.equal(it.note, '말씀카드 1장 · 글 5장');
+  assert.throws(() => ps.buildItem({}), /넣을 것이 없습니다/);
+  // 코어: 카드 폴더(그림을 열 수 있게 등록) · 묶음 · QT 본문(성경 DB) · 순서
+  const core = newCore('preservice');
+  const cards = core.command('preServiceCards', { folder: dir });
+  assert.equal(cards.ok, true, cards.error);
+  const u = cards.result.groups[0].files[0].url;
+  assert.ok(core.library.resolveFile(decodeURIComponent(u.split('p=')[1])), '등록한 그림은 /lib/file 로 열린다');
+  assert.equal(core.command('preServiceInfo').result.cardFolder, dir);
+  assert.equal(core.command('preServiceBundle', { dir: bdir }).ok, true);
+  const q = core.command('preServiceQt', { text: '요 3:16' });
+  assert.equal(q.ok, true, q.error);
+  assert.match(q.result.passage.verses[0].text, /하나님이 세상을/);
+  assert.equal(core.command('preServiceQt', { text: '그냥 글' }).ok, false);
+  const pi = core.command('preServiceItem', { images: [u], qt: q.result, autoSec: 6 });
+  assert.equal(pi.ok, true, pi.error);
+  assert.equal(pi.result.item.autoSec, 6);
+  assert.equal(core.command('preServiceInfo').result.autoSec, 6);
+  core.store.close();
+});

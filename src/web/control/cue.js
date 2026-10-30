@@ -925,11 +925,13 @@
 
   function addItem(type, extra = {}) {
     if (!st.cue) return;
+    const { _at, ...rest } = extra; // _at: 넣을 자리 (예: 0 = 맨 앞). 없으면 고른 순서 다음
+    extra = rest;
     const it = { id: newId(), type, title: extra.title || TYPE[type], note: '', ...extra };
     if (type === 'blank') it.mode = 'background';
     if (type === 'camera' && !it.deviceId) { pickCam(c => { it.deviceId = c.deviceId; it.label = c.label; it.title = '📷 ' + c.label; save(); forceEditor(); render(); previewItem(at); }); }
-    if (type === 'slideshow') Object.assign(it, { images: extra.images || [], body: extra.body || '', autoSec: 8, autoLoop: true, countdown: '', countdownLabel: '예배 시작까지', title: extra.title || '예배 전 화면' });
-    const at = st.sel >= 0 ? st.sel + 1 : st.cue.items.length;
+    if (type === 'slideshow') Object.assign(it, { images: extra.images || [], body: extra.body || '', autoSec: extra.autoSec || 8, autoLoop: extra.autoLoop !== false, countdown: extra.countdown || '', countdownLabel: extra.countdownLabel || '예배 시작까지', title: extra.title || '예배 전 화면' });
+    const at = Number.isInteger(_at) ? Math.max(0, Math.min(_at, st.cue.items.length)) : st.sel >= 0 ? st.sel + 1 : st.cue.items.length;
     st.cue.items.splice(at, 0, it);
     st.sel = at;
     save();
@@ -962,6 +964,7 @@
     const b = e.target.closest('button[data-add]');
     if (!b) return;
     if (b.dataset.add === 'points') { if (window.BCPoints) window.BCPoints.open(); return; }
+    if (b.dataset.add === 'preservice') { if (window.BCPreService) window.BCPreService.open(); return; }
     if (b.dataset.add === 'hymn') openHymnPicker({});
     else if (b.dataset.add === 'weblyrics') webLyrics(-1);
     else addItem(b.dataset.add);
@@ -1157,6 +1160,8 @@
     webLyrics: () => webLyrics(st.sel),
     init, render, onCueNext, move, showSide, onSongDownloaded, onSongInbox: showInbox,
     currentId: () => (st.cue ? st.cue.id : ''),
+    /** 열린 큐시트의 이름·예배 날짜·시작 시각 */
+    meta: () => (st.cue ? { name: st.cue.name || '', serviceDate: st.cue.serviceDate || '', startTime: st.cue.startTime || '' } : null),
     addItem: (type, extra) => addItem(type, extra),
     sendItem: i => { showSide('cue'); return sendItem(i); },
     addBethlehem: (h, o) => addBethlehem(h, o || {}),

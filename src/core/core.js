@@ -878,6 +878,51 @@ WorshipCueCore.prototype.commands = {
     if (isSample) throw new Error('샘플 파일 내용 그대로입니다. 채팅 AI 가 주보로 새로 만든 답을 붙여 넣으세요.');
     return { ...this.planToSavedCue(plan), model: '채팅 AI' };
   },
+  // ---- 예배 전 화면 자동 만들기 (지난주 말씀카드 + 이번 주 QT 첫날 본문 → 슬라이드쇼) ----
+  preServiceInfo() {
+    const fs = require('fs');
+    const path = require('path');
+    const p = this.settings.get().preService || {};
+    let bundleDir = p.bundleDir || '';
+    if (!bundleDir) for (const g of ['F:\\aside\\홈페이지보내기', path.join(require('os').homedir(), 'Documents', '홈페이지보내기')]) { try { if (fs.statSync(g).isDirectory()) { bundleDir = g; break; } } catch { /* 없음 */ } }
+    return { cardFolder: p.cardFolder || '', bundleDir, autoSec: p.autoSec || 8, feedUrl: (this.settings.get().home || {}).feedUrl || '' };
+  },
+  /** 말씀카드 그림 폴더 → 최근 묶음들 (그림 주소는 끌어다 놓은 파일처럼 등록해 보여 줄 수 있게) */
+  preServiceCards(a) {
+    const { cardGroups } = require('./preservice');
+    const folder = String((a && a.folder) || '').trim();
+    const groups = cardGroups(folder);
+    const paths = groups.flatMap(g => g.files.map(f => f.path)).slice(0, 80);
+    const reg = paths.length ? this.commands.addDroppedFiles.call(this, { paths }) : [];
+    const url = p => (reg.find(x => x.path === require('path').resolve(p)) || {}).url || this.library.fileUrl(p);
+    this.settings.update(d => { d.preService = { ...(d.preService || {}), cardFolder: folder.slice(0, 500) }; });
+    return { groups: groups.map(g => ({ base: g.base, mtime: g.mtime, files: g.files.map(f => ({ name: f.name, url: url(f.path) })) })) };
+  },
+  /** 설교쇼츠 편집기 '홈페이지 묶음' 의 최근 카드 문장 */
+  preServiceBundle(a) {
+    const { latestBundle } = require('./preservice');
+    const dir = String((a && a.dir) || '').trim();
+    const b = latestBundle(dir);
+    if (dir) this.settings.update(d => { d.preService = { ...(d.preService || {}), bundleDir: dir.slice(0, 500) }; });
+    return { bundle: b };
+  },
+  /** QT 자료·장절 → 첫날 본문 (성경 DB) */
+  preServiceQt(a) {
+    const { parseQt } = require('./preservice');
+    const { looksLikeReference } = require('./parser');
+    const q = parseQt(String((a && a.text) || '').slice(0, 200000), looksLikeReference);
+    const r = this.commands.searchReference.call(this, { query: q.ref });
+    if (!r || !r.passage || !r.passage.verses || !r.passage.verses.length) throw new Error(`'${q.ref}' 본문을 성경에서 찾지 못했습니다. 장절을 확인하세요.`);
+    const passage = { title: r.passage.title, verses: r.passage.verses.slice(0, 30).map(v => ({ verse: v.verse, text: v.text })) };
+    return { ...q, passage };
+  },
+  /** 슬라이드쇼 순서 만들기 (넣는 것은 조작 화면: 실행 취소가 되게) */
+  preServiceItem(a) {
+    const { buildItem } = require('./preservice');
+    const sec = Number(a && a.autoSec) || 0;
+    if (sec) this.settings.update(d => { d.preService = { ...(d.preService || {}), autoSec: Math.max(3, Math.min(60, Math.round(sec))) }; });
+    return { item: buildItem(a || {}) };
+  },
   // ---- 홈페이지 주보 연동 (교회 홈페이지의 주보 JSON → 큐시트 · 광고 슬라이드) ----
   homeFeedInfo() { const h = this.settings.get().home || {}; return { url: h.feedUrl || '' }; },
   /** 주보 JSON 받기 (받으면 주소를 기억) */

@@ -1393,3 +1393,21 @@ html[data-theme="light"], html[data-theme="manna"] { --tc-p: 100%; }
 .hf-go { margin-top: 12px; }
 .hf-done { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
 .hf-warn ul { margin: 4px 0 0; padding-left: 20px; font-size: 12.5px; color: var(--warn); }
+
+/* ---------------- 예배 전 화면 자동 만들기 (preservice.js) ---------------- */
+.modal-box:has(.ps) { height: auto; max-height: 92vh; width: min(1000px, 95vw); }
+.ps { grid-template-columns: 130px 1fr; }
+.ps h4 { display: flex; align-items: center; margin: 14px 0 2px; }
+.ps h4 > .ic:first-child, .ps button > .ic:first-child { margin-right: .4em; }
+.ps textarea { width: 100%; resize: vertical; }
+.ps-chk { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; flex: none; }
+.ps-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ps-th { position: relative; width: 104px; cursor: pointer; }
+.ps-th img { display: block; width: 104px; height: 130px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--sunken); }
+.ps-th input { position: absolute; left: 6px; top: 6px; }
+.ps-th input:not(:checked) + img { opacity: .35; }
+.ps-th i { position: absolute; right: 6px; bottom: 5px; font-style: normal; font-size: 11px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+.ps-qt { display: flex; gap: 10px; align-items: flex-start; }
+.ps-qt:empty { display: none; }
+.ps-verses { margin-top: 4px; font-size: 13px; line-height: 1.7; color: var(--text2); max-height: 140px; overflow: auto; }
+.ps-verses sup { color: var(--hl); margin-right: 2px; }
