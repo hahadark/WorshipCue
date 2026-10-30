@@ -56,6 +56,8 @@
         '-',
         { ic: 'image', label: '이미지', run: add('image') }, { ic: 'clapperboard', label: '영상', run: add('video') }, { ic: 'volume-2', label: '음악', run: add('audio') },
         { ic: 'images', label: '슬라이드쇼 (예배 전 화면)', run: add('slideshow') }, { ic: 'camera', label: '카메라', run: add('camera') }, { ic: 'square', label: '빈 화면', run: add('blank') },
+        '-',
+        { ic: 'presentation', label: '설교 포인트 슬라이드 (원고에서 대지 뽑기)…', run: () => window.BCPoints && window.BCPoints.open() },
       ] },
       H('고른 순서'),
       { ic: 'pencil', label: '편집칸에서 고치기', key: 'F2', run: act('cueEdit') },

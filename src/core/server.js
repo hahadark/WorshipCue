@@ -248,6 +248,20 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
           } catch (e) { json(res, 200, { ok: false, error: e.message }); }
         });
       }
+      // 설교 원고 파일 → 글 (hwp · hwpx · docx · txt · md · srt · vtt)
+      if (p === '/api/readtext') {
+        const name = decodeURIComponent(String(req.headers['x-filename'] || 'sermon.txt'));
+        return readBody(req, 30 * 1024 * 1024, buf => {
+          try {
+            const ext = path.extname(name).toLowerCase();
+            if (ext === '.srt' || ext === '.vtt') return json(res, 200, { ok: true, result: { text: buf.toString('utf8').replace(/^\ufeff/, '') } });
+            const { readBulletin } = require('./bulletin');
+            const r = readBulletin(buf, name);
+            if (r.text === undefined) throw new Error('PDF·사진에서는 글을 꺼낼 수 없습니다. 원고를 복사해 붙여 넣거나 hwp·docx·txt 파일을 고르세요.');
+            json(res, 200, { ok: true, result: { text: r.text } });
+          } catch (e) { json(res, 200, { ok: false, error: e.message }); }
+        });
+      }
       if (p === '/api/media') {
         const name = String(req.headers['x-filename'] || 'image.png');
         const ext = path.extname(name).toLowerCase();

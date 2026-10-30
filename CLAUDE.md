@@ -31,7 +31,7 @@
 
 - `src/main/main.js` — Electron 메인 (창·보조 화면·업데이트·텔레메트리·동기화 시작·종료 시 `core.sync.stop()`)
 - `src/core/core.js` — 코어. `core.commands` 는 객체 리터럴(`this` = core), 보조 함수는 모듈 수준에. 명령은 `/cmd` 로 조작 화면이 부른다(`window.BC.cmd(name, args)`).
-  주요 모듈: `bulletin.js`(주보 → 큐시트 규칙 파서 `parseOrderText` · `planToCue`), `usagelog.js`(사용 기록, 저작권 보고), `sync.js`(여러 PC 동기화 `WorshipCue-sync.json` · 하루 1회 백업·되돌리기), `hymnal.js`(베들레헴 찬송가 가사·악보), `presentation.js`, `server.js`(127.0.0.1:37528, SSE)
+  주요 모듈: `bulletin.js`(주보 → 큐시트 규칙 파서 `parseOrderText` · `planToCue`), `sermonpoints.js`(설교 원고 → 대지 → '제목' 순서, 규칙·오픈라우터·채팅 AI — 화면은 `control/points.js`), `usagelog.js`(사용 기록, 저작권 보고), `sync.js`(여러 PC 동기화 `WorshipCue-sync.json` · 하루 1회 백업·되돌리기), `hymnal.js`(베들레헴 찬송가 가사·악보), `presentation.js`, `server.js`(127.0.0.1:37528, SSE)
 - DB: `bible.db` 하나에 성경 + 찬양 + 큐시트 + 사용 기록 (WAL). `data/`(공개) · `data-personal/`(개인)
 - `src/web/control/` — 조작 화면. `index.html` 기본 틀, `dock.js`(dockview 패널 배치·작업공간), `menubar.js`(상단 메뉴), `ctxmenu.js`(오른쪽 클릭), `cue.js`(큐시트·편집칸·실행 취소), `library.js`, `settings.js`, `usage.js`, `ai.js`(주보 붙여 넣기 · AI), `control.css`
 - `src/web/shared/` — `render.js`(슬라이드 그리기·카메라), `icons.js`(**Lucide 아이콘 92개**, `BCIcon('name')` · `BCIcon.type('bible')` · 정적 HTML 은 `<i data-icon="…">`), `i18n.js`(영어 화면 런타임: `[data-noi18n]` 은 번역 안 함, 따옴표 안 자리(“{1}”)는 사용자 글로 두고 번역 안 함)
@@ -62,5 +62,6 @@
 - 여러 PC 동기화·백업은 한 PC 안에서 두 데이터 폴더로만 시험했다. 실제 두 PC + 원드라이브에서 검증 필요.
 - 카메라는 가짜 카메라(`--use-fake-device-for-media-stream`)로만 점검했다.
 - (1.12 에서 편집칸 배경 단추·카메라 표시·더보기 메뉴·무대 화면·리모컨·강조 단추는 아이콘으로 바꿈) 아직 이모지가 남은 곳: 빠른 설정의 배경 단추(`tplcontrols.js`), 오버레이 종류(`library.js OV_TYPES`), 오른쪽 클릭 메뉴의 테마 목록 `🌹`, 설정 화면 일부. 같은 아이콘 규칙으로 바꾸면 더 정돈된다.
+- 연결 계획(쇼츠편집기 채팅에서 받은 목록, 사용자가 1번부터 차례로 하라고 함): ① 설교 포인트 슬라이드(완료, 다음 판) ② 광고·주보 연동(홈페이지 주보 데이터 → 광고 슬라이드) ③ 예배 전 대기 화면(지난주 말씀카드 · 이번 주 QT 첫날 본문 순환) ④ 실시간 자막 ⑤ 예배 녹음·자동 정리 ⑥ 실시간 통역(낮음).
 - 큐시트 패널의 "큐시트 · 성경 책" 독 탭 안에 다시 "큐시트(예배 순서) | 성경 책" 분절 탭이 있어 머리가 두 줄 — 하나로 합칠 여지.
 - 사용자가 1.11.0 을 써 보고 눈에 걸리는 곳을 말해 줄 예정 — 그 피드백을 먼저 반영.

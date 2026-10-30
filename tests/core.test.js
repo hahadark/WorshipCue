@@ -1267,3 +1267,65 @@ test('가사 정리: 되풀이로 1절·프리코러스·후렴 나누기, 여�
   const songs = parseSongText('# 곡 하나\n가사 가\n가사 나\n\n# 곡 둘\n가사 다');
   assert.deepEqual(songs.map(s => s.title), ['곡 하나', '곡 둘']);
 });
+
+test('설교 포인트 슬라이드: 원고·자막에서 대지 찾기, AI 답 읽기, 제목 순서로', async () => {
+  const sp = require('../src/core/sermonpoints');
+  // 원고: 머리의 제목·본문·설교자, '첫째·둘째·셋째로', 대지 안의 1. 2. 작은 목록은 대지가 아님, '적용:'
+  const ms = '제목: 복음을 부끄러워하지 않는 삶\n본문: 롬 1:16-17\n설교자: 홍길동 사관\n\n오늘 바울의 고백을 묵상합니다.\n\n'
+    + '첫째, 복음은 하나님의 능력입니다.\n복음은 죽은 자를 살리시는 하나님의 능력입니다. 그래서 바울은 담대했습니다.\n1. 로마는 힘의 도시였습니다\n2. 복음은 더 큰 힘입니다\n\n'
+    + '둘째, 복음은 모든 믿는 자에게 열려 있습니다.\n유대인에게나 헬라인에게나 차별이 없습니다.\n\n'
+    + '셋째로 의인은 믿음으로 삽니다\n우리의 의는 믿음에서 나옵니다.\n\n적용: 이번 주 한 사람에게 복음을 전해 봅시다.';
+  const a = sp.findPoints(ms, {});
+  assert.equal(a.title, '복음을 부끄러워하지 않는 삶');
+  assert.equal(a.verse, '롬 1:16-17');
+  assert.equal(a.speaker, '홍길동 사관');
+  assert.deepEqual(a.points.map(p => p.heading), ['복음은 하나님의 능력입니다', '복음은 모든 믿는 자에게 열려 있습니다', '의인은 믿음으로 삽니다']);
+  assert.match(a.points[1].body, /차별이 없습니다/);
+  assert.match(a.application, /복음을 전해/);
+  // 숫자 목록 원고 · 화면에서 넣은 제목이 원고 머리보다 우선
+  const b = sp.findPoints('1. 하나님은 사랑이십니다\n그 사랑은 십자가에서 드러났습니다.\n2. 우리도 서로 사랑합니다\n사랑은 행함입니다.', { title: '사랑' });
+  assert.equal(b.title, '사랑');
+  assert.deepEqual(b.points.map(p => p.heading), ['하나님은 사랑이십니다', '우리도 서로 사랑합니다']);
+  // 자동 자막(srt): 부호 없이 '첫째 … 둘째 …'
+  const srt = '1\n00:00:01,000 --> 00:00:04,000\n오늘 말씀은 로마서입니다 첫째 복음은 능력입니다\n\n2\n00:00:04,500 --> 00:00:08,000\n죽은 자를 살리는 힘이 있습니다 둘째 복음은 모두에게 열려 있습니다\n\n3\n00:00:08,500 --> 00:00:10,000\n누구든지 믿으면 구원을 받습니다';
+  const c = sp.findPoints(srt, {});
+  assert.equal(c.found, 'sentences');
+  assert.deepEqual(c.points.map(p => p.heading), ['복음은 능력입니다', '복음은 모두에게 열려 있습니다']);
+  // 대지 표시가 없으면 알려 준다
+  assert.throws(() => sp.findPoints('그냥 긴 설교입니다. 대지 표시는 없습니다.', {}), /대지 표시/);
+  // 채팅 AI 답 (설명 + json 코드 블록) · 설교쇼츠 편집기 '설교 요약' 모양
+  const ans = '정리했습니다.\n```json\n{"title":"복음","verse":"롬 1:16-17","theme":"복음은 믿는 모든 자를 살리는 하나님의 능력입니다","points":[{"heading":"복음은 능력입니다","body":"죽은 자를 살리시는 힘"},{"heading":"모두에게 열린 복음","body":"차별 없이"}],"application":"한 사람에게 복음을 전합시다","prayer":"기도"}\n```';
+  const d = sp.parseAnswer(ans);
+  assert.equal(d.points.length, 2);
+  assert.equal(sp.findPoints(ans, {}).found, 'json'); // 원고 칸에 붙여 넣어도 읽는다
+  assert.throws(() => sp.parseAnswer('JSON 이 없는 답'), /찾지 못했습니다/);
+  // 제목 순서: 첫 장 제목·본문, 다음 장 핵심·대지·적용 ('---' 로 나눔)
+  const it = sp.toCueItem(d);
+  assert.equal(it.type, 'title');
+  assert.equal(it.title, '복음');
+  assert.equal(it.subtitle, '롬 1:16-17');
+  const pages = it.more.split('\n---\n');
+  assert.deepEqual(pages.map(p => p.split('\n')[0]), ['복음은 믿는 모든 자를 살리는 하나님의 능력입니다', '첫째, 복음은 능력입니다', '둘째, 모두에게 열린 복음', '한 사람에게 복음을 전합시다']);
+  assert.equal(it.note, '설교 포인트 5장');
+  const it2 = sp.toCueItem({ ...d, points: [{ heading: '하나\n---\n둘', body: '' }] }, { numbering: 'num', theme: false, application: false });
+  assert.equal(it2.more, '1. 하나 — 둘'); // 장 구분선·줄바꿈이 끼어들지 않게
+  // 코어 명령: 규칙 · 프롬프트 · AI(가짜 응답) · 순서 만들기
+  const core = newCore('points');
+  const f = core.command('sermonPointsFind', { text: ms, meta: { speaker: '김사관' } });
+  assert.equal(f.ok, true, f.error);
+  assert.equal(f.result.data.speaker, '김사관');
+  const pr = core.command('sermonPointsPrompt', { text: ms, meta: { title: '복음' } });
+  assert.match(pr.result.prompt, /설교 제목: 복음/);
+  assert.match(pr.result.prompt, /첫째, 복음은 하나님의 능력입니다/);
+  core.command('setAi', { apiKey: 'sk-test' });
+  let sent = null;
+  core.aiFetch = async (url, opt) => { sent = JSON.parse(opt.body); return { ok: true, json: async () => ({ model: 'test/m', choices: [{ message: { content: JSON.stringify({ title: '', points: [{ heading: '하나', body: '일' }, { heading: '둘', body: '이' }] }) } }] }) }; };
+  const ai = await core.command('sermonPointsAI', { text: ms, meta: { title: '복음' } });
+  assert.equal(ai.ok, true, ai.error);
+  assert.equal(ai.result.data.title, '복음'); // AI 가 비운 제목은 화면 값으로
+  assert.match(sent.messages[1].content, /\[설교 원고\]/);
+  const im = core.command('sermonPointsItem', { data: ai.result.data, opts: { numbering: 'word' } });
+  assert.equal(im.ok, true, im.error);
+  assert.match(im.result.item.more, /^첫째, 하나\n일\n---\n둘째, 둘\n이$/);
+  core.store.close();
+});

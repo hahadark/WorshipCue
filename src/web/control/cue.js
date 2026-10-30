@@ -961,6 +961,7 @@
     }
     const b = e.target.closest('button[data-add]');
     if (!b) return;
+    if (b.dataset.add === 'points') { if (window.BCPoints) window.BCPoints.open(); return; }
     if (b.dataset.add === 'hymn') openHymnPicker({});
     else if (b.dataset.add === 'weblyrics') webLyrics(-1);
     else addItem(b.dataset.add);

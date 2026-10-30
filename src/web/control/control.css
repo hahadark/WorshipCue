@@ -1347,3 +1347,29 @@ html[data-theme="light"], html[data-theme="manna"] { --tc-p: 100%; }
 :where(html:not([data-theme="contrast"])) .wc-dock .dv-inactive-group .dv-tab.dv-active-tab::after { background: var(--line2); }
 :where(html:not([data-theme="contrast"])) .dock-body { background: var(--panel); }
 :where(html:not([data-theme="contrast"])) .bottom { margin-top: 8px; }
+
+/* ---------------- 설교 포인트 슬라이드 (points.js) ---------------- */
+.modal-box:has(.pts) { height: auto; max-height: 92vh; width: min(1040px, 95vw); }
+.pts { grid-template-columns: 110px 1fr; }
+.pts textarea { width: 100%; line-height: 1.55; resize: vertical; }
+.pts .pts-go button, .pts .pts-insert button, .pts-chat button, #ptFile { gap: 0; }
+.pts button > .ic:first-child { margin-right: .4em; }
+.pts-chat { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px dashed var(--line2); border-radius: var(--radius-lg, 10px); }
+.pts-chat textarea { font-family: Consolas, 'Malgun Gothic', monospace; font-size: 12px; }
+.pts h4 { margin: 14px 0 8px; }
+.pts h4 .muted { font-weight: 400; font-size: 12px; }
+.pts-edit { display: flex; flex-direction: column; gap: 6px; }
+.pts-row { display: flex; gap: 8px; align-items: center; }
+.pts-row > input[type=text] { flex: 1; min-width: 0; }
+.pts-pt > input[data-k="heading"] { flex: 1.1; font-weight: 600; }
+.pts-pt > input[data-k="body"] { flex: 1.6; }
+.pts-k { flex: none; width: 74px; display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12.5px; }
+.pts-num { justify-content: center; font-weight: 700; color: var(--hl); font-size: 13px; }
+.pts-opt { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 12.5px; }
+.pts-opt select { height: 30px; }
+.pts-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 14px 0 10px; }
+.pts-card { position: relative; aspect-ratio: 16 / 9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 12px 14px; text-align: center;
+  background: radial-gradient(120% 90% at 50% 0%, #22345e, #0c1426); color: #fff; border-radius: 10px; box-shadow: 0 6px 16px -10px rgba(0,0,0,.6); overflow: hidden; }
+.pts-card b { font-size: 14px; line-height: 1.35; word-break: keep-all; }
+.pts-card span { font-size: 11px; line-height: 1.4; color: #c9d6ef; word-break: keep-all; }
+.pts-card i { position: absolute; left: 7px; top: 5px; font-style: normal; font-size: 10px; color: rgba(255,255,255,.55); }

@@ -21,6 +21,12 @@ const { HymnLyrics, countHymns, FILE: HYMN_FILE } = require('./hymnlyrics');
 const { Hymnal } = require('./hymnal');
 
 /** 모두 지우기로 숨긴 배경은 다시 송출하면 돌아온다 (배경 끄기로 직접 끈 것은 그대로) */
+/** 설교 포인트: 화면에서 넣은 설교 제목·본문·설교자 */
+function pointsMeta(a) {
+  const m = (a && a.meta) || {};
+  const s = (v, n) => String(v || '').trim().slice(0, n);
+  return { title: s(m.title, 120), verse: s(m.verse, 80), speaker: s(m.speaker, 60) };
+}
 function unclearBg(core) { if (core.layers.bgByClear) { core.layers.hideBg = false; core.layers.bgByClear = false; } }
 const { Library } = require('./library');
 const { UsageLog } = require('./usagelog');
@@ -156,7 +162,7 @@ class WorshipCueCore extends EventEmitter {
     return { hideBg: this.layers.hideBg, logo: this.layers.logo, logoImage: logo, overlaysOff: this.layers.savedOverlays.length > 0, media };
   }
 
-  // ---------------- AI 주보 → 큐시트 ----------------
+  // ---------------- AI 주보 → 큐시트 · 설교 포인트 ----------------
   aiKey() {
     const a = this.settings.get().ai || {};
     if (a.keyEnc && this.desktop && this.desktop.decrypt) { try { return this.desktop.decrypt(a.keyEnc); } catch { return ''; } }
@@ -871,6 +877,35 @@ WorshipCueCore.prototype.commands = {
     const { plan, isSample } = parseChatAnswer(String((a && a.text) || '').slice(0, 300000));
     if (isSample) throw new Error('샘플 파일 내용 그대로입니다. 채팅 AI 가 주보로 새로 만든 답을 붙여 넣으세요.');
     return { ...this.planToSavedCue(plan), model: '채팅 AI' };
+  },
+  // ---- 설교 포인트 슬라이드 (원고 → 대지·핵심 문장 → '제목' 순서) ----
+  /** 규칙으로 대지 찾기 (AI 없이). 붙여 넣은 글이 AI 답(JSON)이면 그대로 읽는다 */
+  sermonPointsFind(a) {
+    const { findPoints } = require('./sermonpoints');
+    return { data: findPoints(String((a && a.text) || '').slice(0, 300000), pointsMeta(a)) };
+  },
+  /** 오픈라우터 API 로 대지 뽑기 */
+  async sermonPointsAI(a) {
+    const { askPoints } = require('./sermonpoints');
+    const ai = this.settings.get().ai || {};
+    return askPoints({ apiKey: this.aiKey(), model: ai.model || undefined, endpoint: ai.endpoint || undefined, text: String((a && a.text) || ''), meta: pointsMeta(a), extra: String((a && a.extra) || '').slice(0, 500), fetchImpl: this.aiFetch || fetch });
+  },
+  /** 채팅 AI 에 붙여 넣을 프롬프트 (원고 포함) */
+  sermonPointsPrompt(a) {
+    const { chatPrompt } = require('./sermonpoints');
+    return { prompt: chatPrompt(String((a && a.text) || '').slice(0, 300000), pointsMeta(a), String((a && a.extra) || '').slice(0, 500)) };
+  },
+  /** 채팅 AI 답 → 데이터 */
+  sermonPointsImport(a) {
+    const { parseAnswer } = require('./sermonpoints');
+    const d = parseAnswer(String((a && a.text) || '').slice(0, 300000));
+    const m = pointsMeta(a);
+    return { data: { ...d, title: d.title || m.title, verse: d.verse || m.verse, speaker: d.speaker || m.speaker } };
+  },
+  /** 데이터 → 큐시트 '제목' 순서 (넣는 것은 조작 화면이 한다: 실행 취소가 되게) */
+  sermonPointsItem(a) {
+    const { toCueItem } = require('./sermonpoints');
+    return { item: toCueItem((a && a.data) || {}, (a && a.opts) || {}) };
   },
   // ---- 사용 기록 (저작권 보고) ----
   usageLog(a) { const o = { from: String((a && a.from) || ''), to: String((a && a.to) || ''), kinds: a && Array.isArray(a.kinds) ? a.kinds : null, q: String((a && a.q) || '') }; return { rows: this.usage.list(o), summary: this.usage.summary(o) }; },

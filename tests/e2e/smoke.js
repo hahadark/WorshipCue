@@ -46,6 +46,19 @@ app.whenReady().then(async () => {
     await shot('quick');
     await ev(`$('#aiOpen').click(); await wait(1000); return 1;`);
 
+    // ---- 3-1. 설교 포인트 슬라이드: 열린 큐시트의 설교·성경 순서로 미리 채우고 → 대지 찾기 → '설교' 다음에 넣기
+    const pts = await ev(`window.BCPoints.open(); await wait(500);
+      const pre = { title: $('#ptTitle').value, verse: $('#ptVerse').value, speaker: $('#ptSpeaker').value };
+      $('#ptText').value = '첫째, 선한 목자는 양을 아십니다.\\n주님은 우리 이름을 부르십니다.\\n둘째, 선한 목자는 목숨을 버립니다.\\n십자가가 그 증거입니다.';
+      $('#ptFind').click(); await wait(1000);
+      const cards = $$('#ptCards .pts-card').map(c => c.innerText.replace(/\\s+/g, ' '));
+      $('#ptInsert').click(); await wait(1200);
+      const names = []; for (let i = 0; i < 30; i++) { const it = window.BCCue.item(i); if (!it) break; names.push((it.note || '').startsWith('설교 포인트') ? 'PTS:' + it.title : it.title); }
+      return { pre, cards, names, modal: !$('#modal').hidden };`);
+    ok(pts.pre && pts.pre.title === '선한 목자' && /요 3:16/.test(pts.pre.verse) && /홍길동/.test(pts.pre.speaker), '설교 포인트: 설교·성경 순서로 미리 채움', pts);
+    ok(pts.cards && pts.cards.length === 3 && /첫째, 선한 목자는 양을 아십니다/.test(pts.cards[1]), '설교 포인트: 대지 찾기 → 카드 미리보기', pts);
+    ok(pts.names && pts.names.indexOf('PTS:선한 목자') === pts.names.indexOf('설교') + 1 && pts.modal === false, '설교 포인트: 설교 다음에 큐시트로', pts);
+
     // ---- 4. 베들레헴 찬송가 (있을 때만)
     const books = await ev(`return (await window.BC.cmd('hymnalBooks', {})).result;`);
     if (Array.isArray(books) && books.some(b => b.lyrics)) {
