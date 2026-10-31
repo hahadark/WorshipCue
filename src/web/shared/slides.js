@@ -287,10 +287,41 @@
     return { chunks: out.length ? out : chunks, missing };
   }
 
-  /** 공지 글: '---' 만 있는 줄로 슬라이드 구분 */
-  function textChunks(body) {
-    return String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/).map(t => ({ label: '', text: t.trim() })).filter(c => c.text).map((c, k) => ({ ...c, src: k }));
+  /** 교독문 역할 머리말: 줄 앞의 '인도자:' '회중:' '다같이:' … (콜론은 : 또는 ：) */
+  const ROLE_RE = /^\s*(인도자|사회자|집례자|리더|회중|성도|다\s?같이|함께|모두|일동)\s*[:：]\s*(.*)$/;
+  const PEOPLE = /^(회중|성도|다\s?같이|함께|모두|일동)$/;
+  /**
+   * 교독문 역할 표시: 머리말이 붙은 줄만 바꾼다 (없는 줄은 그대로).
+   * 회중·다같이 줄은 굵게(**…**), 인도자 줄은 보통. 머리말은 빼고, labels 면 '회중: ' 처럼 남긴다.
+   * '회중:' 만 있는 줄은 그 아래 줄들(빈 줄 전까지)이 그 역할.
+   */
+  function roleText(text, labels = false) {
+    const fmt = (role, body) => {
+      const plain = body.replace(/^\*\*([\s\S]*)\*\*$/, '$1');
+      const txt = labels ? (plain ? `${role}: ${plain}` : `${role}:`) : plain;
+      return PEOPLE.test(role) ? `**${txt}**` : labels ? txt : body;
+    };
+    const out = [];
+    let cur = null;
+    for (const line of String(text || '').split('\n')) {
+      const m = ROLE_RE.exec(line);
+      if (m) {
+        const role = m[1].replace(/\s/g, '');
+        const body = m[2].trim();
+        if (body || labels) out.push(fmt(role, body));
+        cur = body ? null : role; // 머리말만 있는 줄이면 아래 줄들이 그 역할
+        continue;
+      }
+      if (!line.trim()) { cur = null; out.push(line); continue; }
+      out.push(cur ? (labels ? fmt(cur, line.trim()).replace(`${cur}: `, '') : fmt(cur, line.trim())) : line);
+    }
+    return out.join('\n');
+  }  const hasRoles = text => String(text || '').split('\n').some(l => ROLE_RE.test(l));
+
+  /** 공지 글: '---' 만 있는 줄로 슬라이드 구분. roles: 교독문 머리말 표시 (true · 'labels' = 역할 이름도 보이기) */
+  function textChunks(body, { roles = false } = {}) {
+    return String(body || '').replace(/\r/g, '').split(/\n\s*-{3,}\s*\n/).map(t => ({ label: '', text: (roles ? roleText(t, roles === 'labels') : t).trim() })).filter(c => c.text).map((c, k) => ({ ...c, src: k }));
   }
 
-  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, lyricGroups, arrange, setLyricsChunk, setTextChunk, mergeEdit, slideOp, slideOpEdits, titlePages, fromTitlePages, titleSlide };
+  global.BCSlides = { build, refLabel, indexOfVerse, buildText, lyricsChunks, textChunks, roleText, hasRoles, lyricGroups, arrange, setLyricsChunk, setTextChunk, mergeEdit, slideOp, slideOpEdits, titlePages, fromTitlePages, titleSlide };
 })(window);

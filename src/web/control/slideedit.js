@@ -35,7 +35,7 @@
       }));
     }
     const ref = it.type === 'text' || it.showTitle ? it.title : '';
-    const chunks = it.type === 'song' ? SL.lyricsChunks(it.lyrics) : SL.textChunks(it.body);
+    const chunks = it.type === 'song' ? SL.lyricsChunks(it.lyrics) : SL.textChunks(it.body, { roles: it.type === 'text' ? (it.roleLabels ? 'labels' : true) : false });
     let group = '';
     return chunks.map(c => {
       if (c.label) group = c.label;

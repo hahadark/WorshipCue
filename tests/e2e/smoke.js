@@ -55,6 +55,16 @@ app.whenReady().then(async () => {
     ok(/전 교인 식사/.test(qt.lv || '') && qt.title === '즉석 자막' && qt.input === '', '즉석 자막: Enter 로 바로 송출', qt);
     ok(qt.list && qt.list[0] === '예배 후 전 교인 식사가 있습니다', '즉석 자막: 최근 목록에 남음', qt);
 
+    // ---- 2-2. 교독문 역할: '회중:' 줄은 굵게, 머리말은 빠짐 → '역할 이름도 보이기' 를 켜면 머리말이 화면에
+    const rd = await ev(`const c = (await window.BC.cmd('saveCue', { cue: { name: '교독문 점검', items: [{ type: 'text', title: '교독문 1', body: '인도자: 복 있는 사람은\\n회중: 악인들의 꼬임을 따르지 아니하며' }] } })).result;
+      window.BCCue.openCue(c.id); await wait(800); $$('#cueList .cue-item')[0].click(); await wait(1200);
+      const off = { text: $('#pvScreen').innerText.replace(/\\s+/g, ' '), bold: $$('#pvScreen b, #pvScreen strong').map(b => b.textContent).join('|') };
+      const cb = $('[data-k=roleLabels]'); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); await wait(1200);
+      const on = { text: $('#pvScreen').innerText.replace(/\\s+/g, ' '), saved: (await window.BC.cmd('getCue', { id: c.id })).result.items[0].roleLabels };
+      return { off, on };`);
+    ok(rd.off && /복 있는 사람은/.test(rd.off.text) && !/인도자|회중/.test(rd.off.text) && /악인들의/.test(rd.off.bold), '교독문 역할: 회중 줄 굵게 · 머리말 빼기', rd);
+    ok(rd.on && /회중: 악인들의/.test(rd.on.text) && rd.on.saved === true, '교독문 역할: 역할 이름 보이기 (저장됨)', rd);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

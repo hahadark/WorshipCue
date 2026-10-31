@@ -310,7 +310,7 @@
       }
     }
     else if (it.type === 'song') slides = SL.buildText({ title: it.title, showTitle: it.showTitle, chunks: SL.arrange(SL.lyricsChunks(it.lyrics), songOrder(it)).chunks }, opts);
-    else if (it.type === 'text') slides = SL.buildText({ title: it.title, showTitle: true, chunks: SL.textChunks(it.body) }, opts);
+    else if (it.type === 'text') slides = SL.buildText({ title: it.title, showTitle: true, chunks: SL.textChunks(it.body, { roles: it.roleLabels ? 'labels' : true }) }, opts);
     else if (it.type === 'image' && it.image) slides = [it.score ? { kind: 'score', image: it.image, bg: it.scoreBg || '#ffffff', ref: it.title, label: '악보', parts: [] } : { kind: 'image', image: it.image, ref: it.title, label: '이미지', parts: [] }];
     else if (it.type === 'camera') slides = [{ kind: 'camera', camera: { deviceId: it.deviceId || '', label: it.label || '', fit: it.fit || 'cover' }, ref: it.title, label: '카메라', parts: [] }];
     else if (it.type === 'slideshow') {
@@ -595,7 +595,8 @@
         <label>곡 정보</label><div class="ce-row"><input type="text" data-k="credit" value="${esc(it.credit || '')}" placeholder="${esc((it.songId && st.songs.get(it.songId) && st.songs.get(it.songId).credit) || '작사·작곡 · 저작권 (예: 작사 홍길동 · 작곡 김철수 · CCLI 1234567)')}" style="flex:1"><select data-k="creditShow" title="곡 정보를 화면 아래에 작게 보이기"><option value="" ${!it.creditShow ? 'selected' : ''}>보이지 않기</option><option value="first" ${it.creditShow === 'first' ? 'selected' : ''}>첫 슬라이드에</option><option value="last" ${it.creditShow === 'last' ? 'selected' : ''}>마지막 슬라이드에</option><option value="both" ${it.creditShow === 'both' ? 'selected' : ''}>처음과 끝에</option></select></div>
         <label>부를 순서</label><div class="ce-col"><input type="text" data-k="order" value="${esc(it.order || '')}" placeholder="${esc(songOrder({ ...it, order: '' }) || '비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴 후렴 (또는 1 C 2 C C)')}">
           <div class="ce-row ce-chips">${SL.lyricGroups(SL.lyricsChunks(it.lyrics)).filter(g => g.label).map(g => `<button type="button" data-chip="${esc(g.label)}" title="부를 순서 끝에 넣기">${esc(g.label)}</button>`).join('')}<button type="button" data-chip="" title="부를 순서 지우기 (가사 순서대로)">지우기</button><span id="ceOrderMsg" class="note"></span></div></div>`,
-      text: `<label>내용</label><textarea data-k="body" data-fmt rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="ce-row note">${window.BCFmt ? window.BCFmt.bar() : ''}<span>'---' 줄 = 다음 슬라이드</span></div>`,
+      text: `<label>내용</label><textarea data-k="body" data-fmt rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="ce-row note">${window.BCFmt ? window.BCFmt.bar() : ''}<span>'---' 줄 = 다음 슬라이드</span></div>
+        <span></span><div class="ce-row note"><span>교독문: 줄 앞에 인도자: · 회중: · 다같이: 를 쓰면 회중·다같이 줄은 굵게</span><label class="tc-toggle"><input type="checkbox" data-k="roleLabels" ${it.roleLabels ? 'checked' : ''}> 역할 이름도 화면에 보이기</label></div>`,
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">
         <label>추가 슬라이드</label><textarea data-k="more" rows="${it.more ? 3 : 1}" placeholder="다음 슬라이드 (첫 줄 = 제목, 둘째 줄 = 부제) · '---' 줄로 또 다음 · 비우면 한 장">${esc(it.more || '')}</textarea>`,
       image: `<label>이미지</label><div class="ce-row">${it.image ? thumbTag(it.image) : ''}<button data-act="image">🖼 ${it.image ? '바꾸기' : '고르기'}</button></div>`,

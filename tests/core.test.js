@@ -1477,3 +1477,21 @@ test('단축키 기본값: 즉석 자막(Ctrl+T) 포함 · 서로 겹치지 않�
   assert.equal(new Set(combos).size, combos.length, '같은 키가 두 동작에 묶이면 안 된다');
   for (const k of Object.keys(DEFAULT_SHORTCUTS)) assert.ok(SHORTCUT_LABELS[k], `${k} 이름표`);
 });
+
+test('교독문 역할 표시: 인도자·회중·다같이 머리말 → 회중·다같이 굵게, 머리말만 있는 줄은 아래 줄들에, 저장 시 옵션 유지', () => {
+  global.window = global; window.BCRender = window.BCRender || {};
+  require('../src/web/shared/slides.js');
+  const SL = window.BCSlides;
+  const t = '인도자: 여호와는 나의 목자시니\n회중: 내게 부족함이 없으리로다\n다 같이 : 아멘\n광고 줄';
+  assert.equal(SL.roleText(t), '여호와는 나의 목자시니\n**내게 부족함이 없으리로다**\n**아멘**\n광고 줄');
+  assert.equal(SL.roleText(t, true), '인도자: 여호와는 나의 목자시니\n**회중: 내게 부족함이 없으리로다**\n**다같이: 아멘**\n광고 줄');
+  assert.equal(SL.roleText('회중：\n첫 줄\n둘째 줄\n\n그냥 줄'), '**첫 줄**\n**둘째 줄**\n\n그냥 줄');
+  assert.equal(SL.roleText('**베들레헴 교독문은 이미 굵게**\n보통'), '**베들레헴 교독문은 이미 굵게**\n보통', '머리말 없는 글은 그대로');
+  assert.equal(SL.roleText('회중: **이미 굵게**'), '**이미 굵게**');
+  assert.deepEqual(SL.textChunks('인도자: 가\n회중: 나\n---\n함께: 다', { roles: true }).map(c => c.text), ['가\n**나**', '**다**']);
+  assert.deepEqual(SL.textChunks('회중: 나').map(c => c.text), ['회중: 나'], '옵션이 없으면 그대로');
+  assert.ok(SL.hasRoles(t) && !SL.hasRoles('예배 후 식사: 친교실'), '광고의 일반 콜론은 머리말이 아님');
+  const { normalizeItem } = require('../src/core/cues');
+  assert.equal(normalizeItem({ type: 'text', title: '교독문', body: t, roleLabels: true }).roleLabels, true);
+  assert.equal(normalizeItem({ type: 'text', title: '공지', body: '가' }).roleLabels, undefined);
+});

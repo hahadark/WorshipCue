@@ -27,7 +27,7 @@
   /** 글 → 송출 슬라이드 (공지와 같은 글자 슬라이드, 길면 자동으로 나눔) */
   function slidesOf(text) {
     const SL = window.BCSlides;
-    return SL.buildText({ title: '', showTitle: false, chunks: SL.textChunks(text) }, app.splitOpts());
+    return SL.buildText({ title: '', showTitle: false, chunks: SL.textChunks(text, { roles: true }) }, app.splitOpts());
   }
 
   async function send(text) {

@@ -27,7 +27,7 @@ function normalizeItem(x) {
     case 'song': it.lyrics = str(x.lyrics); it.showTitle = !!x.showTitle; it.credit = str(x.credit, 300); it.creditShow = ['first', 'last', 'both'].includes(x.creditShow) ? x.creditShow : ''; it.songId = str(x.songId, 60); it.order = str(x.order, 300); break;
     case 'video': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.sound = x.sound !== false; it.loop = !!x.loop; it.endAction = ['hold', 'black', 'next'].includes(x.endAction) ? x.endAction : 'hold'; break;
     case 'audio': it.file = str(x.file, 1500); it.volume = Math.max(0, Math.min(1, Number(x.volume ?? 1) || 0)); it.loop = !!x.loop; it.fadeOnLeave = x.fadeOnLeave !== false; break;
-    case 'text': it.body = str(x.body); break;
+    case 'text': it.body = str(x.body); if (x.roleLabels) it.roleLabels = true; break; // roleLabels: 교독문 역할 이름(인도자:·회중:)도 화면에
     case 'title': it.subtitle = str(x.subtitle, 300); it.more = str(x.more, 20000); break; // more = 추가 슬라이드
     case 'image': it.image = str(x.image, 300); break;
     case 'blank': it.mode = x.mode === 'background' ? 'background' : 'black'; break;
