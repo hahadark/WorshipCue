@@ -214,6 +214,18 @@ app.whenReady().then(async () => {
     await ev(`$('#modalClose').click(); return 1;`);
     ok(pr.open && pr.title && pr.note && pr.order && pr.lyr === 2 && pr.bible && pr.noBibleFirst, '큐시트 인쇄 (메모 · 부를 순서대로 가사 · 성경 본문)', pr);
 
+    // ---- 3-5. 부를 순서 여러 개: 라이브러리 찬양 순서에서 '지금 순서 저장' → 다른 순서로 바꿨다가 저장한 것 누르면 돌아옴
+    const ar = await ev(`const s = (await window.BC.cmd('saveSong', { song: { title: '순서 점검 찬양', lyrics: '[1절]\\n가\\n\\n[후렴]\\n나' } })).result;
+      const c = (await window.BC.cmd('saveCue', { cue: { name: '순서 점검', items: [{ type: 'song', title: '순서 점검 찬양', songId: s.id, lyrics: '[1절]\\n가\\n\\n[후렴]\\n나', order: '1절 후렴 후렴' }] } })).result;
+      window.BCCue.openCue(c.id); await wait(900); $$('#cueList .cue-item')[0].click(); await wait(1200);
+      $('#cueEditor [data-arrsave]').click(); await wait(300); document.querySelector('.ask-in').value = '1부 예배'; document.querySelector('.ask-in').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(1200);
+      const btn = !!$('#cueEditor [data-arr="1부 예배"]');
+      const inp = $('#cueEditor [data-k=order]'); inp.value = '1절'; inp.dispatchEvent(new Event('input', { bubbles: true })); await wait(800);
+      $('#cueEditor [data-arr="1부 예배"]').click(); await wait(800);
+      const back = $('#cueEditor [data-k=order]').value; const lib = (await window.BC.cmd('getSong', { id: s.id })).result.arrangements;
+      await window.BC.cmd('deleteSong', { id: s.id }); return { btn, back, lib };`);
+    ok(ar.btn && ar.back === '1절 후렴 후렴' && ar.lib.length === 1 && ar.lib[0].name === '1부 예배', '부를 순서 여러 개 (저장 · 골라 쓰기)', ar);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

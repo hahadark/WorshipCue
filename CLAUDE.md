@@ -87,3 +87,16 @@
 
 순서마다 '⚡ 송출할 때 자동으로'(item.actions)에 obsScene/obsStream/obsRecord · stagePin · companion · dev[] 가 더해졌다 (실행은 `cue.js` runActions, 정리는 `cues.js`).
 실제 장비(OBS·Companion·X32·PTZ)로는 확인하지 못했다 — 가짜 서버/UDP 로 프로토콜 바이트만 단위 테스트. 테스트: 단위 61개 · e2e 40개.
+
+### 같은 날 ProPresenter 7.15 참고로 더한 것 (기능 아이디어만)
+
+| 기능 | 코어 | 화면 | 설정 키 |
+|---|---|---|---|
+| 회중 메시지 (Ctrl+M) | `core.js` showMessage · messageOverlay (배너 오버레이 'wpmessage') | `messagepanel.js` | `messageTemplates` |
+| 매크로 (Alt+1~9 · /api/trigger/macro · 켤 때) | saveMacro · runMacro → 'run-macro' 이벤트 | `macropanel.js` (실행은 cue.js runActions) | `macros` · item.actions.macro |
+| 예약 실행 | checkSchedule (30초) | macropanel.js 아래 | `schedule` |
+| 큐시트 인쇄 (Ctrl+P) | — | `cue.js` printHtml · openPrint (iframe srcdoc) | localStorage `wc-print` |
+| 부를 순서 여러 개 | `library.js` Songs.arrangements(JSON) · saveSongArrangement | `cue.js` arrRow | — |
+| 글 한 줄 묻기 | — | `ask.js` (app.ask) — **Electron 은 prompt() 가 없다. prompt() 쓰지 말 것** | — |
+
+테스트: 단위 65개 · e2e 46개.

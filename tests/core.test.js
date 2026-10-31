@@ -1860,3 +1860,25 @@ test('예약 실행: 요일·시각이 맞으면 매크로 한 번 · 꺼진 예
   clearInterval(core.scheduleTimer);
   core.store.close();
 });
+test('부를 순서 여러 개: 찬양에 이름 붙여 저장 · 같은 이름은 고침 · 지우기 · 찬양을 다시 저장해도 유지 · 동기화 파일에', () => {
+  const core = newCore('arrangements');
+  const s = core.command('saveSong', { song: { title: '은혜', lyrics: '[1절]\n가\n\n[후렴]\n나', arrangement: '1절 후렴' } }).result;
+  assert.deepEqual(s.arrangements, []);
+  core.command('saveSongArrangement', { songId: s.id, name: '1부 예배', order: '1절 후렴 1절 후렴' });
+  core.command('saveSongArrangement', { songId: s.id, name: '짧게', order: '1절 후렴' });
+  let r = core.command('saveSongArrangement', { songId: s.id, name: '1부 예배', order: '1절 후렴 후렴' });
+  assert.deepEqual(r.result.arrangements, [{ name: '짧게', order: '1절 후렴' }, { name: '1부 예배', order: '1절 후렴 후렴' }]);
+  assert.equal(core.command('saveSongArrangement', { songId: s.id, name: '', order: 'x' }).ok, false);
+  assert.equal(core.command('saveSongArrangement', { songId: 'nope1234', name: 'a', order: 'x' }).ok, false, '라이브러리에 없는 찬양');
+  core.command('saveSong', { song: { id: s.id, title: '은혜', lyrics: '[1절]\n가!\n\n[후렴]\n나', arrangement: '' } });
+  assert.equal(core.library.getSong(s.id).arrangements.length, 2, '가사만 고쳐도 저장한 순서는 그대로');
+  r = core.command('saveSongArrangement', { songId: s.id, name: '짧게', remove: true });
+  assert.deepEqual(r.result.arrangements.map(a => a.name), ['1부 예배']);
+  const dir = path.join(tmp, 'arr-sync');
+  fs.mkdirSync(dir, { recursive: true });
+  core.command('setSyncDir', { dir });
+  const data = JSON.parse(fs.readFileSync(path.join(dir, 'WorshipCue-sync.json'), 'utf8'));
+  assert.match(data.songs.find(x => x.id === s.id).arrangements, /1부 예배/);
+  core.command('setSyncDir', { dir: '' });
+  core.store.close();
+});

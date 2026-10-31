@@ -1459,6 +1459,18 @@ WorshipCueCore.prototype.commands = {
   },
   getSong(a) { const s = this.library.getSong(a.id); if (!s) throw new Error('찬양을 찾을 수 없습니다.'); return s; },
   saveSong(a) { const s = this.library.saveSong(a.song || {}); this.emit('songs', { id: s.id }); return s; },
+  /** 찬양에 부를 순서 저장 · 지우기 (이름 · 순서) — 라이브러리 찬양만 */
+  saveSongArrangement(a) {
+    const s = this.library.getSong(a.songId);
+    if (!s) throw new Error('라이브러리 찬양을 찾을 수 없습니다. 먼저 라이브러리에 저장하세요.');
+    const name = String(a.name || '').trim();
+    if (!name) throw new Error('부를 순서 이름을 입력하세요.');
+    let list = s.arrangements.filter(x => x.name !== name);
+    if (!a.remove) { const order = String(a.order || '').trim(); if (!order) throw new Error('부를 순서가 비었습니다.'); list.push({ name, order }); }
+    const saved = this.library.saveSong({ ...s, arrangements: list });
+    this.emit('songs', { id: saved.id });
+    return saved;
+  },
   deleteSong(a) { this.library.deleteSong(a.id); this.emit('songs', { id: a.id }); return {}; },
   // ---- 라이브러리: 이미지·음악 폴더 ----
   listLibFolders(a) { return this.library.folders(a.kind); },

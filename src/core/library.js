@@ -20,6 +20,14 @@ const POSITIONS = ['top-left', 'top-center', 'top-right', 'middle-left', 'center
 const str = (v, max = 2000) => String(v ?? '').slice(0, max);
 const newId = p => p + Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
 
+/** 저장한 부를 순서 정리: [{ name, order }] 최대 12개, 이름 겹치면 뒤의 것 */
+function normArr(a) {
+  const m = new Map();
+  for (const x of Array.isArray(a) ? a : []) { const name = str(x && x.name, 30).trim(), order = str(x && x.order, 300).trim(); if (name && order) m.set(name, { name, order }); }
+  return [...m.values()].slice(-12);
+}
+function parseArr(s) { try { return normArr(JSON.parse(s || '[]')); } catch { return []; } }
+
 function normalizeOverlay(o) {
   if (!o || !OVERLAY_TYPES.includes(o.type)) throw new Error('알 수 없는 오버레이 종류입니다.');
   const num = (v, d, a, b) => { const n = Number(v); return Number.isFinite(n) ? Math.max(a, Math.min(b, n)) : d; };
@@ -61,6 +69,8 @@ class Library {
     // 부를 순서(편곡) 칸: 예전 DB 에는 없으면 추가
     const cols = this.db.prepare('PRAGMA table_info(Songs)').all().map(c => c.name);
     if (!cols.includes('arrangement')) this.db.exec("ALTER TABLE Songs ADD COLUMN arrangement TEXT NOT NULL DEFAULT ''");
+    // 저장해 둔 부를 순서 여러 개 [{ name, order }] (예: '1부 예배' · '짧게')
+    if (!cols.includes('arrangements')) this.db.exec("ALTER TABLE Songs ADD COLUMN arrangements TEXT NOT NULL DEFAULT '[]'");
   }
 
   // ---------------- 찬양 ----------------
@@ -82,14 +92,16 @@ class Library {
 
   getSong(id) {
     const r = this.db.prepare('SELECT * FROM Songs WHERE id = ?').get(String(id));
-    return r ? { id: r.id, title: r.title, lyrics: r.lyrics, credit: r.credit, tags: r.tags, arrangement: r.arrangement || '', updatedAt: r.updated_at } : null;
+    return r ? { id: r.id, title: r.title, lyrics: r.lyrics, credit: r.credit, tags: r.tags, arrangement: r.arrangement || '', arrangements: parseArr(r.arrangements), updatedAt: r.updated_at } : null;
   }
 
   saveSong(s) {
     if (!s || !String(s.title || '').trim()) throw new Error('찬양 제목을 입력하세요.');
     const id = /^[a-z0-9]{4,40}$/i.test(s.id || '') ? s.id : newId('s');
-    this.db.prepare('INSERT OR REPLACE INTO Songs (id, title, lyrics, credit, tags, arrangement, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(id, str(s.title, 200).trim(), str(s.lyrics, 50000), str(s.credit, 300), str(s.tags, 300), str(s.arrangement, 300), new Date().toISOString());
+    // arrangements 를 안 보내면(예전 화면 · 가져오기) 저장해 둔 것을 그대로 둔다
+    const keep = s.arrangements === undefined ? ((this.getSong(id) || {}).arrangements || []) : s.arrangements;
+    this.db.prepare('INSERT OR REPLACE INTO Songs (id, title, lyrics, credit, tags, arrangement, arrangements, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(id, str(s.title, 200).trim(), str(s.lyrics, 50000), str(s.credit, 300), str(s.tags, 300), str(s.arrangement, 300), JSON.stringify(normArr(keep)), new Date().toISOString());
     return this.getSong(id);
   }
 

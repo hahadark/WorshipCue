@@ -1521,3 +1521,6 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .pr { display: flex; flex-direction: column; gap: 10px; width: min(860px, 88vw); }
 .pr-opts { flex-wrap: wrap; gap: 10px; }
 .pr-frame { width: 100%; height: 62vh; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+/* ---- 저장한 부를 순서 (cue.js arrRow) ---- */
+.ce-arr { flex-wrap: wrap; gap: 4px; }
+.ce-arr button.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }

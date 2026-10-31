@@ -57,7 +57,7 @@ class Sync {
     if (!f) throw new Error('동기화 폴더를 설정하세요.');
     fs.mkdirSync(path.dirname(f), { recursive: true });
     const db = this.core.store.db;
-    const songs = db.prepare('SELECT id, title, lyrics, credit, tags, arrangement, updated_at FROM Songs').all().map(r => ({ ...r }));
+    const songs = db.prepare('SELECT id, title, lyrics, credit, tags, arrangement, arrangements, updated_at FROM Songs').all().map(r => ({ ...r }));
     const cues = db.prepare('SELECT id, name, service_date, start_time, items, updated_at, memo, pinned, template, deleted_at, created_at FROM Cuesheets').all().map(r => ({ ...r }));
     const data = { v: 1, app: 'WorshipCue', at: new Date().toISOString(), host: os.hostname(), songs, cues, overlays: this.core.settings.get().overlays || [] };
     const tmp = f + '.tmp';
@@ -83,12 +83,12 @@ class Sync {
     const tx = fn => () => this.core.store.transaction(fn);
     const run = () => {
       const song = db.prepare('SELECT updated_at FROM Songs WHERE id = ?');
-      const putSong = db.prepare('INSERT OR REPLACE INTO Songs (id, title, lyrics, credit, tags, arrangement, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      const putSong = db.prepare('INSERT OR REPLACE INTO Songs (id, title, lyrics, credit, tags, arrangement, arrangements, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       for (const s of data.songs) {
         if (!/^[a-z0-9]{4,40}$/i.test(s.id || '') || !String(s.title || '').trim()) continue;
         const l = song.get(s.id);
         if (!newer(s.updated_at, l && l.updated_at)) continue;
-        putSong.run(s.id, String(s.title).slice(0, 200), String(s.lyrics || '').slice(0, 50000), String(s.credit || '').slice(0, 300), String(s.tags || '').slice(0, 300), String(s.arrangement || '').slice(0, 300), String(s.updated_at || new Date().toISOString()));
+        putSong.run(s.id, String(s.title).slice(0, 200), String(s.lyrics || '').slice(0, 50000), String(s.credit || '').slice(0, 300), String(s.tags || '').slice(0, 300), String(s.arrangement || '').slice(0, 300), typeof s.arrangements === 'string' ? s.arrangements.slice(0, 5000) : '[]', String(s.updated_at || new Date().toISOString()));
         got.songs += 1;
       }
       const cue = db.prepare('SELECT updated_at, deleted_at FROM Cuesheets WHERE id = ?');

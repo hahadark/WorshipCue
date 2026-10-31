@@ -454,6 +454,26 @@
   }
 
   /** 부를 순서: 이 순서에 적은 것 → (라이브러리 찬양이면) 라이브러리의 기본 순서 */
+  /** 저장해 둔 부를 순서 (라이브러리 찬양): 골라 쓰기 · 지금 순서를 이름 붙여 저장 · 지우기 */
+  function arrRow(it) {
+    if (!it.songId) return '';
+    const s = st.songs.get(it.songId);
+    const list = (s && s.arrangements) || [];
+    const cur = list.find(a => a.order === (it.order || '').trim());
+    return `<div class="ce-row ce-arr"><span class="note">저장한 순서</span>${list.map(a => `<button type="button" data-arr="${esc(a.name)}" class="${cur && cur.name === a.name ? 'on' : ''}" title="${esc(a.order)}">${esc(a.name)}</button>`).join('') || '<span class="muted">없음</span>'}<button type="button" data-arrsave title="지금 부를 순서를 이름 붙여 이 찬양에 저장 (다음 주에도 골라 쓰기)">＋ 지금 순서 저장</button>${cur ? `<button type="button" data-arrdel="${esc(cur.name)}" class="ghost" title="이 저장한 순서 지우기">✕</button>` : ''}</div>`;
+  }
+  async function arrAction(it, kind, name) {
+    if (kind === 'use') { const a = ((st.songs.get(it.songId) || {}).arrangements || []).find(x => x.name === name); if (!a) return; const inp = $('#cueEditor [data-k=order]'); if (inp) { inp.value = a.order; editChanged(inp); } else { it.order = a.order; save(); } forceEditor(); return; }
+    if (kind === 'save') {
+      if (!(it.order || '').trim()) return app.showMsg('먼저 부를 순서를 쓰세요 (예: 1절 후렴 2절 후렴).', 'warn', 2500);
+      const n = await app.ask('이 부를 순서의 이름 (예: 1부 예배 · 짧게 · 찬양팀 B)', '');
+      if (!n) return;
+      const r = await cmd('saveSongArrangement', { songId: it.songId, name: n, order: it.order });
+      if (!r.ok) return app.showMsg(r.error, 'error');
+      st.songs.set(it.songId, r.result); forceEditor(); app.showMsg(`'${n}' 순서를 저장했습니다.`, 'ok', 2000); return;
+    }
+    if (kind === 'del') { const r = await cmd('saveSongArrangement', { songId: it.songId, name, remove: true }); if (r.ok) { st.songs.set(it.songId, r.result); forceEditor(); } }
+  }
   function songOrder(it) {
     if (it.order && it.order.trim()) return it.order;
     const s = it.songId && st.songs.get(it.songId);
@@ -735,7 +755,8 @@
         <span></span><div class="ce-row note">${window.BCFmt ? window.BCFmt.bar() : ''}</div>
         <label>곡 정보</label><div class="ce-row"><input type="text" data-k="credit" value="${esc(it.credit || '')}" placeholder="${esc((it.songId && st.songs.get(it.songId) && st.songs.get(it.songId).credit) || '작사·작곡 · 저작권 (예: 작사 홍길동 · 작곡 김철수 · CCLI 1234567)')}" style="flex:1"><select data-k="creditShow" title="곡 정보를 화면 아래에 작게 보이기"><option value="" ${!it.creditShow ? 'selected' : ''}>보이지 않기</option><option value="first" ${it.creditShow === 'first' ? 'selected' : ''}>첫 슬라이드에</option><option value="last" ${it.creditShow === 'last' ? 'selected' : ''}>마지막 슬라이드에</option><option value="both" ${it.creditShow === 'both' ? 'selected' : ''}>처음과 끝에</option></select></div>
         <label>부를 순서</label><div class="ce-col"><input type="text" data-k="order" value="${esc(it.order || '')}" placeholder="${esc(songOrder({ ...it, order: '' }) || '비우면 가사 순서대로 · 예: 1절 후렴 2절 후렴 후렴 (또는 1 C 2 C C)')}">
-          <div class="ce-row ce-chips">${SL.lyricGroups(SL.lyricsChunks(it.lyrics)).filter(g => g.label).map(g => `<button type="button" data-chip="${esc(g.label)}" title="부를 순서 끝에 넣기">${esc(g.label)}</button>`).join('')}<button type="button" data-chip="" title="부를 순서 지우기 (가사 순서대로)">지우기</button><span id="ceOrderMsg" class="note"></span></div></div>`,
+          <div class="ce-row ce-chips">${SL.lyricGroups(SL.lyricsChunks(it.lyrics)).filter(g => g.label).map(g => `<button type="button" data-chip="${esc(g.label)}" title="부를 순서 끝에 넣기">${esc(g.label)}</button>`).join('')}<button type="button" data-chip="" title="부를 순서 지우기 (가사 순서대로)">지우기</button><span id="ceOrderMsg" class="note"></span></div>
+          ${arrRow(it)}</div>`,
       text: `<label>내용</label><textarea data-k="body" data-fmt rows="6" placeholder="광고 내용…&#10;---&#10;다음 장">${esc(it.body || '')}</textarea><span></span><div class="ce-row note">${window.BCFmt ? window.BCFmt.bar() : ''}<span>'---' 줄 = 다음 슬라이드</span></div>
         <span></span><div class="ce-row note"><span>교독문: 줄 앞에 인도자: · 회중: · 다같이: 를 쓰면 회중·다같이 줄은 굵게</span><label class="tc-toggle"><input type="checkbox" data-k="roleLabels" ${it.roleLabels ? 'checked' : ''}> 역할 이름도 화면에 보이기</label></div>`,
       title: `<label>부제</label><input type="text" data-k="subtitle" value="${esc(it.subtitle || '')}" placeholder="예: 홍길동 집사 · 설교 제목 · 본문">
@@ -856,6 +877,13 @@
     if (k === 'musicVolume') { it.musicVolume = v; save(); return; }
     if (!v) delete a[k]; else a[k] = v;
     it.actions = a; save(); forceEditor();
+  });
+  // 저장한 부를 순서 단추
+  $('#cueEditor').addEventListener('click', e => {
+    const it = st.cue && st.cue.items[st.sel];
+    if (!it) return;
+    const u = e.target.closest('[data-arr]'), s = e.target.closest('[data-arrsave]'), d = e.target.closest('[data-arrdel]');
+    if (u) arrAction(it, 'use', u.dataset.arr); else if (s) arrAction(it, 'save'); else if (d) arrAction(it, 'del', d.dataset.arrdel);
   });
   // 부를 순서 단추: 이름표를 순서 끝에 붙이기 / 지우기
   $('#cueEditor').addEventListener('click', e => {
