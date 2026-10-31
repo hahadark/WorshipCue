@@ -68,6 +68,10 @@ function validatePassage(p) {
     tpl: p.tpl ? { main: String(p.tpl.main || ''), overlay: String(p.tpl.overlay || '') } : null,
     // 자동 넘김: sec 초마다 다음 슬라이드, loop 면 끝에서 처음으로
     auto: p.auto && Number(p.auto.sec) >= 2 ? { sec: Math.min(3600, Math.round(Number(p.auto.sec))), loop: !!p.auto.loop } : null,
+    // 글자 자동 숨김: 슬라이드가 보인 뒤 hideAfter 초에 글자만 숨김 (0 = 끔)
+    hideAfter: Number(p.hideAfter) >= 1 ? Math.min(3600, Math.round(Number(p.hideAfter))) : 0,
+    // 처음·끝에서 한 번 더 누르면 글자만 숨김
+    edgeHide: !!p.edgeHide,
   };
 }
 

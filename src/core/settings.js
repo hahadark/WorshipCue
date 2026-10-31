@@ -72,6 +72,7 @@ function defaults() {
     guide: { bethlehemDone: false },
     activeCueId: '',     // 열어 둔 큐시트
     cueAdvance: true,    // 항목의 마지막 슬라이드에서 F6 → 다음 순서로
+    cueEdgeHide: false,  // 순서의 처음·끝에서 한 번 더 F5·F6 → 글자만 숨김 (다음 누름에 다음 순서)
     hymnFolders: [],     // [{ name, path }] 찬송가·교독문 .pps 폴더
     hymnBackground: 'original', // 찬송가 배경 기본값: original(파일의 배경) | template(템플릿 배경) | #ffffff | 이미지 주소
     songSearchUrl: 'https://cwy0675.tistory.com/search/{q}', // 온라인에서 찾기: {q} = 검색어

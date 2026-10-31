@@ -84,12 +84,17 @@ class WorshipCueCore extends EventEmitter {
     }
     this.draw = { strokes: [], spot: null }; // 화면에 그리기·강조 (슬라이드가 바뀌면 지움)
     this.presentation.on('live', () => {
-      this.syncVideo(); this.scheduleAuto();
+      this.syncVideo(); this.scheduleAuto(); this.scheduleHide();
       if (this.draw.strokes.length || this.draw.spot) { this.draw = { strokes: [], spot: null }; this.emit('draw', this.draw); }
       this.emit('live');
     });
     this.presentation.on('preview', () => this.emit('preview'));
     this.presentation.on('edge', ({ edge, live }) => {
+      // 처음·끝에서 한 번 더: 글자만 숨기고 멈춘다 (숨긴 채로 한 번 더 누르면 아래처럼 다음·이전 순서로)
+      if (live && live.visible && live.passage && live.passage.cueId && (live.passage.edgeHide || this.settings.get().cueEdgeHide === true)) {
+        this.presentation.clear();
+        return;
+      }
       // 큐시트 항목을 송출 중이면 다음(이전) 순서로 넘어간다
       if (live && live.passage && live.passage.cueId && live.passage.cueIndex >= 0 && this.settings.get().cueAdvance !== false) {
         this.emit('cue-next', { dir: edge === 'end' ? 1 : -1, version: this.presentation.version, cueId: live.passage.cueId, index: live.passage.cueIndex });
@@ -150,6 +155,34 @@ class WorshipCueCore extends EventEmitter {
       else P.move(1); // 끝: 큐시트 순서면 다음 순서로 (자동 넘김 설정에 따라)
     }, a.sec * 1000);
     if (this.autoTimer.unref) this.autoTimer.unref();
+  }
+
+  /** 글자 자동 숨김: 이 순서에 'N초 뒤 숨김' 이 있으면 슬라이드가 보인 뒤 N초에 글자만 숨긴다 */
+  scheduleHide() {
+    clearTimeout(this.hideTimer);
+    const P = this.presentation;
+    const L = P.live;
+    const sec = L && L.visible && L.passage && L.passage.hideAfter;
+    if (!sec) return;
+    const ver = P.version;
+    this.hideTimer = setTimeout(() => {
+      if (P.version !== ver || !P.live || !P.live.visible) return; // 그 사이 다른 송출·이동
+      P.clear();
+      this.autoHidAt = P.version; // 자동으로 숨긴 상태 — 다음 F6 은 다음 슬라이드를 보이며
+    }, sec * 1000);
+    if (this.hideTimer.unref) this.hideTimer.unref();
+  }
+
+  /** F5·F6: 자동 숨김 뒤라면 넘기면서 다시 보인다 */
+  slideStep(d) {
+    const P = this.presentation;
+    if (P.live && !P.live.visible && this.autoHidAt === P.version) {
+      this.autoHidAt = null;
+      const r = P.move(d);
+      if (r.ok) { P.restore(); return { ok: true, state: P.getLiveState() }; }
+      return r; // 끝: 위 'edge' 처리 (다음 순서로)
+    }
+    return P.move(d);
   }
 
   // ---------------- 화면 지우기 층 ----------------
@@ -454,8 +487,8 @@ WorshipCueCore.prototype.commands = {
     this.emit('outputs');
     return r;
   },
-  nextSlide() { return this.presentation.move(1); },
-  previousSlide() { return this.presentation.move(-1); },
+  nextSlide() { return this.slideStep(1); },
+  previousSlide() { return this.slideStep(-1); },
   // ---- 스트림덱 · Companion · 외부 단추 (GET /api/trigger/<동작>?key=…) ----
   triggerInfo() {
     if (!this.settings.get().triggerKey) this.commands.newTriggerKey.call(this);
@@ -623,6 +656,7 @@ WorshipCueCore.prototype.commands = {
       if (['range', 'continuous'].includes(p.navMode)) d.navMode = p.navMode;
       if (typeof p.globalShortcuts === 'boolean') d.globalShortcuts = p.globalShortcuts;
       if (typeof p.cueAdvance === 'boolean') d.cueAdvance = p.cueAdvance;
+      if (typeof p.cueEdgeHide === 'boolean') d.cueEdgeHide = p.cueEdgeHide;
       if (typeof p.cueTimes === 'boolean') d.cueTimes = p.cueTimes;
       if (p.uiLang === 'ko' || p.uiLang === 'en') d.uiLang = p.uiLang;
       if (typeof p.autoUpdate === 'boolean') d.autoUpdate = p.autoUpdate;

@@ -262,7 +262,7 @@
     const it = st.cue.items[i];
     const prevIdx = keepIndex && app.preview && app.preview.cue && app.preview.cue.index === i ? app.preview.index : 0;
     st.sel = i;
-    const cue = { id: st.cue.id, index: i, title: it.title, note: it.note || '', type: it.type, credit: it.credit || '', ...(it.autoSec >= 2 ? { auto: { sec: it.autoSec, loop: !!it.autoLoop } } : {}) };
+    const cue = { id: st.cue.id, index: i, title: it.title, note: it.note || '', type: it.type, credit: it.credit || '', ...(it.autoSec >= 2 ? { auto: { sec: it.autoSec, loop: !!it.autoLoop } } : {}), ...(it.hideAfter >= 1 ? { hideAfter: it.hideAfter } : {}), ...(it.edgeHide ? { edgeHide: true } : {}) };
     const tpl = itemTpl(it);
     if (it.type === 'audio') { // 음악: 화면은 그대로, 가운데에 정보만
       showAudioInfo(i, it);
@@ -620,6 +620,7 @@
         ${it.type !== 'audio' ? `<label>테마</label><div class="ce-row"><select data-theme title="이 순서에만 다른 테마 (예배당·OBS 템플릿을 함께 바꿈)"><option value="">기본 (전체 설정 따름)</option>${themeOf(it) === 'custom' ? '<option value="custom" selected>직접 고른 템플릿 (아래)</option>' : ''}${themeList.map(t => `<option value="${esc(t.id)}" ${themeOf(it) === t.id ? 'selected' : ''}>🎨 ${esc(t.name)}</option>`).join('')}</select></div>` : ''}
         ${it.type !== 'audio' ? `<label>템플릿</label><div class="ce-row">${tplSelect('tplMain', '예배당', it.tplMain)}${tplSelect('tplOverlay', 'OBS', it.tplOverlay)}</div>` : ''}
         ${it.type !== 'audio' && it.type !== 'video' ? `<label>자동 넘김</label><div class="ce-row"><input type="number" data-k="autoSec" min="0" max="3600" value="${it.autoSec || ''}" placeholder="0" style="width:80px"> 초마다 <label class="tc-toggle"><input type="checkbox" data-k="autoLoop" ${it.autoLoop ? 'checked' : ''}> 끝나면 처음부터 반복</label><span class="note">0 = 끔 (F6 으로 넘김) · 숨김(F10) 중에는 멈춤</span></div>` : ''}
+        ${it.type !== 'audio' ? `<label>글자 숨김</label><div class="ce-row"><input type="number" data-k="hideAfter" min="0" max="3600" value="${it.hideAfter || ''}" placeholder="0" style="width:80px"> 초 뒤 글자만 숨김 <label class="tc-toggle" title="마지막 슬라이드에서 F6(첫 슬라이드에서 F5)을 한 번 더 누르면 글자만 숨기고, 그다음에 누르면 다음(이전) 순서로"><input type="checkbox" data-k="edgeHide" ${it.edgeHide ? 'checked' : ''}> 처음·끝에서 한 번 더 누르면 숨김</label><span class="note">0 = 끔 · 숨긴 뒤 F6 은 다음 슬라이드를 보이며 넘김</span></div>` : ''}
         ${it.type !== 'audio' ? actionsHtml(it) : ''}
         ${timesOn() ? `<label>예정 시간</label><div class="ce-row"><input type="number" data-k="duration" min="0" max="600" value="${it.duration || ''}" placeholder="0" style="width:80px"> 분 <span class="note">${planTimes()[i] ? '예정 시작 ' + planTimes()[i] : '큐시트 위 ⏰ 에 예배 시작 시각을 넣으면 순서마다 예정 시각이 계산됩니다'}</span></div>` : ''}
         <label>메모</label><input type="text" data-k="note" value="${esc(it.note || '')}" placeholder="조작자만 보는 메모 (예: 설교 후 바로)">

@@ -1495,3 +1495,49 @@ test('교독문 역할 표시: 인도자·회중·다같이 머리말 → 회중
   assert.equal(normalizeItem({ type: 'text', title: '교독문', body: t, roleLabels: true }).roleLabels, true);
   assert.equal(normalizeItem({ type: 'text', title: '공지', body: '가' }).roleLabels, undefined);
 });
+
+test('글자 자동 숨김(N초 뒤) · 처음·끝에서 한 번 더 누르면 숨김 → 다음 누름에 다음 순서', async () => {
+  const core = newCore('autohide');
+  let next = null;
+  core.on('cue-next', d => { next = d; });
+  const txt = t => ({ kind: 'text', ref: '', label: '', parts: [{ book: 0, chapter: 0, verse: 0, text: t }] });
+  // N초 뒤 숨김: 보인 뒤 1초에 글자만 숨김, 숨긴 뒤 F6 은 다음 슬라이드를 보이며
+  assert.equal(core.command('sendLive', { passage: { title: '광고', cueId: 'c1', cueIndex: 0, hideAfter: 1 }, slides: [txt('가'), txt('나')] }).ok, true);
+  assert.equal(core.presentation.live.passage.hideAfter, 1);
+  await new Promise(r => setTimeout(r, 1200));
+  assert.equal(core.presentation.live.visible, false, '1초 뒤 숨김');
+  core.command('nextSlide');
+  assert.equal(core.presentation.live.visible, true, '다음 슬라이드를 보이며');
+  assert.equal(core.presentation.live.index, 1);
+  // 손으로 숨긴(F10) 것은 F6 이 다시 보이게 하지 않는다 (예전 그대로)
+  core.command('toggleLive');
+  core.command('previousSlide');
+  assert.equal(core.presentation.live.visible, false);
+  // 처음·끝에서 한 번 더: 끝에서 F6 → 숨김만, 한 번 더 → 다음 순서
+  core.command('sendLive', { passage: { title: '기도', cueId: 'c1', cueIndex: 1, edgeHide: true }, slides: [txt('다')] });
+  core.command('nextSlide');
+  assert.equal(core.presentation.live.visible, false, '끝에서 한 번 더 → 글자만 숨김');
+  assert.equal(next, null, '아직 다음 순서로 가지 않음');
+  core.command('nextSlide');
+  assert.equal(next && next.dir, 1, '숨긴 채로 한 번 더 → 다음 순서');
+  // 설정(모든 순서)으로도 켜진다 · 처음에서 F5 도 같다
+  next = null;
+  core.command('updateSettings', { patch: { cueEdgeHide: true } });
+  core.command('sendLive', { passage: { title: '찬양', cueId: 'c1', cueIndex: 2 }, slides: [txt('라'), txt('마')] });
+  core.command('previousSlide');
+  assert.equal(core.presentation.live.visible, false);
+  assert.equal(next, null);
+  core.command('previousSlide');
+  assert.equal(next && next.dir, -1);
+  // 큐시트가 아닌 송출(성경 검색 등)은 그대로
+  core.command('sendLive', { passage: { title: '요 3:16' }, slides: [txt('바')] });
+  core.command('nextSlide');
+  assert.equal(core.presentation.live.visible, true);
+  const { normalizeItem } = require('../src/core/cues');
+  const it = normalizeItem({ type: 'text', title: '광고', body: '가', hideAfter: '10', edgeHide: 1 });
+  assert.equal(it.hideAfter, 10);
+  assert.equal(it.edgeHide, true);
+  assert.equal(normalizeItem({ type: 'text', title: '광고', body: '가', hideAfter: 0 }).hideAfter, undefined);
+  clearTimeout(core.hideTimer); clearTimeout(core.autoTimer);
+  core.store.close();
+});

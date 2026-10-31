@@ -65,6 +65,16 @@ app.whenReady().then(async () => {
     ok(rd.off && /복 있는 사람은/.test(rd.off.text) && !/인도자|회중/.test(rd.off.text) && /악인들의/.test(rd.off.bold), '교독문 역할: 회중 줄 굵게 · 머리말 빼기', rd);
     ok(rd.on && /회중: 악인들의/.test(rd.on.text) && rd.on.saved === true, '교독문 역할: 역할 이름 보이기 (저장됨)', rd);
 
+    // ---- 2-3. 글자 자동 숨김: 편집칸 '1 초 뒤 글자만 숨김' → 송출 → 1초 뒤 숨김 → F6 은 다시 보이며
+    const ah = await ev(`const h = $('[data-k=hideAfter]'); h.value = '1'; h.dispatchEvent(new Event('input', { bubbles: true })); await wait(1500);
+      const saved = (await window.BC.cmd('getCue', { id: window.BCCue.currentId() })).result.items[0].hideAfter;
+      await window.BC.sendPreview(); await wait(300);
+      const shown = window.BC.state.live.visible; await wait(1500);
+      const hidden = window.BC.state.live.visible === false;
+      await window.BC.cmd('clearAll', {}); await wait(300);
+      return { saved, shown, hidden, edge: !!$('[data-k=edgeHide]') };`);
+    ok(ah.saved === 1 && ah.shown === true && ah.hidden && ah.edge, '글자 자동 숨김 (N초 뒤) · 처음·끝 숨김 칸', ah);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

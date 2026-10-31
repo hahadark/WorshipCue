@@ -381,7 +381,7 @@
   function passageMeta(p, query) {
     const v = p.verses || [];
     const cue = app.preview && app.preview.passage === p ? app.preview.cue : null;
-    const cueMeta = cue ? { cueId: cue.id, cueIndex: cue.index, itemTitle: cue.title, note: cue.note || '', itemType: cue.type || '', credit: cue.credit || '', ...(cue.auto ? { auto: cue.auto } : {}) } : {};
+    const cueMeta = cue ? { cueId: cue.id, cueIndex: cue.index, itemTitle: cue.title, note: cue.note || '', itemType: cue.type || '', credit: cue.credit || '', ...(cue.auto ? { auto: cue.auto } : {}), ...(cue.hideAfter ? { hideAfter: cue.hideAfter } : {}), ...(cue.edgeHide ? { edgeHide: true } : {}) } : {};
     const tpl = app.preview && app.preview.passage === p && app.preview.tpl ? { tpl: app.preview.tpl } : {};
     if (!v.length) return { title: p.title, versionId: '', versionName: p.versionName || '', book: null, query: query || p.title, first: null, last: null, ...cueMeta, ...tpl };
     return {

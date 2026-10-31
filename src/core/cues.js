@@ -79,6 +79,10 @@ function normalizeItem(x) {
     const sec = Math.round(Number(x.autoSec ?? (x.type === 'slideshow' ? 8 : 0)) || 0);
     it.autoSec = sec >= 2 ? Math.min(3600, sec) : 0;
     it.autoLoop = x.autoLoop === undefined ? x.type === 'slideshow' : !!x.autoLoop;
+    // 글자 자동 숨김 (N초 뒤) · 처음·끝에서 한 번 더 누르면 숨김
+    const hide = Math.round(Number(x.hideAfter) || 0);
+    if (hide >= 1) it.hideAfter = Math.min(3600, hide);
+    if (x.edgeHide) it.edgeHide = true;
   }
   it.tplMain = str(x.tplMain, 80);
   it.tplOverlay = str(x.tplOverlay, 80);
