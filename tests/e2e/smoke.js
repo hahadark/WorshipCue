@@ -154,6 +154,15 @@ app.whenReady().then(async () => {
       r.row = !!$('#cueEditor [data-a=companion]'); return r;`);
     ok(cp.host === '127.0.0.1' && cp.test && cp.row, 'Companion 단추 (외부 단추 창 · 순서 자동 동작 줄)', cp);
 
+    // ---- 2-12. 장비: X32 등록 → 순서 자동 동작에 장비 줄 → 지우기
+    const dv = await ev(`window.BCDevices.open(); await wait(300); $('#dvKind').value = 'x32'; $('#dvName').value = '본당 X32'; $('#dvHost').value = '127.0.0.1'; $('#dvAdd').click(); await wait(800);
+      const rows = $$('.dv-row').length; $('#modalClose').click(); await wait(300);
+      const it = window.BCCue.selected(); window.BCCue.openCue && 0; await wait(100);
+      const row = !!$('#cueEditor [data-dev]') || !!$('#cueEditor [data-act=devopen]');
+      const ds = window.BC.state.settings.devices || []; for (const d of ds) await window.BC.cmd('deleteDevice', { id: d.id });
+      return { rows, row, n: ds.length };`);
+    ok(dv.rows === 1 && dv.n === 1 && dv.row, '장비 (X32 등록 · 순서 자동 동작 줄)', dv);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

@@ -515,6 +515,7 @@
         <label>무대 화면</label><div class="ce-row"><select data-a="stagePin"><option value="">그대로</option><option value="live" ${a.stagePin === 'live' ? 'selected' : ''}>지금 화면 (고정 풀기)</option><option value="order" ${a.stagePin === 'order' ? 'selected' : ''}>순서표 고정</option>${(app.state.settings.stagePresets || []).map(p => `<option value="${esc(p.id)}" ${a.stagePin === p.id ? 'selected' : ''}>고정: ${esc(p.name)}</option>`).join('')}</select></div>
         ${obsActHtml(a)}
         <label>Companion</label><div class="ce-row"><input type="text" data-a="companion" value="${esc(a.companion || '')}" placeholder="단추 위치 (예: 1/0/2 · 여러 개는 쉼표)" style="width:220px" spellcheck="false"><button data-act="comptest" class="ghost" title="지금 눌러 보기">눌러 보기</button><span class="note">ATEM · PTZ · 조명 · 음향을 Companion 으로 (도구 → 스트림덱·외부 단추에서 주소)</span></div>
+        ${window.BCDevices ? window.BCDevices.actionHtml(a) : ''}
       </div>` : ''}</div>`;
   }
   /** OBS 장면 · 방송 · 녹화 (도구 → OBS 원격 조작이 연결돼 있으면 장면 목록에서 고른다) */
@@ -530,7 +531,7 @@
     return [a.timer && `⏱ 타이머 ${a.timer}분`, a.stageMsg && '💬 무대 메시지', a.clearStage && '메시지 지움', a.logo && `로고 ${a.logo === 'on' ? '켜기' : '끄기'}`, a.bg && `배경 ${a.bg === 'hide' ? '지우기' : '보이기'}`,
       a.ovOn && `오버레이 켜기: ${ovName(a.ovOn)}`, a.ovOff && `오버레이 끄기: ${ovName(a.ovOff)}`, a.stopMusic && '음악 멈춤',
       a.stagePin && (a.stagePin === 'live' ? '무대 고정 풀기' : a.stagePin === 'order' ? '무대: 순서표' : `무대 고정: ${((app.state.settings.stagePresets || []).find(p => p.id === a.stagePin) || {}).name || '?'}`),
-      a.companion && `Companion ${a.companion}`,
+      a.companion && `Companion ${a.companion}`, window.BCDevices && window.BCDevices.summary(a),
       a.obsScene && `OBS 장면: ${a.obsScene}`, a.obsStream && `OBS 방송 ${a.obsStream === 'start' ? '시작' : '끝'}`, a.obsRecord && `OBS 녹화 ${a.obsRecord === 'start' ? '시작' : '끝'}`].filter(Boolean).join(' · ');
   }
   /** 새로 송출된 순서의 자동 동작 (한 번만 · 방금 송출한 것만) */
@@ -557,6 +558,7 @@
     if (a.ovOn) cmd('toggleOverlay', { id: a.ovOn, on: true });
     if (a.ovOff === '*') (app.state.settings.overlays || []).filter(o => o.on && o.id !== a.ovOn).forEach(o => cmd('toggleOverlay', { id: o.id, on: false }));
     else if (a.ovOff) cmd('toggleOverlay', { id: a.ovOff, on: false });
+    if (a.dev && window.BCDevices) a.dev.forEach(x => window.BCDevices.run(x.device, x.action, true));
     if (a.companion) cmd('companionPress', { loc: a.companion }).then(r => { if (!r.ok) app.showMsg('Companion: ' + r.error, 'error', 5000); });
     if (a.stagePin) cmd('stagePinSet', a.stagePin === 'live' ? null : a.stagePin === 'order' ? { mode: 'order', name: '순서표' } : { preset: a.stagePin });
     if (window.BCObs && (a.obsScene || a.obsStream || a.obsRecord)) {
@@ -774,6 +776,23 @@
     if (d) imgs.splice(k, 1); else if (k > 0) [imgs[k - 1], imgs[k]] = [imgs[k], imgs[k - 1]];
     it.images = imgs; save(); forceEditor(); previewItem(st.sel, { keepIndex: true });
   });
+  // 장비 줄 (data-dev = 장비 id): 동작 글을 actions.dev 에 · '보내 보기'
+  $('#cueEditor').addEventListener('change', e => {
+    const el = e.target.closest('[data-dev]');
+    const it = st.cue && st.cue.items[st.sel];
+    if (!el || !it) return;
+    const a = { ...(it.actions || {}) };
+    const dev = (a.dev || []).filter(x => x.device !== el.dataset.dev);
+    if (el.value.trim()) dev.push({ device: el.dataset.dev, action: el.value.trim() });
+    if (dev.length) a.dev = dev; else delete a.dev;
+    it.actions = a; save(); forceEditor();
+  });
+  $('#cueEditor').addEventListener('click', e => {
+    const b = e.target.closest('[data-devtest]');
+    if (!b || !window.BCDevices) return;
+    const inp = $(`#cueEditor [data-dev="${b.dataset.devtest}"]`);
+    if (inp) window.BCDevices.run(b.dataset.devtest, inp.value);
+  });
   // '송출할 때 자동으로' 칸 (data-a = actions 의 키)
   $('#cueEditor').addEventListener('change', e => {
     const el = e.target.closest('[data-a]');
@@ -803,6 +822,7 @@
     switch (b.dataset.act) {
       case 'obsopen': if (window.BCObs) window.BCObs.open(); break;
       case 'pptsplit': openSplit(i); break;
+      case 'devopen': if (window.BCDevices) window.BCDevices.open(); break;
       case 'comptest': { const v = ($('#cueEditor [data-a=companion]') || {}).value || ''; cmd('companionPress', { loc: v }).then(r => app.showMsg(r.ok ? `Companion 단추를 눌렀습니다 (${r.result.pressed}개).` : 'Companion: ' + r.error, r.ok ? 'ok' : 'error', 4000)); break; }
       case 'close': setEditor(false); app.showMsg('편집칸을 숨겼습니다. 다시 보려면 가운데 위 ✎ 편집칸 단추 · F2 · Ctrl+Shift+E', 'info', 3500); break;
       case 'up': if (i > 0) { moveItem(i, i - 1); st.sel = i - 1; renderEditor(true); } break;

@@ -1756,3 +1756,44 @@ test('Companion 단추: 위치 읽기 · POST /api/location/페이지/줄/칸/pr
   assert.equal(normalizeItem({ type: 'title', title: 'x', actions: { companion: '없음' } }).actions, undefined);
   core.store.close();
 });
+test('장비 직접 제어: X32 OSC (채널·페이더·메인·씬) · PTZ VISCA 프리셋 (Sony 머리글 · 그대로) · 잘못된 동작', async () => {
+  const D = require('../src/core/devices');
+  const dgram = require('dgram');
+  // OSC 바이트: 주소·타입 태그는 4바이트 맞춤, 값은 빅 엔디언
+  assert.deepEqual([...D.oscMessage('/ch/01/mix/on', [{ t: 'i', v: 0 }])], [...Buffer.from('/ch/01/mix/on\0\0\0'), ...Buffer.from(',i\0\0'), 0, 0, 0, 0]);
+  assert.deepEqual(D.parseX32('ch1 on, ch5 fader 0.75, main off, scene 3, dca2 mute, bus12 unmute').map(c => c.address + ' ' + c.args.map(a => a.t + a.v).join('')),
+    ['/ch/01/mix/on i1', '/ch/05/mix/fader f0.75', '/main/st/mix/on i0', '/-action/goscene i3', '/dca/2/on i0', '/bus/12/mix/on i1']);
+  assert.throws(() => D.parseX32('ch40 on'), /1~32/);
+  assert.throws(() => D.parseX32('ch1 fader 2'), /0~1/);
+  assert.throws(() => D.parseX32('불 켜기'), /알아듣지 못했습니다/);
+  assert.deepEqual([...D.viscaCommand('5')], [0x81, 0x01, 0x04, 0x3f, 0x02, 5, 0xff]);
+  assert.deepEqual([...D.viscaCommand('home')], [0x81, 0x01, 0x06, 0x04, 0xff]);
+  assert.throws(() => D.viscaCommand('300'), /0~254/);
+  // 가짜 장비 (UDP)
+  const listen = () => new Promise(r => { const s = dgram.createSocket('udp4'); s.got = []; s.on('message', m => s.got.push(m)); s.bind(0, '127.0.0.1', () => r(s)); });
+  const x32 = await listen(), cam = await listen(), raw = await listen();
+  const core = newCore('devices');
+  const add = d => core.command('saveDevice', { device: d }).result;
+  const dx = add({ kind: 'x32', name: '본당 X32', host: '127.0.0.1', port: x32.address().port });
+  const dc = add({ kind: 'visca', name: '강대상 카메라', host: '127.0.0.1', port: cam.address().port });
+  const dr = add({ kind: 'visca', name: 'PTZOptics', host: '127.0.0.1', port: raw.address().port, proto: 'raw' });
+  assert.equal(core.command('saveDevice', { device: { kind: 'x32', host: '' } }).ok, false, 'IP 필요');
+  assert.equal(add({ kind: 'visca', host: '10.0.0.5' }).port, 52381, '기본 포트');
+  assert.equal((await core.command('deviceRun', { device: dx.id, action: 'ch1 off, ch1 fader 0.5' })).result.sent, 2);
+  await core.command('deviceRun', { device: dc.id, action: '7' });
+  await core.command('deviceRun', { device: dr.id, action: 'home' });
+  await new Promise(r => setTimeout(r, 200));
+  assert.equal(x32.got.length, 2);
+  assert.equal(x32.got[1].toString('ascii', 0, 16), '/ch/01/mix/fader');
+  assert.equal(x32.got[1].readFloatBE(x32.got[1].length - 4), 0.5);
+  const v = cam.got[0];
+  assert.equal(v.readUInt16BE(0), 0x0100, 'Sony VISCA over IP 머리글');
+  assert.equal(v.readUInt16BE(2), 7, '명령 길이');
+  assert.deepEqual([...v.subarray(8)], [0x81, 0x01, 0x04, 0x3f, 0x02, 7, 0xff]);
+  assert.deepEqual([...raw.got[0]], [0x81, 0x01, 0x06, 0x04, 0xff], '머리글 없이');
+  assert.match((await core.command('deviceRun', { device: 'nope123', action: '1' })).error, /장비를 찾을 수 없습니다/);
+  const { normalizeItem } = require('../src/core/cues');
+  assert.deepEqual(normalizeItem({ type: 'title', title: 'x', actions: { dev: [{ device: dx.id, action: ' ch1 off ' }, { device: dc.id, action: '' }] } }).actions.dev, [{ device: dx.id, action: 'ch1 off' }]);
+  x32.close(); cam.close(); raw.close();
+  core.store.close();
+});

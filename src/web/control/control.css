@@ -1480,3 +1480,9 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .sp-th.sel { border-color: var(--accent); opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
 .sp-list { margin: 0 0 0 18px; padding: 0; }
 .sp-list li { margin: 2px 0; }
+/* ---- 장비 직접 제어 (devicepanel.js) ---- */
+.dv { display: flex; flex-direction: column; gap: 8px; min-width: min(680px, 84vw); }
+.dv-list { display: flex; flex-direction: column; gap: 6px; }
+.dv-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line-soft, var(--line)); border-radius: 8px; background: var(--panel2); }
+.dv-row .muted { font-size: 12px; white-space: nowrap; }
+.dv-name { min-width: 90px; font-weight: 600; }

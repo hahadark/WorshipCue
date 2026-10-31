@@ -125,6 +125,7 @@
       { ic: 'video', label: '미디어 (영상·음악 바로 재생)', run: () => window.BCDock && window.BCDock.show('media') },
       { ic: 'timer', label: '무대·설교 타이머', run: () => window.BCDock && window.BCDock.show('stage') },
       { ic: 'radio', label: 'OBS 원격 조작 (방송 · 녹화 · 장면)…', run: () => window.BCObs && window.BCObs.open() },
+      { ic: 'sliders-horizontal', label: '장비 (X32 음향 · PTZ 카메라)…', run: () => window.BCDevices && window.BCDevices.open() },
       '-',
       { ic: 'smartphone', label: '휴대폰 리모컨', sub: () => [
         { label: '열기 (QR · 주소 · PIN)…', run: () => window.BCRemote && window.BCRemote.open() },

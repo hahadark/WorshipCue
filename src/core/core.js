@@ -742,6 +742,19 @@ WorshipCueCore.prototype.commands = {
     this.emit('outputs');
     return r;
   },
+  /** 장비 직접 제어 (X32 OSC · PTZ VISCA): 보내기 · 장비 저장 · 지우기 */
+  async deviceRun(a) { return require('./devices').run(this, a || {}); },
+  saveDevice(a) {
+    const d = require('./devices').normalizeDevice(a.device || {});
+    this.settings.update(s => { s.devices = [...(s.devices || []).filter(x => x.id !== d.id), d].slice(-20); });
+    this.settingsChanged('settings');
+    return d;
+  },
+  deleteDevice(a) {
+    this.settings.update(s => { s.devices = (s.devices || []).filter(x => x.id !== a.id); });
+    this.settingsChanged('settings');
+    return {};
+  },
   /** Companion 단추 누르기 (loc: '1/0/2, 2/1/0') · 설정 (주소·포트) */
   async companionPress(a) { return require('./companion').press(this, a && a.loc); },
   setCompanion(a) {
@@ -1198,7 +1211,7 @@ WorshipCueCore.prototype.commands = {
     if (!['order', 'text'].includes(p.mode)) throw new Error('고정할 것을 고르세요.');
     const name = String(p.name || '').trim().slice(0, 60);
     if (!name) throw new Error('프리셋 이름을 입력하세요.');
-    const id = /^[a-z0-9]{3,30}$/i.test(p.id || '') ? p.id : 'sp' + Date.now().toString(36);
+    const id = /^[a-z0-9]{3,30}$/i.test(p.id || '') ? p.id : 'sp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     this.settings.update(d => {
       const list = (d.stagePresets || []).filter(x => x.id !== id);
       list.push({ id, name, mode: p.mode, text: String(p.text || '').slice(0, 2000) });
