@@ -28,6 +28,7 @@ const DEFAULT_SHORTCUTS = {
   webLyrics: 'Ctrl+L',
   quickText: 'Ctrl+T',
   messages: 'Ctrl+M',
+  printCue: 'Ctrl+P',
 };
 
 const SHORTCUT_LABELS = {
@@ -53,6 +54,7 @@ const SHORTCUT_LABELS = {
   webLyrics: '웹에서 가사 찾기 (고른 찬양 순서에 넣기)',
   quickText: '즉석 자막 (글을 써서 바로 송출)',
   messages: '회중 메시지 (유아실 호출 · 차량 이동)',
+  printCue: '큐시트 인쇄',
 };
 
 function defaults() {

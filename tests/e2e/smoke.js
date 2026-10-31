@@ -203,6 +203,17 @@ app.whenReady().then(async () => {
       return { n: s.length, days: s[0] && s[0].days, time: s[0] && s[0].time };`);
     ok(sc.n === 1 && JSON.stringify(sc.days) === '[0,3]' && sc.time === '10:55', '예약 실행 (더하기 · 요일 · 저장)', sc);
 
+    // ---- 3-4. 큐시트 인쇄: Ctrl+P → 미리보기에 순서 · 메모 · 가사(부를 순서대로) · 성경 본문(켜면)
+    const pr = await ev(`const c = (await window.BC.cmd('saveCue', { cue: { name: '인쇄 점검', serviceDate: '2026-11-01', items: [{ type: 'title', title: '예배로 부름', note: '일어서기' }, { type: 'song', title: '은혜', lyrics: '[1절]\\n은혜 아니면\\n\\n[후렴]\\n주의 은혜라', order: '1절 후렴 1절' }, { type: 'bible', title: '성경 봉독', ref: '요 3:16' }] } })).result;
+      window.BCCue.openCue(c.id); await wait(900); localStorage.removeItem('wc-print');
+      document.body.focus(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', code: 'KeyP', ctrlKey: true, bubbles: true })); await wait(1500);
+      const b = () => $('#prFrame').contentDocument.body.innerText;
+      const t1 = b(); const bib = $('[data-po=bible]'); if (!bib.checked) { bib.click(); await wait(1500); }
+      const t2 = b(); return { open: !!$('#prFrame'), title: /인쇄 점검/.test(t1), note: /메모: 일어서기/.test(t1), order: /부를 순서: 1절 후렴 1절/.test(t1), lyr: (t1.match(/은혜 아니면/g) || []).length, bible: /하나님이 세상을/.test(t2), noBibleFirst: !/하나님이 세상을/.test(t1) };`);
+    await shot('print');
+    await ev(`$('#modalClose').click(); return 1;`);
+    ok(pr.open && pr.title && pr.note && pr.order && pr.lyr === 2 && pr.bible && pr.noBibleFirst, '큐시트 인쇄 (메모 · 부를 순서대로 가사 · 성경 본문)', pr);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

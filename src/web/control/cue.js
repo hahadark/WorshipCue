@@ -460,6 +460,56 @@
     return s ? s.arrangement || '' : '';
   }
 
+  // ---------------- 큐시트 인쇄 (찬양팀·방송실용): 순서 · 예정 시각 · 메모 · 가사(부를 순서대로) · 성경 본문 ----------------
+  async function printHtml(o) {
+    if (!st.cue) return '';
+    const G = window.BCGroup;
+    const clean = t => { let s = G.stripFmt(String(t || '')); if (!o.chords) s = G.stripChords(s); return s.replace(/^\s*>\s?/gm, ''); };
+    const times = timesOn() ? planTimes() : [];
+    const meta = st.cue;
+    const rows = [];
+    for (let i = 0; i < st.cue.items.length; i++) {
+      const it = st.cue.items[i];
+      let body = '';
+      if (o.lyrics && it.type === 'song' && (it.lyrics || '').trim()) {
+        const ch = SL.arrange(SL.lyricsChunks(it.lyrics), songOrder(it)).chunks;
+        let last = null;
+        body = ch.map(c => { const lab = c.label && c.label !== last ? `<div class="lab">${esc(c.label)}</div>` : ''; last = c.label || last; return `${lab}<p>${esc(clean(c.text)).replace(/\n/g, '<br>')}</p>`; }).join('');
+        const ord = songOrder(it);
+        if (ord) body = `<div class="ord">부를 순서: ${esc(ord)}</div>` + body;
+      } else if (o.lyrics && it.type === 'text' && (it.body || '').trim()) {
+        body = SL.textChunks(it.body, { roles: true }).map(c => `<p>${esc(clean(c.text).replace(/\*\*/g, '')).replace(/\n/g, '<br>')}</p>`).join('');
+      } else if (o.bible && it.type === 'bible' && (it.ref || '').trim()) {
+        const r = await cmd('searchReference', { query: it.ref, versionId: it.versionId || undefined });
+        if (r.ok) body = `<p class="bib">${(r.result.passage.verses || []).map(v => `<sup>${v.verse}</sup>${esc(v.text)}`).join(' ')}</p>`;
+      }
+      const sub = it.type === 'bible' ? it.ref : it.type === 'title' ? it.subtitle : it.type === 'hymn' ? (it.range ? `슬라이드 ${it.range}` : '') : '';
+      rows.push(`<section class="it${body ? ' hasbody' : ''}"><div class="hd"><span class="no">${i + 1}</span>${times[i] ? `<span class="tm">${esc(times[i])}</span>` : ''}<b>${esc(it.title)}</b>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}<span class="ty">${esc(TYPE[it.type] || '')}</span></div>${o.notes && it.note ? `<div class="note">메모: ${esc(it.note)}</div>` : ''}${body}</section>`);
+    }
+    const css = `@page { size: A4; margin: 14mm 12mm; } body { font-family: 'Pretendard Variable','Malgun Gothic',sans-serif; color: #111; font-size: ${o.big ? 13 : 11}pt; line-height: 1.45; margin: 0; } @media screen { body { padding: 10mm 12mm; } }
+      h1 { font-size: 16pt; margin: 0 0 2px; } .meta { color: #555; margin-bottom: 10px; font-size: 10pt; }
+      .it { border-top: 1px solid #ccc; padding: 6px 0; } .it.hasbody { break-inside: auto; } .hd { display: flex; gap: 8px; align-items: baseline; break-after: avoid; }
+      .no { font-weight: 800; min-width: 1.6em; } .tm { color: #0a58ca; font-variant-numeric: tabular-nums; } .sub { color: #444; } .ty { margin-left: auto; color: #888; font-size: 9pt; }
+      .note { color: #a33; font-size: 10pt; margin: 2px 0 0 2.2em; } p { margin: 3px 0 6px 2.2em; break-inside: avoid; } .lab { margin: 6px 0 0 2.2em; font-weight: 700; color: #555; font-size: 9.5pt; }
+      .ord { margin: 2px 0 0 2.2em; color: #555; font-size: 9.5pt; } .bib sup { color: #888; margin-right: 2px; } ${o.cols ? '.it.hasbody p, .it.hasbody .lab { margin-left: 0; } .hasbody { column-count: 2; column-gap: 8mm; } .hasbody .hd, .hasbody .note, .hasbody .ord { column-span: all; }' : ''}`;
+    const when = [meta.serviceDate, meta.startTime].filter(Boolean).join(' ');
+    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(meta.name)}</title><style>${css}</style></head><body><h1>${esc(meta.name)}</h1><div class="meta">${esc(when)}${when ? ' · ' : ''}순서 ${meta.items.length}개 · 워십프리젠터</div>${rows.join('')}</body></html>`;
+  }
+  async function openPrint() {
+    if (!st.cue) return app.showMsg('먼저 큐시트를 여세요.', 'warn', 2500);
+    let o = { lyrics: true, bible: false, notes: true, chords: false, big: false, cols: false };
+    try { o = { ...o, ...JSON.parse(localStorage.getItem('wc-print') || '{}') }; } catch { /* 무시 */ }
+    const chk = (k, t) => `<label class="tc-toggle"><input type="checkbox" data-po="${k}" ${o[k] ? 'checked' : ''}> ${t}</label>`;
+    app.openModal('큐시트 인쇄', `<div class="pr">
+      <div class="row-flex pr-opts">${chk('lyrics', '가사·공지 글')}${chk('bible', '성경 본문')}${chk('notes', '메모')}${chk('chords', '코드 (찬양팀)')}${chk('big', '큰 글씨')}${chk('cols', '두 단')}</div>
+      <iframe id="prFrame" class="pr-frame" title="인쇄 미리보기"></iframe>
+      <div class="row-flex"><button id="prGo" class="primary">${window.BCIcon('file-text')}인쇄…</button><span class="muted">PDF 로 저장하려면 프린터에서 'Microsoft Print to PDF'</span></div>
+    </div>`);
+    const load = async () => { $('#prFrame').srcdoc = await printHtml(o); };
+    document.querySelectorAll('[data-po]').forEach(c => { c.onchange = () => { o[c.dataset.po] = c.checked; try { localStorage.setItem('wc-print', JSON.stringify(o)); } catch { /* 무시 */ } load(); }; });
+    $('#prGo').onclick = () => { const w = $('#prFrame').contentWindow; if (w) { w.focus(); w.print(); } };
+    await load();
+  }
   // ---------------- 찬양 라이브러리 연결 ----------------
   /** 라이브러리 찬양의 최신 가사를 이 순서에 반영 */
   async function syncSong(it) {
@@ -1279,6 +1329,7 @@
     meta: () => (st.cue ? { name: st.cue.name || '', serviceDate: st.cue.serviceDate || '', startTime: st.cue.startTime || '' } : null),
     addItem: (type, extra) => addItem(type, extra),
     runActions: (it, depth) => runActions(it, depth), actSummary: it => actSummary(it),
+    openPrint: () => openPrint(), printHtml: o => printHtml(o),
     sendItem: i => { showSide('cue'); return sendItem(i); },
     addBethlehem: (h, o) => addBethlehem(h, o || {}),
     openCue: async id => { await refreshList(); showSide('cue'); return openCue(id); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),

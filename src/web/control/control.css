@@ -1517,3 +1517,7 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .sc-days label { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 13px; }
 .sc-days label.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .sc-days input { display: none; }
+/* ---- 큐시트 인쇄 (cue.js openPrint) ---- */
+.pr { display: flex; flex-direction: column; gap: 10px; width: min(860px, 88vw); }
+.pr-opts { flex-wrap: wrap; gap: 10px; }
+.pr-frame { width: 100%; height: 62vh; border: 1px solid var(--line); border-radius: 8px; background: #fff; }

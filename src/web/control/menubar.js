@@ -35,6 +35,7 @@
       { ic: 'folder-open', label: '큐시트 열기 · 새로 만들기 · 관리…', run: click('#cueMenu') },
       { ic: 'clipboard-paste', label: '주보 순서 붙여 넣기 → 큐시트…', run: () => window.BCAI && window.BCAI.open() },
       { ic: 'globe', label: '홈페이지 주보 → 큐시트 · 광고…', run: () => window.BCHome && window.BCHome.open() },
+      { ic: 'file-text', label: '큐시트 인쇄 (가사 · 메모 · 찬양팀용)…', key: 'Ctrl+P', run: act('printCue') },
       '-',
       { ic: 'download', label: '가져오기', sub: [
         { ic: 'music', label: '찬양 (OpenLP · ChordPro · ProPresenter · PPT)…', run: () => { lib('songs')(); setTimeout(() => { const b = document.querySelector('#panelLibrary [data-import]'); if (b) b.click(); }, 300); } },

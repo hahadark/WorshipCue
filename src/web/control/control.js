@@ -1489,6 +1489,7 @@
     webLyrics: () => window.BCCue && window.BCCue.webLyrics(),
     quickText: () => window.BCQuick && window.BCQuick.toggle(),
     messages: () => window.BCMessage && window.BCMessage.open(),
+    printCue: () => window.BCCue && window.BCCue.openPrint(),
     previewPrevSlide: () => stepPreview(-1),
     previewNextSlide: () => stepPreview(1),
     previewPrevVerse: () => previewAdjacentVerse(-1),
