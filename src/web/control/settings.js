@@ -460,6 +460,8 @@
       <label class="tc-toggle"><input type="checkbox" id="bCueAdv" ${s.cueAdvance !== false ? 'checked' : ''}> F6 을 누르면 다음 순서로 넘어가 바로 송출 (F5 는 이전 순서의 마지막 슬라이드)</label>
       <label class="tc-toggle"><input type="checkbox" id="bCueEdgeHide" ${s.cueEdgeHide === true ? 'checked' : ''}> 그 전에 한 번은 글자만 숨기기 (모든 순서 — 순서마다 따로 켤 수도 있음)</label>
       <label class="tc-toggle"><input type="checkbox" id="bCueTimes" ${s.cueTimes === true ? 'checked' : ''}> ⏰ 예배 진행 시계 쓰기 (예배 시작 시각 · 순서별 예정 시간 · 몇 분 늦음)</label>
+      <label>입력</label>
+      <label class="tc-toggle"><input type="checkbox" id="bImeAuto" ${s.imeAuto !== false ? 'checked' : ''}> 가사·공지·제목·즉석 자막 칸에 들어가면 한글 입력으로 바꾸기 (윈도우)</label>
     </div>`;
     $('#bMode').value = s.searchMode;
     $('#bLang').value = s.uiLang === 'en' ? 'en' : 'ko';
@@ -472,6 +474,7 @@
     $('#bNav').onchange = e => cmd('updateSettings', { patch: { navMode: e.target.value } });
     $('#bCueAdv').onchange = e => cmd('updateSettings', { patch: { cueAdvance: e.target.checked } });
     $('#bCueEdgeHide').onchange = e => cmd('updateSettings', { patch: { cueEdgeHide: e.target.checked } });
+    $('#bImeAuto').onchange = e => cmd('updateSettings', { patch: { imeAuto: e.target.checked } });
     $('#bCueTimes').onchange = e => window.BCCue && window.BCCue.setTimes(e.target.checked);
   }
 

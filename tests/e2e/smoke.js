@@ -145,6 +145,10 @@ app.whenReady().then(async () => {
       return { row: !!sel && !$('#stMonRow').hidden, opts: sel ? sel.options.length : 0, bad: bad.ok ? 'ok' : bad.error, stage: window.BC.state.outputs && window.BC.state.outputs.stage };`);
     ok(sm.row && sm.opts >= 2 && /모니터를 고르세요/.test(sm.bad) && sm.stage && sm.stage.enabled === false, '무대 화면 모니터 (목록 · 잘못된 모니터 거절)', sm);
 
+    // ---- 2-10. 한글 입력 자동 전환: 도우미가 실제로 응답 (윈도우)
+    const im = await ev(`const r = await window.BC.cmd('imeKorean', {}); return { ok: r.ok, res: r.result, err: r.error, setting: window.BC.state.settings.imeAuto };`);
+    ok(im.ok && im.setting !== false && (process.platform !== 'win32' || /^ok \d+ \d+$/.test(im.res && im.res.result || '')), '한글 입력 자동 전환 (도우미 응답)', im);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

@@ -1721,3 +1721,15 @@ test('무대 화면 모니터: 데스크톱에서만 · 켜기/끄기를 데스�
   core.desktop = null;
   core.store.close();
 });
+test('한글 입력 자동 전환: 데스크톱의 도우미를 부르고, 설정으로 끌 수 있음', async () => {
+  const core = newCore('ime');
+  assert.deepEqual((await core.command('imeKorean')).result, { skipped: true }, '웹(코어만)에서는 건너뜀');
+  let n = 0;
+  core.desktop = { setImeKorean: async () => { n++; return 'ok 0 1'; } };
+  assert.deepEqual((await core.command('imeKorean')).result, { result: 'ok 0 1' });
+  core.command('updateSettings', { patch: { imeAuto: false } });
+  assert.deepEqual((await core.command('imeKorean')).result, { skipped: true });
+  assert.equal(n, 1);
+  core.desktop = null;
+  core.store.close();
+});

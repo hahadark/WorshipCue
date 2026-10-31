@@ -158,6 +158,14 @@ if (!app.requestSingleInstanceLock()) {
 
   // ---------- 무대 화면을 모니터에 (설교자·찬양팀 모니터를 전체 화면으로) ----------
   let stageWin = null;
+  // 한글 입력 자동 전환 (윈도우): 처음 쓸 때 도우미를 띄운다
+  let imeHelper = null;
+  function setImeKorean() {
+    if (process.platform !== 'win32' || !controlWin || controlWin.isDestroyed()) return Promise.resolve('skip');
+    const { ImeHelper, hwndOf } = require('./ime');
+    if (!imeHelper) imeHelper = new ImeHelper(core.logger);
+    return imeHelper.set(hwndOf(controlWin), 1);
+  }
   function stageStatus() {
     const s = core.settings.get().stageOut || {};
     const d = s.displayId != null ? findDisplay(s.displayId) : null;
@@ -340,7 +348,7 @@ if (!app.requestSingleInstanceLock()) {
     const bk = setTimeout(() => { try { core.sync.backupDaily(); } catch (e) { core.logger.warn('자동 백업 실패: ' + e.message); } }, 20000); // 하루 한 번 백업
     if (bk.unref) bk.unref();
     core.desktop = {
-      listDisplays, status, setOutput, stageStatus, setStageOutput,
+      listDisplays, status, setOutput, stageStatus, setStageOutput, setImeKorean,
       globalShortcutStatus: () => globalStatus,
       // 폴더 고르기 창 (찬송가 폴더 등)
       pickFolder: async title => {
@@ -444,7 +452,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
-    if (core) { try { core.sync.stop(); } catch { /* 무시 */ } try { core.obs && core.obs.close(); } catch { /* 무시 */ } core.settings.saveNow(); core.logger.info('워십프리젠터 종료'); core.store.close(); }
+    if (core) { try { core.sync.stop(); } catch { /* 무시 */ } try { core.obs && core.obs.close(); } catch { /* 무시 */ } try { imeHelper && imeHelper.stop(); } catch { /* 무시 */ } core.settings.saveNow(); core.logger.info('워십프리젠터 종료'); core.store.close(); }
   });
   process.on('uncaughtException', e => { try { core && core.logger.error('예외: ' + (e && e.stack || e)); } catch { /* 무시 */ } });
   app.on('window-all-closed', () => app.quit());

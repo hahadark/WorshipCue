@@ -73,6 +73,7 @@ function defaults() {
     activeCueId: '',     // 열어 둔 큐시트
     cueAdvance: true,    // 항목의 마지막 슬라이드에서 F6 → 다음 순서로
     cueEdgeHide: false,
+    imeAuto: true,       // 가사·공지·즉석 자막 칸에 들어가면 한글 입력으로 (윈도우)
     stagePresets: [],    // 무대 화면 고정 프리셋 [{ id, name, mode: 'order'|'text', text }]
     skipVersion: '',     // 업데이트: 이 버전은 건너뛰기 (알리지 않고 설치하지 않음)
     obs: { enabled: false, host: '127.0.0.1', port: 4455, password: '', passwordEnc: '' }, // OBS 원격 조작 (obs-websocket 5)  // 순서의 처음·끝에서 한 번 더 F5·F6 → 글자만 숨김 (다음 누름에 다음 순서)

@@ -1390,6 +1390,16 @@
 
   // ---------------- 상태 표시 ----------------
   app.renderStatus = () => renderStatus();
+  // 한글 입력 자동 전환: 가사·공지·즉석 자막·고정 글 칸에 들어가면 (같은 칸은 3초에 한 번)
+  const IME_KO = 'textarea[data-k=lyrics], textarea[data-k=body], textarea[data-k=obsLyrics], input[data-k=title], input[data-k=subtitle], #qtInput, #stPinText, #stMsg, [data-ime=ko]';
+  let imeLast = { el: null, at: 0 };
+  document.addEventListener('focusin', e => {
+    const t = e.target;
+    if (!t || !t.matches || !t.matches(IME_KO) || !app.state || app.state.settings.imeAuto === false) return;
+    if (imeLast.el === t && Date.now() - imeLast.at < 3000) return;
+    imeLast = { el: t, at: Date.now() };
+    cmd('imeKorean');
+  });
   function renderStatus() {
     renderOutputButton();
     const st = app.state;

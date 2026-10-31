@@ -676,6 +676,7 @@ WorshipCueCore.prototype.commands = {
       if (typeof p.globalShortcuts === 'boolean') d.globalShortcuts = p.globalShortcuts;
       if (typeof p.cueAdvance === 'boolean') d.cueAdvance = p.cueAdvance;
       if (typeof p.cueEdgeHide === 'boolean') d.cueEdgeHide = p.cueEdgeHide;
+      if (typeof p.imeAuto === 'boolean') d.imeAuto = p.imeAuto;
       if (typeof p.cueTimes === 'boolean') d.cueTimes = p.cueTimes;
       if (p.uiLang === 'ko' || p.uiLang === 'en') d.uiLang = p.uiLang;
       if (typeof p.autoUpdate === 'boolean') d.autoUpdate = p.autoUpdate;
@@ -740,6 +741,11 @@ WorshipCueCore.prototype.commands = {
     const r = this.desktop.setOutput({ enabled: a.enabled, displayId: a.displayId });
     this.emit('outputs');
     return r;
+  },
+  /** 한글 입력 자동 전환: 가사·공지 칸에 들어가면 (설정 imeAuto, 윈도우 데스크톱만) */
+  async imeKorean() {
+    if (this.settings.get().imeAuto === false || !this.desktop || !this.desktop.setImeKorean) return { skipped: true };
+    return { result: await this.desktop.setImeKorean() };
   },
   /** 무대 화면을 모니터에 전체 화면으로 (설교자·찬양팀 모니터) */
   setStageWindow(a) {
