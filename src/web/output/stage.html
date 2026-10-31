@@ -36,6 +36,25 @@
   .conn { position: fixed; bottom: 1vh; left: 1vw; font-size: 1.8vh; color: #ff6b6b; display: none; }
   .conn.on { display: block; }
   html[lang='en'] .next::before { content: 'Next'; }
+  /* 줄 자리 고정: 메시지가 숨으면(display:none) 칸들이 한 줄씩 당겨져 큰 칸이 작아지던 문제 */
+  .top { grid-row: 1; } .msg { grid-row: 2; } .cur { grid-row: 3; } .next { grid-row: 4; } .bottom { grid-row: 5; }
+  /* '다음' 이름표가 칸 밖으로 나가 잘리던 문제: 칸 안 위쪽에 */
+  .next { padding-top: 3.4vh; }
+  .next::before { top: .5vh; }
+  /* 무대 화면 고정 (순서표 · 고정 글) */
+  .next[data-label='지금 화면']::before { content: '지금 화면'; color: #f08a8a; }
+  html[lang='en'] .next[data-label='지금 화면']::before { content: 'On screen'; }
+  body.pinned .cur { border-color: #3d7bff; align-items: flex-start; overflow-y: auto; }
+  body.pinned .cur .badge { background: #3d7bff; }
+  body.pinned .cur .t { width: 100%; }
+  .order { list-style: none; margin: 3vh 0 0; padding: 0; text-align: left; font-size: var(--fs, 4.4vh); line-height: 1.5; }
+  .order li { display: flex; gap: 1.2vw; align-items: baseline; padding: .2vh 1vw; border-radius: .8vh; color: #cfd5e0; }
+  .order li .on { color: #6d7588; min-width: 2.2em; text-align: right; font-variant-numeric: tabular-nums; }
+  .order li .onote { font-size: .6em; color: #9ec5ff; margin-left: auto; }
+  .order li.done { color: #59606e; }
+  .order li.now { background: #c0392b; color: #fff; font-weight: 800; }
+  .order li.now .on { color: #ffd479; }
+  .order li.nx { outline: 2px solid #2d3340; }
 </style>
 </head>
 <body>

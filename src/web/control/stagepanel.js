@@ -22,6 +22,11 @@
       <h4>무대에 메시지</h4>
       <div class="stg-row"><input type="text" id="stMsg" placeholder="예: 5분 남았습니다" style="flex:1"><button id="stSend" class="primary">보내기</button><button id="stClear">지우기</button></div>
       <div class="stg-row">${QUICK_MSG.map(m => `<button data-msg="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+      <h4>무대 화면 고정</h4>
+      <div class="stg-row note">지금 슬라이드와 상관없이 무대 화면에 계속 보이게 합니다 (지금 화면은 아래 작은 칸에). 찬양팀에게 전체 순서표, 설교자에게 고정 메모를 줄 때.</div>
+      <div class="stg-row" id="stPins"></div>
+      <div class="stg-row"><textarea id="stPinText" rows="2" placeholder="고정할 글 (예: 결단 찬양은 2절까지 · 헌금 후 바로 광고)" style="flex:1"></textarea></div>
+      <div class="stg-row"><button id="stPinTextGo">글 고정</button><input type="text" id="stPinName" placeholder="프리셋 이름" style="width:140px"><select id="stPinMode"><option value="text">고정 글</option><option value="order">순서표</option></select><button id="stPinSave">프리셋으로 저장</button></div>
       <div class="stg-prev"><iframe id="stFrame" title="무대 화면 미리보기" src="/outputs/stage"></iframe></div>
       <h4>📱 휴대폰 리모컨</h4>
       <div class="stg-row"><button id="rmOpen">${window.BCIcon('smartphone')}리모컨 열기 (QR · 주소 · PIN)…</button><span class="muted">메뉴 도구 → 📱 휴대폰 리모컨 에서도 열 수 있습니다</span></div>
@@ -43,12 +48,44 @@
     // 미리보기 iframe 을 칸 너비에 맞게 축소
     const prev = el.querySelector('.stg-prev');
     new ResizeObserver(() => prev.style.setProperty('--s', String(prev.clientWidth / 1280))).observe(prev);
+    // 무대 화면 고정
+    const pin = a => cmd('stagePinSet', a).then(r => { if (!r.ok) app.showMsg(r.error, 'error'); else { drawPins(r.result); app.showMsg(r.result ? '무대 화면을 고정했습니다.' : '무대 화면을 지금 화면으로 돌렸습니다.', 'ok', 1500); } });
+    $('#stPins').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.pin === 'live') pin(null);
+      else if (b.dataset.pin === 'order') pin({ mode: 'order', name: '순서표' });
+      else if (b.dataset.preset) pin({ preset: b.dataset.preset });
+      else if (b.dataset.del && confirm('이 프리셋을 지울까요?')) cmd('deleteStagePreset', { id: b.dataset.del }).then(() => setTimeout(() => drawPins(), 300));
+    });
+    $('#stPinTextGo').onclick = () => { const t = $('#stPinText').value.trim(); if (!t) return app.showMsg('고정할 글을 쓰세요.', 'warn', 2000); pin({ mode: 'text', text: t, name: $('#stPinName').value.trim() }); };
+    $('#stPinSave').onclick = async () => {
+      const mode = $('#stPinMode').value, name = $('#stPinName').value.trim(), text = $('#stPinText').value.trim();
+      if (mode === 'text' && !text) return app.showMsg('고정할 글을 쓰세요.', 'warn', 2000);
+      const r = await cmd('saveStagePreset', { preset: { mode, name, text } });
+      if (!r.ok) return app.showMsg(r.error, 'error');
+      app.showMsg(`무대 화면 프리셋 '${name}' 을(를) 저장했습니다.`, 'ok', 2000); setTimeout(() => drawPins(), 300);
+    };
+    drawPins();
     setInterval(tick, 250);
     $('#rmOpen').onclick = () => window.BCRemote && window.BCRemote.open();
   }
 
+  /** 고정 단추들: 지금 화면 · 순서표 · 저장한 프리셋 (지금 고정된 것은 강조) */
+  function drawPins(cur) {
+    const box = $('#stPins');
+    if (!box) return;
+    const now = cur !== undefined ? cur : (app.state && app.state.stage && app.state.stage.pin) || null;
+    const on = k => (k === 'live' ? !now : now && (k === 'order' ? now.mode === 'order' && !now.id : now.id === k)) ? 'on' : '';
+    const list = (app.state && app.state.settings.stagePresets) || [];
+    box.innerHTML = `<button data-pin="live" class="${on('live')}">지금 화면 (기본)</button><button data-pin="order" class="${on('order')}">순서표</button>` +
+      list.map(p => `<span class="stg-preset"><button data-preset="${esc(p.id)}" class="${on(p.id)}" title="${esc(p.mode === 'order' ? '순서표' : p.text)}">${esc(p.name)}</button><button data-del="${esc(p.id)}" class="icon-btn" title="프리셋 지우기">✕</button></span>`).join('');
+  }
+
+  let pinKey = '';
   function tick() {
     const st = app.state && app.state.stage;
+    const pk = JSON.stringify([st && st.pin && [st.pin.mode, st.pin.id || ''], ((app.state && app.state.settings.stagePresets) || []).map(p => p.id + p.name)]);
+    if (pk !== pinKey) { pinKey = pk; drawPins(); }
     const el = $('#stTime');
     if (!el || !st) return;
     const t = st.timer;
@@ -60,5 +97,5 @@
     el.className = 'stg-time' + (neg ? ' over' : left < 300000 ? ' warn' : '');
   }
 
-  window.BCStage = { init };
+  window.BCStage = { init, drawPins };
 })();

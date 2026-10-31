@@ -67,7 +67,7 @@ class WorshipCueCore extends EventEmitter {
     this.library = new Library(this);
     this.usage = new UsageLog(this); // 사용 기록 (저작권 보고)
     this.sync = new Sync(this); // 여러 PC 동기화 · 자동 백업
-    this.stage = { timer: { running: false, endAt: 0, remaining: 0, duration: 0 }, message: '' };
+    this.stage = { timer: { running: false, endAt: 0, remaining: 0, duration: 0 }, message: '', pin: null }; // pin: 무대 화면 고정 { mode: 'order' | 'text', text, name }
     // 화면 지우기 층: 배경 숨김 · 로고 화면 · 오버레이 끄기 전 켜져 있던 것
     this.layers = { hideBg: false, logo: false, savedOverlays: [], media: null }; // media = 배경 미디어 (카메라·그림·영상, 슬라이드와 따로)
     this.pendingImports = new Map();
@@ -256,7 +256,20 @@ class WorshipCueCore extends EventEmitter {
       note: live.passage ? live.passage.note || '' : '',
       timer: { running: t.running, remaining, duration: t.duration, now: Date.now() },
       message: this.stage.message,
+      pin: this.stagePin(live),
     };
+  }
+
+  /** 무대 화면 고정: 지금 슬라이드와 상관없이 계속 보이는 것 (순서표 · 고정 글). 지금 화면은 아래 작은 칸에 */
+  stagePin(live) {
+    const p = this.stage.pin;
+    if (!p) return null;
+    if (p.mode === 'text') return { mode: 'text', name: p.name || '', text: p.text || '' };
+    const s = this.settings.get();
+    const cueId = (live && live.passage && live.passage.cueId) || s.activeCueId;
+    const cue = cueId ? this.store.getCue(cueId) : null;
+    const cur = live && live.passage && live.passage.cueId === (cue && cue.id) ? live.passage.cueIndex : -1;
+    return { mode: 'order', name: p.name || '', cueName: cue ? cue.name : '', current: cur, items: cue ? cue.items.map(it => ({ title: it.title, type: it.type, note: it.note || '' })) : [] };
   }
 
   // ---------------- 영상 재생 (큐시트 '영상' 순서) ----------------
@@ -1146,6 +1159,35 @@ WorshipCueCore.prototype.commands = {
     else throw new Error('알 수 없는 타이머 조작입니다.');
     this.emit('live');
     return this.stagePayload().timer;
+  },
+  /** 무대 화면 고정: { mode: 'order' | 'text', text, name } · { preset: id } · null(지금 화면으로) */
+  stagePinSet(a) {
+    let p = a && a.preset ? (this.settings.get().stagePresets || []).find(x => x.id === a.preset) : a;
+    if (a && a.preset && !p) throw new Error('무대 화면 프리셋을 찾을 수 없습니다.');
+    this.stage.pin = p && ['order', 'text'].includes(p.mode) ? { mode: p.mode, text: String(p.text || '').slice(0, 2000), name: String(p.name || '').slice(0, 60), id: p.id || '' } : null;
+    this.emit('live');
+    return this.stage.pin;
+  },
+  /** 무대 화면 프리셋 저장 (같은 id 면 고침) · 지우기 */
+  saveStagePreset(a) {
+    const p = a.preset || {};
+    if (!['order', 'text'].includes(p.mode)) throw new Error('고정할 것을 고르세요.');
+    const name = String(p.name || '').trim().slice(0, 60);
+    if (!name) throw new Error('프리셋 이름을 입력하세요.');
+    const id = /^[a-z0-9]{3,30}$/i.test(p.id || '') ? p.id : 'sp' + Date.now().toString(36);
+    this.settings.update(d => {
+      const list = (d.stagePresets || []).filter(x => x.id !== id);
+      list.push({ id, name, mode: p.mode, text: String(p.text || '').slice(0, 2000) });
+      d.stagePresets = list.slice(-30);
+    });
+    this.settingsChanged('settings');
+    return { id };
+  },
+  deleteStagePreset(a) {
+    this.settings.update(d => { d.stagePresets = (d.stagePresets || []).filter(x => x.id !== a.id); });
+    if (this.stage.pin && this.stage.pin.id === a.id) { this.stage.pin = null; this.emit('live'); }
+    this.settingsChanged('settings');
+    return {};
   },
   /** 무대 화면에 전달 메시지 (빈 글이면 지움) */
   stageMessage(a) {

@@ -105,6 +105,19 @@ app.whenReady().then(async () => {
     ok(ob.form.host && ob.form.port === '4455' && ob.enabled === true && ob.connected === false && /연결하지 못했습니다/.test(ob.err || '') && /OBS 원격 끊김/.test(ob.bar), 'OBS 원격 조작: 설정 · 연결 실패 안내 · 상태줄', ob);
     ok(ob.row && ob.after, 'OBS 원격 조작: 순서 자동 동작 줄 · 끄면 상태줄에서 사라짐', ob);
 
+    // ---- 2-7. 무대 화면 고정: 순서표 → 무대 화면에 순서 목록 · 지금 화면은 아래 칸
+    await ev(`const c = (await window.BC.cmd('saveCue', { cue: { name: '무대 점검', items: [{ type: 'title', title: '예배로 부름' }, { type: 'text', title: '광고', body: '식사 있습니다' }, { type: 'title', title: '설교', note: '20분' }] } })).result;
+      window.BCCue.openCue(c.id); await wait(800); $$('#cueList .cue-item')[1].click(); await wait(800); await window.BC.sendPreview(); await wait(500);
+      await window.BC.cmd('stagePinSet', { mode: 'order', name: '순서표' }); return 1;`);
+    const sw = new BrowserWindow({ width: 1280, height: 720, show: false, webPreferences: { offscreen: true } });
+    await sw.loadURL(`http://127.0.0.1:${port}/outputs/stage`);
+    await wait(1500);
+    const sp = await sw.webContents.executeJavaScript(`(() => ({ items: [...document.querySelectorAll('.order li')].map(l => l.className + ':' + l.querySelector('.ot').textContent), badge: document.getElementById('badge').textContent, now: document.getElementById('next').textContent }))()`);
+    fs.writeFileSync(path.join(OUT, 'stage-pin.png'), (await sw.webContents.capturePage()).toPNG());
+    sw.destroy();
+    await ev(`await window.BC.cmd('stagePinSet', {}); await window.BC.cmd('clearAll', {}); return 1;`);
+    ok(sp.items.length === 3 && /^now:광고/.test(sp.items[1]) && /^nx:설교/.test(sp.items[2]) && /고정/.test(sp.badge) && /식사/.test(sp.now), '무대 화면 고정 (순서표 · 지금 순서 · 아래 칸에 지금 화면)', sp);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

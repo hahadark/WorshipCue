@@ -446,6 +446,7 @@
           배경 <select data-a="bg"><option value="">그대로</option><option value="hide" ${a.bg === 'hide' ? 'selected' : ''}>지우기</option><option value="show" ${a.bg === 'show' ? 'selected' : ''}>다시 보이기</option></select></div>
         <label>오버레이</label><div class="ce-row">켜기 ${ovSel('ovOn')} 끄기 ${ovSel('ovOff', `<option value="*" ${a.ovOff === '*' ? 'selected' : ''}>모두</option>`)}</div>
         <label>음악</label><div class="ce-row"><label class="tc-toggle"><input type="checkbox" data-a="stopMusic" ${a.stopMusic ? 'checked' : ''}> 재생 중인 음악 서서히 멈춤</label></div>
+        <label>무대 화면</label><div class="ce-row"><select data-a="stagePin"><option value="">그대로</option><option value="live" ${a.stagePin === 'live' ? 'selected' : ''}>지금 화면 (고정 풀기)</option><option value="order" ${a.stagePin === 'order' ? 'selected' : ''}>순서표 고정</option>${(app.state.settings.stagePresets || []).map(p => `<option value="${esc(p.id)}" ${a.stagePin === p.id ? 'selected' : ''}>고정: ${esc(p.name)}</option>`).join('')}</select></div>
         ${obsActHtml(a)}
       </div>` : ''}</div>`;
   }
@@ -461,6 +462,7 @@
     const ovName = id => (id === '*' ? '모두' : ((app.state.settings.overlays || []).find(o => o.id === id) || {}).name || '?');
     return [a.timer && `⏱ 타이머 ${a.timer}분`, a.stageMsg && '💬 무대 메시지', a.clearStage && '메시지 지움', a.logo && `로고 ${a.logo === 'on' ? '켜기' : '끄기'}`, a.bg && `배경 ${a.bg === 'hide' ? '지우기' : '보이기'}`,
       a.ovOn && `오버레이 켜기: ${ovName(a.ovOn)}`, a.ovOff && `오버레이 끄기: ${ovName(a.ovOff)}`, a.stopMusic && '음악 멈춤',
+      a.stagePin && (a.stagePin === 'live' ? '무대 고정 풀기' : a.stagePin === 'order' ? '무대: 순서표' : `무대 고정: ${((app.state.settings.stagePresets || []).find(p => p.id === a.stagePin) || {}).name || '?'}`),
       a.obsScene && `OBS 장면: ${a.obsScene}`, a.obsStream && `OBS 방송 ${a.obsStream === 'start' ? '시작' : '끝'}`, a.obsRecord && `OBS 녹화 ${a.obsRecord === 'start' ? '시작' : '끝'}`].filter(Boolean).join(' · ');
   }
   /** 새로 송출된 순서의 자동 동작 (한 번만 · 방금 송출한 것만) */
@@ -487,6 +489,7 @@
     if (a.ovOn) cmd('toggleOverlay', { id: a.ovOn, on: true });
     if (a.ovOff === '*') (app.state.settings.overlays || []).filter(o => o.on && o.id !== a.ovOn).forEach(o => cmd('toggleOverlay', { id: o.id, on: false }));
     else if (a.ovOff) cmd('toggleOverlay', { id: a.ovOff, on: false });
+    if (a.stagePin) cmd('stagePinSet', a.stagePin === 'live' ? null : a.stagePin === 'order' ? { mode: 'order', name: '순서표' } : { preset: a.stagePin });
     if (window.BCObs && (a.obsScene || a.obsStream || a.obsRecord)) {
       if (a.obsScene) window.BCObs.act({ action: 'scene', scene: a.obsScene }, true);
       if (a.obsStream) window.BCObs.act({ action: 'stream', on: a.obsStream === 'start' }, true);

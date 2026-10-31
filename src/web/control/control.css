@@ -1465,3 +1465,7 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .obs-box .st { display: inline-flex; align-items: center; gap: 6px; }
 .obs-scenes { display: flex; flex-wrap: wrap; gap: 6px; }
 .obs-scenes button.on { border-color: var(--live); color: var(--live); font-weight: 700; }
+/* ---- 무대 화면 고정 (stagepanel.js) ---- */
+#stPins { flex-wrap: wrap; gap: 6px; }
+#stPins button.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.stg-preset { display: inline-flex; gap: 2px; }

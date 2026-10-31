@@ -72,6 +72,7 @@ function normalizeItem(x) {
     if (a.ovOff) act.ovOff = str(a.ovOff, 60);
     if (a.stopMusic) act.stopMusic = true;
     if (a.clearStage) act.clearStage = true;
+    if (a.stagePin) act.stagePin = str(a.stagePin, 40); // 무대 화면 고정: live(풀기) · order(순서표) · 프리셋 id
     if (a.obsScene) act.obsScene = str(a.obsScene, 120); // OBS 장면 바꾸기
     if (['start', 'stop'].includes(a.obsStream)) act.obsStream = a.obsStream; // OBS 방송 시작·끝
     if (['start', 'stop'].includes(a.obsRecord)) act.obsRecord = a.obsRecord; // OBS 녹화 시작·끝

@@ -1665,3 +1665,33 @@ test('OBS 원격 조작: obs-websocket 5 인증 · 장면 목록 · 장면 바�
   assert.equal(link.retry, null);
   link.close();
 });
+
+test('무대 화면 고정: 순서표(지금 순서 표시) · 고정 글 · 프리셋 저장·적용·지우기', () => {
+  const core = newCore('stagepin');
+  const cue = core.command('saveCue', { cue: { name: '주일 예배', items: [{ type: 'title', title: '예배로 부름' }, { type: 'song', title: '은혜', lyrics: '가' }, { type: 'title', title: '설교', note: '20분' }] } }).result;
+  core.settings.update(d => { d.activeCueId = cue.id; });
+  assert.equal(core.stagePayload().pin, null, '기본은 지금 화면');
+  core.command('stagePinSet', { mode: 'order', name: '순서표' });
+  let p = core.stagePayload().pin;
+  assert.equal(p.mode, 'order');
+  assert.deepEqual(p.items.map(x => x.title), ['예배로 부름', '은혜', '설교']);
+  assert.equal(p.current, -1);
+  core.command('sendLive', { passage: { title: '은혜', cueId: cue.id, cueIndex: 1 }, slides: [{ kind: 'text', parts: [{ book: 0, chapter: 0, verse: 0, text: '가' }] }] });
+  assert.equal(core.stagePayload().pin.current, 1, '송출 중인 순서를 표시');
+  assert.equal(core.stagePayload().pin.items[2].note, '20분');
+  core.command('stagePinSet', { mode: 'text', text: '결단 찬양은 2절까지', name: '메모' });
+  assert.deepEqual(core.stagePayload().pin, { mode: 'text', name: '메모', text: '결단 찬양은 2절까지' });
+  const saved = core.command('saveStagePreset', { preset: { mode: 'text', name: '헌금 안내', text: '헌금 후 바로 광고' } });
+  assert.equal(saved.ok, true, saved.error);
+  assert.equal(core.command('saveStagePreset', { preset: { mode: 'text', name: '' } }).ok, false, '이름 필요');
+  core.command('stagePinSet', { preset: saved.result.id });
+  assert.equal(core.stagePayload().pin.text, '헌금 후 바로 광고');
+  core.command('deleteStagePreset', { id: saved.result.id });
+  assert.equal(core.stagePayload().pin, null, '쓰던 프리셋을 지우면 고정도 풀림');
+  assert.equal(core.settings.get().stagePresets.length, 0);
+  core.command('stagePinSet', {});
+  assert.equal(core.stagePayload().pin, null);
+  const { normalizeItem } = require('../src/core/cues');
+  assert.equal(normalizeItem({ type: 'title', title: 'x', actions: { stagePin: 'order' } }).actions.stagePin, 'order');
+  core.store.close();
+});

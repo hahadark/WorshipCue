@@ -49,10 +49,26 @@
     $('cur').classList.toggle('hidden', p.hasLive && !p.visible);
     $('badge').textContent = p.hasLive && !p.visible ? '숨김 중' : 'LIVE';
     $('next').textContent = p.nextSlide ? noCh(slideText(p.nextSlide)).replace(/^\s*>\s?/gm, '') : (p.hasLive ? '(이 순서의 마지막 슬라이드)' : '');
+    $('next').dataset.label = '';
+    // 무대 화면 고정: 큰 칸에 순서표·고정 글, 아래 작은 칸에 지금 화면
+    const pin = p.pin;
+    document.body.classList.toggle('pinned', !!pin);
+    if (pin) {
+      $('badge').textContent = '고정' + (pin.name ? ': ' + pin.name : '');
+      $('ref').textContent = pin.mode === 'order' ? (pin.cueName || '') : '';
+      $('ref').style.cssText = '';
+      $('cur').classList.remove('hidden');
+      if (pin.mode === 'order') {
+        $('text').innerHTML = pin.items.length ? `<ol class="order">${pin.items.map((it, i) => `<li class="${i === pin.current ? 'now' : i === pin.current + 1 ? 'nx' : i < pin.current ? 'done' : ''}" ${i === pin.current ? 'id="orderNow"' : ''}><span class="on">${i + 1}</span><span class="ot">${esc(it.title)}</span>${it.note ? `<span class="onote">${esc(it.note)}</span>` : ''}</li>`).join('')}</ol>` : '<div class="cl">열린 큐시트가 없습니다</div>';
+      } else $('text').innerHTML = String(pin.text || '').split('\n').map(l => `<div class="cl">${esc(l) || '&nbsp;'}</div>`).join('');
+      $('next').dataset.label = '지금 화면';
+      $('next').textContent = p.hasLive ? (p.visible ? '' : '(숨김) ') + noCh(slideText(p.slide)).replace(/^\s*>\s?/gm, '') : '송출 중인 화면 없음';
+    }
     $('note').textContent = p.note ? '📝 ' + p.note : '';
     $('msg').textContent = p.message || '';
     $('msg').classList.toggle('on', !!p.message);
-    fit();
+    if (pin && pin.mode === 'order') { $('text').style.setProperty('--fs', '4.4vh'); const n = document.getElementById('orderNow'); if (n) n.scrollIntoView({ block: 'center' }); }
+    else fit();
     tick();
   }
 
