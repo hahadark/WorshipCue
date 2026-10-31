@@ -365,7 +365,7 @@ class WorshipCueCore extends EventEmitter {
       if (c.client === 'control') continue;
       list.push({ id, output: c.client, kind: c.kind, connectedAt: c.connectedAt, ack: c.ack });
     }
-    return { clients: list, desktop: this.desktop ? this.desktop.status() : null };
+    return { clients: list, desktop: this.desktop ? this.desktop.status() : null, stage: this.desktop && this.desktop.stageStatus ? this.desktop.stageStatus() : null };
   }
 
   getState() {
@@ -738,6 +738,13 @@ WorshipCueCore.prototype.commands = {
   setOutputWindow(a) {
     if (!this.desktop) throw new Error('전체 화면 출력 창은 데스크톱 프로그램에서만 사용할 수 있습니다.');
     const r = this.desktop.setOutput({ enabled: a.enabled, displayId: a.displayId });
+    this.emit('outputs');
+    return r;
+  },
+  /** 무대 화면을 모니터에 전체 화면으로 (설교자·찬양팀 모니터) */
+  setStageWindow(a) {
+    if (!this.desktop || !this.desktop.setStageOutput) throw new Error('무대 화면 창은 데스크톱 프로그램에서만 띄울 수 있습니다.');
+    const r = this.desktop.setStageOutput({ enabled: a.enabled, displayId: a.displayId });
     this.emit('outputs');
     return r;
   },

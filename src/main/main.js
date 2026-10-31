@@ -156,6 +156,59 @@ if (!app.requestSingleInstanceLock()) {
     return status();
   }
 
+  // ---------- 무대 화면을 모니터에 (설교자·찬양팀 모니터를 전체 화면으로) ----------
+  let stageWin = null;
+  function stageStatus() {
+    const s = core.settings.get().stageOut || {};
+    const d = s.displayId != null ? findDisplay(s.displayId) : null;
+    const all = screen.getAllDisplays();
+    return { enabled: !!s.enabled, displayId: s.displayId ?? null, valid: !!d, visible: !!(stageWin && !stageWin.isDestroyed() && stageWin.isVisible()), displayLabel: d ? displayLabel(d, all.findIndex(x => x.id === d.id)) : '' };
+  }
+  function syncStageWindow() {
+    const s = core.settings.get().stageOut || {};
+    const d = s.enabled && s.displayId != null ? findDisplay(s.displayId) : null;
+    if (!d) { if (stageWin && !stageWin.isDestroyed()) stageWin.hide(); core.emit('outputs'); return; }
+    if (!stageWin || stageWin.isDestroyed()) {
+      stageWin = new BrowserWindow({
+        x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: d.bounds.height,
+        frame: false, show: false, skipTaskbar: true, resizable: false, movable: false, minimizable: false,
+        fullscreenable: true, backgroundColor: '#000000', title: T('워십프리젠터 무대 화면'), icon: APP_ICON,
+        webPreferences: { backgroundThrottling: false, contextIsolation: true, sandbox: true },
+      });
+      stageWin.setMenu(null);
+      stageWin.loadURL(`http://127.0.0.1:${port}/outputs/stage?window=1`);
+      stageWin.on('closed', () => { stageWin = null; core.emit('outputs'); });
+      stageWin.webContents.on('render-process-gone', () => setTimeout(() => { if (stageWin && !stageWin.isDestroyed()) stageWin.reload(); }, 500));
+      stageWin.webContents.on('before-input-event', (ev, input) => { if (input.type === 'keyDown' && input.code === 'Escape') { ev.preventDefault(); setStageOutput({ enabled: false }); } });
+      stageWin.once('ready-to-show', () => placeStage(d));
+    } else placeStage(d);
+    core.emit('outputs');
+  }
+  function placeStage(d) {
+    if (!stageWin || stageWin.isDestroyed()) return;
+    const mac = process.platform === 'darwin';
+    if (mac) stageWin.setSimpleFullScreen(false); else stageWin.setFullScreen(false);
+    stageWin.setBounds(d.bounds);
+    const ctrl = controlWin ? screen.getDisplayMatching(controlWin.getBounds()) : null;
+    stageWin.setAlwaysOnTop(!(ctrl && ctrl.id === d.id), 'screen-saver');
+    stageWin.showInactive();
+    if (mac) stageWin.setSimpleFullScreen(true); else stageWin.setFullScreen(true);
+    core.emit('outputs');
+  }
+  function setStageOutput({ enabled, displayId }) {
+    if (displayId != null && !findDisplay(Number(displayId))) throw new Error('그 모니터를 찾지 못했습니다. 무대 화면을 띄울 모니터를 고르세요.');
+    core.settings.update(s => {
+      s.stageOut = { enabled: false, displayId: null, ...(s.stageOut || {}) };
+      if (typeof enabled === 'boolean') s.stageOut.enabled = enabled;
+      if (displayId != null && findDisplay(Number(displayId))) s.stageOut.displayId = Number(displayId);
+    });
+    const so = core.settings.get().stageOut;
+    if (so.enabled && (so.displayId == null || !findDisplay(so.displayId))) { core.settings.update(s => { s.stageOut.enabled = false; }); syncStageWindow(); throw new Error('무대 화면을 띄울 모니터를 고르세요.'); }
+    const out = core.settings.get().output;
+    if (so.enabled && out.enabled && out.displayId === so.displayId) core.logger.warn('무대 화면과 예배당 화면이 같은 모니터입니다.');
+    syncStageWindow();
+    return stageStatus();
+  }
   // ---------- 전역 단축키 ----------
   function toAccelerator(combo) {
     return combo.split('+').map(k => ({ ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', Ctrl: 'CommandOrControl', Meta: 'Super' }[k] || k)).join('+'); // 맥은 ⌘
@@ -287,7 +340,7 @@ if (!app.requestSingleInstanceLock()) {
     const bk = setTimeout(() => { try { core.sync.backupDaily(); } catch (e) { core.logger.warn('자동 백업 실패: ' + e.message); } }, 20000); // 하루 한 번 백업
     if (bk.unref) bk.unref();
     core.desktop = {
-      listDisplays, status, setOutput,
+      listDisplays, status, setOutput, stageStatus, setStageOutput,
       globalShortcutStatus: () => globalStatus,
       // 폴더 고르기 창 (찬송가 폴더 등)
       pickFolder: async title => {
@@ -376,16 +429,17 @@ if (!app.requestSingleInstanceLock()) {
     // 모니터 연결·해제·해상도 변경
     screen.on('display-removed', (e, d) => {
       if (core.settings.get().output.displayId === d.id) core.logger.warn('출력 모니터 연결 해제됨 — 출력 창을 숨깁니다.');
-      syncOutputWindow();
+      syncOutputWindow(); syncStageWindow();
     });
-    screen.on('display-added', () => syncOutputWindow());
-    screen.on('display-metrics-changed', () => syncOutputWindow());
+    screen.on('display-added', () => { syncOutputWindow(); syncStageWindow(); });
+    screen.on('display-metrics-changed', () => { syncOutputWindow(); syncStageWindow(); });
 
     powerSaveBlocker.start('prevent-display-sleep');
     applyGlobalShortcuts();
     // 시작할 때는 보조 화면 출력을 항상 꺼 둔다 (선택한 모니터는 기억). 하단 [보조 화면] 버튼으로 켠다.
     core.settings.update(s => { s.output.enabled = false; });
     syncOutputWindow();
+    syncStageWindow(); // 무대 화면 모니터는 켜 두었으면 다시 (모니터가 그대로 있을 때만)
   });
 
   app.on('will-quit', () => {

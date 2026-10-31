@@ -65,6 +65,11 @@ function diagnose(core, { cueId, port } = {}) {
     else if (st.sameAsControl) out.push(item('display', '예배당 화면 (보조 모니터)', 'warn', '예배당 화면이 조작 화면과 같은 모니터에 있습니다.', ['설정 → 출력 에서 다른 모니터를 고르세요.']));
     else out.push(item('display', '예배당 화면 (보조 모니터)', 'ok', `모니터 ${ds.length}대 · ${st.enabled ? `출력 켜짐 (${st.displayLabel})` : '출력 꺼짐 — 송출하면 자동으로 켜집니다'}`));
   } else out.push(item('display', '예배당 화면 (보조 모니터)', 'info', '웹 화면에서는 점검할 수 없습니다 (데스크톱 프로그램에서).'));
+  if (core.desktop && core.desktop.stageStatus) {
+    const ss = core.desktop.stageStatus();
+    if (ss.enabled && !ss.valid) out.push(item('stagemon', '무대 화면 모니터', 'fail', '무대 화면을 띄울 모니터를 찾지 못했습니다.', ['모니터 연결을 확인하고, 무대·타이머 패널 → 무대 화면 모니터에서 다시 고르세요.']));
+    else if (ss.enabled) out.push(item('stagemon', '무대 화면 모니터', 'ok', `켜짐 (${ss.displayLabel})`));
+  }
 
   // 2. OBS 브라우저 소스
   const st = core.outputStatus();

@@ -14,6 +14,7 @@
     el.innerHTML = `<div class="stg">
       <div class="stg-row"><b>무대 화면</b><span class="muted">설교자·찬양팀 모니터용: 지금·다음 슬라이드, 시계, 타이머, 메시지, 순서 메모</span></div>
       <div class="stg-row"><button id="stOpen" class="primary">${window.BCIcon('monitor')}무대 화면 창 열기</button><input type="text" readonly value="${esc(url)}" id="stUrl" style="flex:1" title="이 PC 의 브라우저나 OBS 브라우저 소스로도 열 수 있습니다 (다른 기기에서는 휴대폰 리모컨을 쓰세요)"><button id="stCopy">주소 복사</button></div>
+      <div class="stg-row" id="stMonRow"><span>무대 화면 모니터</span><select id="stMon"><option value="">모니터 고르기…</option></select><button id="stMonGo">전체 화면으로 띄우기</button><span id="stMonSt" class="muted"></span></div>
       <h4>설교 타이머</h4>
       <div class="stg-row"><span id="stTime" class="stg-time">--:--</span>
         ${PRESETS.map(m => `<button data-min="${m}">${m}분</button>`).join('')}
@@ -48,6 +49,27 @@
     // 미리보기 iframe 을 칸 너비에 맞게 축소
     const prev = el.querySelector('.stg-prev');
     new ResizeObserver(() => prev.style.setProperty('--s', String(prev.clientWidth / 1280))).observe(prev);
+    // 무대 화면을 모니터에 (전체 화면)
+    const monFill = async () => {
+      const r = await cmd('getDisplays');
+      if (!r.ok || !r.result.available) { $('#stMonRow').hidden = true; return; }
+      const ss = (app.state.outputs && app.state.outputs.stage) || {};
+      $('#stMon').innerHTML = '<option value="">모니터 고르기…</option>' + r.result.displays.map(d => `<option value="${d.id}" ${ss.displayId === d.id ? 'selected' : ''}>${esc(d.label)}${d.primary ? ' (주 모니터)' : ''}</option>`).join('');
+      drawMon();
+    };
+    $('#stMon').onfocus = monFill;
+    $('#stMonGo').onclick = async () => {
+      const ss = (app.state.outputs && app.state.outputs.stage) || {};
+      const on = !ss.enabled;
+      const id = $('#stMon').value;
+      if (on && !id) return app.showMsg('무대 화면을 띄울 모니터를 고르세요.', 'warn', 2500);
+      const r = await cmd('setStageWindow', on ? { enabled: true, displayId: Number(id) } : { enabled: false });
+      if (!r.ok) return app.showMsg(r.error, 'error');
+      if (app.state.outputs) app.state.outputs.stage = r.result;
+      drawMon();
+    };
+    $('#stMon').onchange = async () => { const ss = (app.state.outputs && app.state.outputs.stage) || {}; if (ss.enabled && $('#stMon').value) { const r = await cmd('setStageWindow', { enabled: true, displayId: Number($('#stMon').value) }); if (r.ok && app.state.outputs) { app.state.outputs.stage = r.result; drawMon(); } } };
+    monFill();
     // 무대 화면 고정
     const pin = a => cmd('stagePinSet', a).then(r => { if (!r.ok) app.showMsg(r.error, 'error'); else { drawPins(r.result); app.showMsg(r.result ? '무대 화면을 고정했습니다.' : '무대 화면을 지금 화면으로 돌렸습니다.', 'ok', 1500); } });
     $('#stPins').addEventListener('click', e => {
@@ -81,11 +103,22 @@
       list.map(p => `<span class="stg-preset"><button data-preset="${esc(p.id)}" class="${on(p.id)}" title="${esc(p.mode === 'order' ? '순서표' : p.text)}">${esc(p.name)}</button><button data-del="${esc(p.id)}" class="icon-btn" title="프리셋 지우기">✕</button></span>`).join('');
   }
 
+  function drawMon() {
+    const b = $('#stMonGo'), t = $('#stMonSt');
+    if (!b) return;
+    const ss = (app.state && app.state.outputs && app.state.outputs.stage) || {};
+    b.textContent = ss.enabled ? '무대 화면 끄기' : '전체 화면으로 띄우기';
+    b.className = ss.enabled ? 'danger' : '';
+    t.textContent = ss.enabled ? (ss.valid ? `켜짐 — ${ss.displayLabel} (그 화면을 누르고 Esc 로 끄기)` : '모니터를 찾지 못했습니다') : '';
+  }
+  let monKey = '';
   let pinKey = '';
   function tick() {
     const st = app.state && app.state.stage;
     const pk = JSON.stringify([st && st.pin && [st.pin.mode, st.pin.id || ''], ((app.state && app.state.settings.stagePresets) || []).map(p => p.id + p.name)]);
     if (pk !== pinKey) { pinKey = pk; drawPins(); }
+    const mk = JSON.stringify(app.state && app.state.outputs && app.state.outputs.stage);
+    if (mk !== monKey) { monKey = mk; drawMon(); }
     const el = $('#stTime');
     if (!el || !st) return;
     const t = st.timer;

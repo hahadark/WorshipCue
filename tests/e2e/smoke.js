@@ -138,6 +138,13 @@ app.whenReady().then(async () => {
     ok(ps.row && ps.thumbs === 6 && ps.r1 === '1-4' && ps.r2 === '5', 'PPT 나누기 창 (슬라이드 · Shift 범위 · 다음 시작 번호)', ps);
     ok(ps.items && ps.items.join('|') === '광고:1-4|설교:5-6' && ps.pv === 2, 'PPT 나누기 → 순서 2개 · 범위만 송출', ps);
 
+    // ---- 2-9. 무대 화면 모니터: 패널에 모니터 목록 · 잘못된 모니터는 거절 (실제 모니터에 창은 띄우지 않음)
+    const sm = await ev(`window.BCDock && window.BCDock.show('stage'); await wait(800);
+      const sel = $('#stMon'); if (sel) { sel.dispatchEvent(new Event('focus')); await wait(600); }
+      const bad = await window.BC.cmd('setStageWindow', { enabled: true, displayId: 987654 });
+      return { row: !!sel && !$('#stMonRow').hidden, opts: sel ? sel.options.length : 0, bad: bad.ok ? 'ok' : bad.error, stage: window.BC.state.outputs && window.BC.state.outputs.stage };`);
+    ok(sm.row && sm.opts >= 2 && /모니터를 고르세요/.test(sm.bad) && sm.stage && sm.stage.enabled === false, '무대 화면 모니터 (목록 · 잘못된 모니터 거절)', sm);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

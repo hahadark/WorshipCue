@@ -1707,3 +1707,17 @@ test('PPT 슬라이드 범위: 한 PPT 를 여러 순서로 (범위 정리 · �
   assert.equal(h('0'), undefined);
   assert.equal(normalizeItem({ type: 'song', title: 'x', lyrics: '가', range: '1-2' }).range, undefined, 'PPT 순서에만');
 });
+test('무대 화면 모니터: 데스크톱에서만 · 켜기/끄기를 데스크톱에 넘기고 출력 상태에 포함', () => {
+  const core = newCore('stagemon');
+  assert.equal(core.command('setStageWindow', { enabled: true, displayId: 2 }).ok, false, '웹(코어만)에서는 안 됨');
+  const calls = [];
+  core.desktop = { status: () => ({ enabled: false }), stageStatus: () => ({ enabled: calls.length ? calls.at(-1).enabled : false, displayId: 2, valid: true, displayLabel: '모니터 2' }), setStageOutput: a => { calls.push(a); return { enabled: a.enabled, displayId: a.displayId, valid: true }; }, listDisplays: () => [{ id: 1 }, { id: 2 }] };
+  const r = core.command('setStageWindow', { enabled: true, displayId: 2 });
+  assert.equal(r.ok, true, r.error);
+  assert.deepEqual(calls[0], { enabled: true, displayId: 2 });
+  assert.equal(core.outputStatus().stage.enabled, true);
+  const d = core.command('diagnose', {}).result.items.find(x => x.id === 'stagemon');
+  assert.equal(d.status, 'ok');
+  core.desktop = null;
+  core.store.close();
+});
