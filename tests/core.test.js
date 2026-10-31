@@ -1585,3 +1585,15 @@ test('로그 묶음: 버전 · 점검 · 설정(열쇠·PIN·AI 키 가림) · �
   assert.match(text, /\(숨김\)/);
   core.store.close();
 });
+
+test('업데이트 동작: 결과로 지금 업데이트 상태를 돌려준다 (건너뛰기 등)', async () => {
+  const core = newCore('updact');
+  core.update = { state: 'ready', version: '9.9.9', current: '1.0.0' };
+  core.updateActions = { skip: a => { core.settings.update(d => { d.skipVersion = a.version; }); core.update = { ...core.update, skipped: true }; } };
+  const res = await core.command('updateAction', { action: 'skip', version: '9.9.9' });
+  assert.equal(res.ok, true, res.error);
+  const out = res.result;
+  assert.equal(out.skipped, true);
+  assert.equal(core.settings.get().skipVersion, '9.9.9');
+  core.store.close();
+});

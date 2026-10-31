@@ -1450,3 +1450,13 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .dg-fix { margin: 6px 0 0 18px; padding: 0; color: var(--text2, var(--text)); font-size: 13px; }
 .dg-fix li { margin: 2px 0; overflow-wrap: anywhere; }
 .dg-go { gap: 8px; }
+/* ---- 새 버전 창 (updatepanel.js) ---- */
+.upd { display: flex; flex-direction: column; gap: 10px; min-width: min(600px, 80vw); }
+.upd h4 { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; }
+.upd-skip { font-size: 12px; color: var(--warn); border: 1px solid var(--warn); border-radius: 6px; padding: 0 6px; margin-left: 6px; }
+.upd-notes { max-height: 46vh; overflow-y: auto; background: var(--sunken); border: 1px solid var(--line-soft, var(--line)); border-radius: 8px; padding: 8px 14px; line-height: 1.55; }
+.upd-notes h4 { font-size: 14px; margin: 10px 0 4px; }
+.upd-notes ul { margin: 4px 0 8px 18px; padding: 0; }
+.upd-notes p { margin: 4px 0; }
+.upd-go { gap: 8px; align-items: center; }
+.upd-go .grow { flex: 1; }

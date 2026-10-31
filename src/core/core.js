@@ -608,8 +608,8 @@ WorshipCueCore.prototype.commands = {
   async updateAction(a) {
     const f = this.updateActions && this.updateActions[a.action];
     if (!f) throw new Error('데스크톱 프로그램에서만 됩니다.');
-    await f();
-    return this.updateStatus();
+    await f(a);
+    return this.update || { state: 'idle', mode: 'none' }; // (commands 안의 updateStatus 는 this 의 메서드가 아님)
   },
   /** 내부망 출력: 상태 · 주소 */
   lanOutputInfo() { return this.lanOutput ? this.lanOutput.status() : { running: false, urls: [] }; },

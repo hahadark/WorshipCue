@@ -33,11 +33,24 @@ function setupUpdater(core) {
   // 영어판·개인용은 latest.yml(한국어 공개판 설치 파일)로 바꾸면 성경·언어가 바뀌므로 알리기만
   const variant = (() => { try { const p = require('../../package.json'); return p.worshipcuePersonal ? 'personal' : p.worshipcueLang === 'en' ? 'en' : ''; } catch { return ''; } })();
   const canInstall = app.isPackaged && process.platform === 'win32' && !process.env.PORTABLE_EXECUTABLE_DIR && !variant;
-  const set = patch => { core.update = { current, mode: canInstall ? 'auto' : 'notify', page: PAGE, ...(core.update || {}), ...patch }; core.emit('update', core.update); };
+  let updater = null;
+  const set = patch => {
+    core.update = { current, mode: canInstall ? 'auto' : 'notify', page: PAGE, ...(core.update || {}), ...patch };
+    // 이번 버전 건너뛰기: 알리지 않고, 받아 두었어도 끌 때 설치하지 않는다
+    core.update.skipped = !!(core.update.version && core.settings.get().skipVersion === core.update.version);
+    if (updater) updater.autoInstallOnAppQuit = !core.update.skipped;
+    core.emit('update', core.update);
+  };
+  /** 바뀐 점: 그 버전 릴리스의 설명 (GitHub) */
+  const fetchNotes = async v => {
+    try {
+      const r = await latestRelease();
+      if (r.tag_name.replace(/^v/, '') === String(v).replace(/^v/, '')) set({ notes: String(r.body || '').slice(0, 6000), notesUrl: r.html_url || PAGE, publishedAt: r.published_at || '' });
+    } catch { /* 설명은 없어도 된다 */ }
+  };
   set({ state: 'idle' });
   const enabled = () => core.settings.get().autoUpdate !== false;
 
-  let updater = null;
   if (canInstall) {
     try {
       updater = require('electron-updater').autoUpdater;
@@ -46,7 +59,7 @@ function setupUpdater(core) {
       updater.logger = { info: m => core.logger.info('업데이트: ' + m), warn: m => core.logger.warn('업데이트: ' + m), error: m => core.logger.error('업데이트: ' + m), debug: () => {} };
       updater.on('checking-for-update', () => set({ state: 'checking' }));
       updater.on('update-not-available', () => set({ state: 'latest', checkedAt: Date.now() }));
-      updater.on('update-available', i => set({ state: 'downloading', version: i.version, checkedAt: Date.now() }));
+      updater.on('update-available', i => { set({ state: 'downloading', version: i.version, checkedAt: Date.now() }); fetchNotes(i.version); });
       updater.on('download-progress', p => set({ state: 'downloading', percent: Math.round(p.percent || 0) }));
       updater.on('update-downloaded', i => set({ state: 'ready', version: i.version }));
       updater.on('error', e => set({ state: 'error', error: String(e && e.message || e).slice(0, 200) }));
@@ -61,7 +74,7 @@ function setupUpdater(core) {
     set({ state: 'checking' });
     try {
       const r = await latestRelease();
-      set(newer(r.tag_name, current) ? { state: 'available', version: r.tag_name.replace(/^v/, ''), checkedAt: Date.now() } : { state: 'latest', checkedAt: Date.now() });
+      set(newer(r.tag_name, current) ? { state: 'available', version: r.tag_name.replace(/^v/, ''), checkedAt: Date.now(), notes: String(r.body || '').slice(0, 6000), notesUrl: r.html_url || PAGE, publishedAt: r.published_at || '' } : { state: 'latest', checkedAt: Date.now() });
     } catch (e) { set({ state: 'error', error: e.message }); }
     return core.update;
   }
@@ -71,6 +84,9 @@ function setupUpdater(core) {
     check: () => check({ manual: true }),
     open: () => shell.openExternal(PAGE),
     installNow: () => { if (updater && core.update.state === 'ready') setImmediate(() => updater.quitAndInstall(true, true)); },
+    // 이번 버전 건너뛰기 · 건너뛰기 취소 (다음 버전이 나오면 다시 알린다)
+    skip: a => { const v = String((a && a.version) || core.update.version || '').replace(/^v/, ''); core.settings.update(d => { d.skipVersion = v; }); set({}); },
+    unskip: () => { core.settings.update(d => { d.skipVersion = ''; }); set({}); },
   };
   setTimeout(() => check(), 15000); // 켜고 조금 뒤 (시작을 늦추지 않게)
   setInterval(() => check(), 6 * 3600 * 1000).unref?.();

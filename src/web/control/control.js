@@ -179,8 +179,8 @@
       const before = app.update && app.update.state;
       app.update = u;
       renderStatus();
-      if (u.state !== before && u.state === 'ready') showMsg(`새 버전 ${u.version} 을 받았습니다. 프로그램을 끌 때 설치됩니다.`, 'ok', 6000);
-      if (u.state !== before && u.state === 'available') showMsg(`새 버전 ${u.version} 이 나왔습니다. 아래 상태줄의 '새 버전' 을 누르면 받는 곳이 열립니다.`, 'info', 6000);
+      if (u.skipped) { /* 건너뛰기로 한 버전: 알리지 않음 */ } else if (u.state !== before && u.state === 'ready') showMsg(`새 버전 ${u.version} 을 받았습니다. 프로그램을 끌 때 설치됩니다.`, 'ok', 6000);
+      else if (u.state !== before && u.state === 'available') showMsg(`새 버전 ${u.version} 이 나왔습니다. 아래 상태줄의 '새 버전' 을 누르면 바뀐 점과 받는 곳이 보입니다.`, 'info', 6000);
       if (window.BCSettings && window.BCSettings.onUpdate) window.BCSettings.onUpdate();
     });
     es.addEventListener('outputs', e => {
@@ -1384,6 +1384,7 @@
   }
 
   // ---------------- 상태 표시 ----------------
+  app.renderStatus = () => renderStatus();
   function renderStatus() {
     renderOutputButton();
     const st = app.state;
@@ -1413,7 +1414,7 @@
     if (md) parts.unshift(`<span class="st st-media" data-media-off title="눌러서 송출 배경 끄기"><span class="dot err"></span>${window.BCIcon(LY_ICON[md.type] || 'image')} 송출 배경: ${esc(md.label || '')} ✕</span>`);
     // 업데이트: 새 버전이 있을 때만
     const u = app.update;
-    if (u && (u.state === 'ready' || u.state === 'available' || (u.state === 'downloading' && u.version))) {
+    if (u && !u.skipped && (u.state === 'ready' || u.state === 'available' || (u.state === 'downloading' && u.version))) {
       const txt = u.state === 'ready' ? `⬆ 새 버전 ${esc(u.version)} — 끌 때 설치` : u.state === 'available' ? `⬆ 새 버전 ${esc(u.version)} — 받기` : `⬆ 새 버전 ${esc(u.version)} 받는 중${u.percent ? ' ' + u.percent + '%' : ''}`;
       parts.push(`<span class="st st-update" data-update="${u.state}" title="자동 업데이트 (설정 → 정보)"><span class="dot ok"></span>${txt}</span>`);
     }
@@ -1423,7 +1424,7 @@
     if (e.target.closest('[data-media-off]')) { cmd('setBackgroundMedia', { media: null }); return; }
     const b = e.target.closest('[data-update]');
     if (!b) return;
-    if (b.dataset.update === 'available') cmd('updateAction', { action: 'open' });
+    if (window.BCUpdate) window.BCUpdate.open(); // 바뀐 점 · 설치/받기 · 이번 버전 건너뛰기
     else if (window.BCSettings) window.BCSettings.open('about');
   });
 

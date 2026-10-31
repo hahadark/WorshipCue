@@ -83,6 +83,16 @@ app.whenReady().then(async () => {
     ok(dg.rows >= 7 && dg.titles.some(t => /오늘 큐시트/.test(t)) && dg.titles.includes('카메라') && /^워십프리젠터 연결 점검/.test(dg.text || ''), '연결 점검 (항목 · 오늘 큐시트 · 카메라 · 결과 글)', dg);
     ok(dg.logsBtn && dg.bundle, '로그 묶음 (연결 점검 창 단추 · 내용)', dg);
 
+    // ---- 2-5. 새 버전 창: 바뀐 점(마크다운) · 받기/설치 · 이번 버전 건너뛰기
+    const up = await ev(`const keep = window.BC.update; window.BC.update = { current: '1.0.0', version: '9.9.9', state: 'available', mode: 'notify', notes: '## 새 기능\\n- **즉석 자막** 추가\\n- 교독문 역할', page: '' };
+      window.BCUpdate.open(); await wait(300);
+      const r = { title: ($('#modalTitle') || {}).textContent, items: $$('.upd-notes li').map(x => x.textContent), bold: !!$('.upd-notes li b'), open: !!$('#updOpenM'), skip: !!$('#updSkip') };
+      $('#updSkip').click(); await wait(600);
+      r.saved = (await window.BC.cmd('getState', {})).result.settings.skipVersion; r.closed = $('#modal').hidden;
+      await window.BC.cmd('updateAction', { action: 'unskip' }); window.BC.update = keep; return r;`);
+    ok(up.title === '새 버전 9.9.9' && up.items.length === 2 && up.bold && up.open && up.skip, '새 버전 창 (바뀐 점 · 받기 · 건너뛰기 단추)', up);
+    ok(up.saved === '9.9.9' && up.closed, '이번 버전 건너뛰기 (저장)', up);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

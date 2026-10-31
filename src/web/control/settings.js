@@ -780,13 +780,16 @@
     }[u.state || 'idle'];
     box.innerHTML = `<div class="form">
       <label>지금 버전</label><div><b>${esc(u.current || '')}</b> <span class="muted">${u.mode === 'auto' ? '(설치판 — 자동 업데이트)' : u.mode === 'notify' ? '(포터블·맥 — 새 버전 알림)' : ''}</span></div>
-      <label>업데이트</label><div class="row-flex">${state ? `<span>${state}</span>` : ''}<button id="updCheck">지금 확인</button>${u.state === 'available' ? '<button id="updOpen" class="primary">받기…</button>' : ''}${u.state === 'ready' ? '<button id="updNow" class="primary">지금 다시 시작해서 설치</button>' : ''}</div>
+      <label>업데이트</label><div class="row-flex">${state ? `<span>${state}</span>` : ''}<button id="updCheck">지금 확인</button>${u.state === 'available' ? '<button id="updOpen" class="primary">받기…</button>' : ''}${u.state === 'ready' ? '<button id="updNow" class="primary">지금 다시 시작해서 설치</button>' : ''}${u.version && ['ready', 'available', 'downloading'].includes(u.state) ? '<button id="updNotes">바뀐 점 보기</button>' : ''}</div>
+      ${u.skipped ? `<span></span><div class="row-flex note">${esc(u.version)} 은 건너뛰기로 했습니다 (알리지 않고 설치하지 않음). <button id="updUnskipS">건너뛰기 취소</button></div>` : ''}
       <span></span><label class="tc-toggle"><input type="checkbox" id="updAuto" ${s.autoUpdate !== false ? 'checked' : ''}> 켤 때 새 버전 확인 (설치판은 끌 때 자동 설치)</label>
       <label>사용 통계</label><div><label class="tc-toggle"><input type="checkbox" id="telemetryOn" ${s.telemetry !== false ? 'checked' : ''}> 익명 사용 통계 보내기</label><div class="note">몇 대에서 쓰는지 세려고 하루 한 번 <b>무작위 설치 번호 · 버전 · 화면 언어 · OS</b> 만 보냅니다. 이름·교회·성경·큐시트 내용은 보내지 않습니다.</div></div>
       <span></span><div class="note">예배 중에는 저절로 다시 시작하지 않습니다. 설치판(Setup)은 새 버전을 미리 받아 두었다가 프로그램을 끌 때 설치하고, 포터블·맥은 새 버전이 있다고 알려 줍니다. 큐시트·성경 데이터·설정은 업데이트해도 그대로 남습니다.</div>
     </div>`;
     $('#updCheck').onclick = async () => { $('#updCheck').disabled = true; const r = await cmd('updateAction', { action: 'check' }); if (!r.ok) app.showMsg(r.error, 'error'); else { app.update = r.result; drawUpdate(); } };
     if ($('#updOpen')) $('#updOpen').onclick = () => cmd('updateAction', { action: 'open' });
+    if ($('#updNotes')) $('#updNotes').onclick = () => window.BCUpdate && window.BCUpdate.open();
+    if ($('#updUnskipS')) $('#updUnskipS').onclick = async () => { const r = await cmd('updateAction', { action: 'unskip' }); if (r.ok) { app.update = r.result; drawUpdate(); if (app.renderStatus) app.renderStatus(); } };
     if ($('#updNow')) $('#updNow').onclick = () => { if (confirm('지금 프로그램을 끄고 새 버전을 설치한 뒤 다시 켭니다. 송출 중이면 화면이 잠시 꺼집니다. 진행할까요?')) cmd('updateAction', { action: 'installNow' }); };
     $('#updAuto').onchange = e => cmd('updateSettings', { patch: { autoUpdate: e.target.checked } });
     $('#telemetryOn').onchange = e => cmd('updateSettings', { patch: { telemetry: e.target.checked } });
