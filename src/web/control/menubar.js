@@ -136,6 +136,7 @@
       { ic: 'image', label: '그림으로 보는 사용법 (README)', run: link('https://github.com/hahadark/WorshipCue#readme') },
       { ic: 'video', label: 'OBS 연결 안내', run: link('https://github.com/hahadark/WorshipCue/blob/main/docs/OBS%EC%84%A4%EC%A0%95%EA%B0%80%EC%9D%B4%EB%93%9C.md') },
       '-',
+      { ic: 'list-checks', label: '연결 점검 (예배 전에 한 번)…', run: () => window.BCDiag && window.BCDiag.open() },
       { ic: 'keyboard', label: '단축키 보기', run: settings('shortcuts') },
       { ic: 'sparkles', label: '새 소식 (버전별 바뀐 점)', run: link('https://github.com/hahadark/WorshipCue/releases') },
       { ic: 'bug', label: '문제 알리기 · 건의', run: link('https://github.com/hahadark/WorshipCue/issues') },

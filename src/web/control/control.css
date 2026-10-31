@@ -1427,3 +1427,26 @@ html[data-theme="light"], html[data-theme="manna"] { --tc-p: 100%; }
 .quick-text .qt-send { flex: 1; min-width: 0; text-align: left; justify-content: flex-start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .quick-text .qt-empty { font-size: 12px; padding: 4px 2px; }
 footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent); }
+
+/* ---- 연결 점검 (diag.js) ---- */
+.dg { display: flex; flex-direction: column; gap: 10px; min-width: min(640px, 80vw); }
+.dg-sum { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; font-weight: 700; background: var(--sunken); }
+.dg-sum:empty { display: none; }
+.dg-sum.dg-ok { color: var(--ok-text); }
+.dg-sum.dg-warn { color: var(--warn-strong, var(--warn)); background: var(--warn-bg); }
+.dg-sum.dg-fail { color: var(--danger-text); background: var(--live-bg); }
+.dg-list { display: flex; flex-direction: column; gap: 6px; max-height: 58vh; overflow-y: auto; }
+.dg-row { display: flex; gap: 10px; padding: 9px 10px; border: 1px solid var(--line-soft, var(--line)); border-radius: 8px; background: var(--panel2); }
+.dg-ico { flex: 0 0 auto; display: inline-flex; padding-top: 1px; }
+.dg-ok .dg-ico { color: var(--ok-text); }
+.dg-warn .dg-ico { color: var(--warn); }
+.dg-fail .dg-ico { color: var(--danger-text); }
+.dg-info .dg-ico { color: var(--muted); }
+.dg-fail { border-color: var(--live-line, var(--danger-text)); }
+.dg-body { flex: 1; min-width: 0; }
+.dg-title { display: flex; gap: 8px; align-items: baseline; }
+.dg-word { font-size: 12px; color: var(--muted); }
+.dg-detail { color: var(--text2, var(--text)); margin-top: 2px; overflow-wrap: anywhere; }
+.dg-fix { margin: 6px 0 0 18px; padding: 0; color: var(--text2, var(--text)); font-size: 13px; }
+.dg-fix li { margin: 2px 0; overflow-wrap: anywhere; }
+.dg-go { gap: 8px; }

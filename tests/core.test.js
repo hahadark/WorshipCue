@@ -1541,3 +1541,31 @@ test('글자 자동 숨김(N초 뒤) · 처음·끝에서 한 번 더 누르면 
   clearTimeout(core.hideTimer); clearTimeout(core.autoTimer);
   core.store.close();
 });
+
+test('연결 점검: 항목마다 상태·해결 순서, 오늘 큐시트의 없는 파일·빈 가사·잘못된 장절', () => {
+  const core = newCore('diag');
+  const cue = core.command('saveCue', { cue: { name: '점검 예배', items: [
+    { type: 'video', title: '광고 영상', file: 'C:\\없는폴더\\없음.mp4' },
+    { type: 'song', title: '빈 찬양', lyrics: '' },
+    { type: 'bible', title: '성경', ref: '요 3:16' },
+    { type: 'bible', title: '이상한 장절', ref: '없는책 99:99' },
+    { type: 'text', title: '공지', body: '가' },
+  ] } }).result;
+  core.settings.update(d => { d.activeCueId = cue.id; d.hymnFolders = [{ name: '사라진 폴더', path: 'C:\\없는폴더\\찬송가' }]; });
+  const r = core.command('diagnose', { port: 37999 });
+  assert.equal(r.ok, true, r.error);
+  const by = id => r.result.items.find(x => x.id === id);
+  assert.equal(by('display').status, 'info', '웹(코어만)에서는 모니터 점검 안 함');
+  assert.equal(by('obs').status, 'info');
+  assert.match(by('obs').fix[0], /127\.0\.0\.1:37999\/outputs\/main/);
+  assert.equal(by('bible').status, 'ok');
+  assert.equal(by('hymn').status, 'warn');
+  const c = by('cue');
+  assert.equal(c.status, 'warn');
+  assert.ok(c.fix.some(f => /1번 '광고 영상': 파일이 없습니다/.test(f)), c.fix.join('\n'));
+  assert.ok(c.fix.some(f => /2번 '빈 찬양': 찬양 가사가 비어/.test(f)));
+  assert.ok(c.fix.some(f => /4번 '이상한 장절': 장절을 찾지 못했습니다/.test(f)));
+  assert.ok(!c.fix.some(f => /3번/.test(f) || /5번/.test(f)), '괜찮은 순서는 말하지 않는다');
+  assert.ok(r.result.summary.warn >= 2);
+  core.store.close();
+});

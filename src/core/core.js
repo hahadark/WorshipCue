@@ -1041,6 +1041,8 @@ WorshipCueCore.prototype.commands = {
     return {};
   },
   // ---- 휴대폰 리모컨 ----
+  /** 연결 점검 (도움말 → 연결 점검): 예배당 화면 · OBS · 내부망 · 리모컨 · 데이터 · 오늘 큐시트 · 동기화 · 저장 공간 */
+  diagnose(a) { return require('./diagnose').diagnose(this, { cueId: a && a.cueId, port: a && a.port }); },
   remoteStatus() { return this.remote ? this.remote.status() : { enabled: false, running: false, urls: [], error: '리모컨을 쓸 수 없습니다.' }; },
   async setRemote(a) {
     const { newPin } = require('./remote');
