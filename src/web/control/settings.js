@@ -397,14 +397,14 @@
       drawTemplates();
     };
     $('#tDup').onclick = async () => {
-      const name = prompt('복제할 템플릿 이름', t.name + ' 복사본');
+      const name = await app.ask('복제할 템플릿 이름', t.name + ' 복사본');
       if (!name) return;
       const r = await cmd('duplicateTemplate', { id: t.id, name });
       if (!r.ok) return app.showMsg(r.error, 'error');
       tplEdit = structuredClone(r.result); tplDirty = false; drawTemplates();
     };
     $('#tNew').onclick = async () => {
-      const name = prompt('새 템플릿 이름', '새 템플릿');
+      const name = await app.ask('새 템플릿 이름', '새 템플릿');
       if (!name) return;
       const r = await cmd('saveTemplate', { template: { name } });
       if (!r.ok) return app.showMsg(r.error, 'error');

@@ -44,6 +44,7 @@ const TRIGGERS = [
   ['logo', '로고 화면 켜기·끄기'], ['bg', '배경 지우기·보이기'], ['overlays', '오버레이 끄기·다시 켜기'], ['clear-all', '모두 지우기'],
   ['timer', '설교 타이머 시작 (?min=30)'], ['timer-pause', '타이머 일시정지·계속'], ['timer-reset', '타이머 지우기'],
   ['message', '무대 메시지 (?text=…, 비우면 지움)'], ['draw-clear', '화면에 그린 것 지우기'],
+  ['macro', '매크로 실행 (?name=매크로 이름)'],
 ].map(([id, name]) => ({ id, name }));
 
 class WorshipCueCore extends EventEmitter {
@@ -141,6 +142,7 @@ class WorshipCueCore extends EventEmitter {
       case 'timer-reset': return C('stageTimer', { action: 'reset' });
       case 'message': return C('stageMessage', { text: String(q.text || '').slice(0, 300) });
       case 'draw-clear': return C('drawClear');
+      case 'macro': return C('runMacro', { name: q.name, id: q.id });
       default: throw new Error('알 수 없는 동작: ' + action);
     }
   }
@@ -1206,6 +1208,37 @@ WorshipCueCore.prototype.commands = {
     else throw new Error('알 수 없는 타이머 조작입니다.');
     this.emit('live');
     return this.stagePayload().timer;
+  },
+  // ---- 매크로: 이름 붙인 '송출할 때 자동으로' 묶음 (실행은 조작 화면이 한다 — 음악·OBS 등이 그쪽에 있음) ----
+  saveMacro(a) {
+    const m = a.macro || {};
+    const name = String(m.name || '').trim().slice(0, 40);
+    if (!name) throw new Error('매크로 이름을 입력하세요.');
+    const { normalizeItem } = require('./cues');
+    const it = normalizeItem({ type: 'title', title: name, actions: m.actions || {}, music: m.music || '', musicVolume: m.musicVolume });
+    if (!it.actions && !it.music) throw new Error('매크로에 넣을 동작이 없습니다. 순서의 ⚡ 송출할 때 자동으로 에서 동작을 정한 뒤 저장하세요.');
+    const id = /^[a-z0-9]{3,30}$/i.test(m.id || '') ? m.id : 'mc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const color = /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : '';
+    this.settings.update(d => {
+      const list = (d.macros || []).filter(x => x.id !== id).map(x => (m.startup ? { ...x, startup: false } : x));
+      const i = (d.macros || []).findIndex(x => x.id === id);
+      const one = { id, name, color, actions: it.actions || {}, ...(it.music ? { music: it.music, musicVolume: it.musicVolume } : {}), ...(m.startup ? { startup: true } : {}) };
+      if (i >= 0) list.splice(Math.min(i, list.length), 0, one); else list.push(one);
+      d.macros = list.slice(0, 40);
+    });
+    this.settingsChanged('settings');
+    return { id };
+  },
+  deleteMacro(a) { this.settings.update(d => { d.macros = (d.macros || []).filter(x => x.id !== a.id); }); this.settingsChanged('settings'); return {}; },
+  /** 매크로 실행 요청 (외부 단추 · 예약): 조작 화면에 알린다 */
+  runMacro(a) {
+    const list = this.settings.get().macros || [];
+    const m = list.find(x => x.id === a.id) || list.find(x => x.name === String(a.name || '').trim());
+    if (!m) throw new Error('매크로를 찾을 수 없습니다: ' + (a.name || a.id || ''));
+    const ctl = [...this.outputClients.values()].some(c => c.client === 'control');
+    this.emit('run-macro', { id: m.id, name: m.name, by: a.by || '' });
+    this.logger.info(`매크로 '${m.name}'${a.by ? ' (' + a.by + ')' : ''}`);
+    return { id: m.id, name: m.name, delivered: ctl };
   },
   /** 회중 메시지 보이기: text(칸을 채운 글) · seconds(0 = 숨길 때까지) · outputs(main · overlay) */
   showMessage(a) {

@@ -1819,3 +1819,26 @@ test('회중 메시지: 칸 채우기 확인 · 출력별 아래 띠 · N초 뒤
   assert.ok(!core.settings.get().messageTemplates.some(t => t.id === s.result.id));
   core.store.close();
 });
+test('매크로: 저장(동작 정리) · 켤 때 하나만 · 이름·id 로 실행 요청 · 외부 단추 · 지우기', () => {
+  const core = newCore('macro');
+  assert.equal(core.command('saveMacro', { macro: { name: '빈 것', actions: {} } }).ok, false, '동작 없으면 거절');
+  const a = core.command('saveMacro', { macro: { name: '예배 시작', actions: { logo: 'off', obsStream: 'start', stagePin: 'order', nope: 1 }, startup: true } });
+  assert.equal(a.ok, true, a.error);
+  const b = core.command('saveMacro', { macro: { name: '축도 후', actions: { logo: 'on', obsStream: 'stop' }, startup: true } });
+  const ms = core.settings.get().macros;
+  assert.deepEqual(ms.map(m => m.name), ['예배 시작', '축도 후']);
+  assert.deepEqual(ms[0].actions, { logo: 'off', stagePin: 'order', obsStream: 'start' }, '모르는 동작은 버림');
+  assert.equal(ms.filter(m => m.startup).length, 1, '켤 때 실행은 하나만');
+  let ev = null;
+  core.on('run-macro', m => { ev = m; });
+  assert.equal(core.command('runMacro', { name: '예배 시작' }).result.id, a.result.id);
+  assert.equal(ev.name, '예배 시작');
+  core.trigger('macro', { name: '축도 후' });
+  assert.equal(ev.id, b.result.id, '외부 단추 /api/trigger/macro?name=');
+  assert.equal(core.command('runMacro', { name: '없음' }).ok, false);
+  core.command('deleteMacro', { id: a.result.id });
+  assert.deepEqual(core.settings.get().macros.map(m => m.name), ['축도 후']);
+  const { normalizeItem } = require('../src/core/cues');
+  assert.equal(normalizeItem({ type: 'title', title: 'x', actions: { macro: b.result.id } }).actions.macro, b.result.id);
+  core.store.close();
+});

@@ -75,6 +75,7 @@ function normalizeItem(x) {
     if (a.clearStage) act.clearStage = true;
     if (a.companion) { const loc = require('./companion').parseLocations(a.companion).map(l => `${l.page}/${l.row}/${l.col}`).join(', '); if (loc) act.companion = loc; } // Companion 단추 (페이지/줄/칸)
     if (a.stagePin) act.stagePin = str(a.stagePin, 40);
+    if (a.macro && /^[a-z0-9]{3,30}$/i.test(a.macro)) act.macro = a.macro; // 매크로 실행
     // 장비 직접 제어: [{ device, action }] (X32 동작 글 · PTZ 프리셋)
     if (Array.isArray(a.dev)) { const dev = a.dev.filter(x => x && /^[a-z0-9]{3,30}$/i.test(x.device || '') && String(x.action || '').trim()).slice(0, 8).map(x => ({ device: x.device, action: str(x.action, 300).trim() })); if (dev.length) act.dev = dev; } // 무대 화면 고정: live(풀기) · order(순서표) · 프리셋 id
     if (a.obsScene) act.obsScene = str(a.obsScene, 120); // OBS 장면 바꾸기

@@ -46,7 +46,7 @@
     $('#aiKeyGet').onclick = () => cmd('openLink', { url: 'https://openrouter.ai/settings/keys' });
     $('#aiModel').onchange = async e => {
       let m = e.target.value;
-      if (m === '__custom') { m = prompt('오픈라우터 모델 이름 (예: anthropic/claude-haiku-5.5)', '') || ''; if (!m) { e.target.value = s.model; return; } }
+      if (m === '__custom') { m = (await app.ask('오픈라우터 모델 이름 (예: anthropic/claude-haiku-5.5)', '')) || ''; if (!m) { e.target.value = s.model; return; } }
       await cmd('setAi', { model: m });
       app.showMsg('AI 모델을 바꿨습니다.', 'ok', 1200);
     };

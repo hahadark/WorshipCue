@@ -174,6 +174,26 @@ app.whenReady().then(async () => {
       return { field, prev, text: st && st.text, bar, live: /홍길동/.test(live), after };`);
     ok(mg.field === '이름' && /^홍길동 어린이 부모님/.test(mg.prev) && /홍길동/.test(mg.text || '') && /메시지/.test(mg.bar) && mg.after === null, '회중 메시지 (틀 칸 채우기 · 보이기 · 상태줄 · 숨기기)', mg);
 
+    // ---- 3-2. 글 묻기(app.ask — Electron 에 prompt() 가 없음) · 매크로: 순서 동작 → 매크로로 저장 → Alt+1 · 외부 단추
+    const mc = await ev(`const c = (await window.BC.cmd('saveCue', { cue: { name: '매크로 점검', items: [{ type: 'title', title: '설교', actions: { stageMsg: '설교 시작' } }] } })).result;
+      window.BCCue.openCue(c.id); await wait(800); $$('#cueList .cue-item')[0].click(); await wait(800);
+      if (!$('#cueEditor [data-act=macrosave]')) { $('#cueEditor [data-act=actmore]').click(); await wait(300); }
+      $('#cueEditor [data-act=macrosave]').click(); await wait(300);
+      const askShown = window.BCAsk.isOpen(); const def = document.querySelector('.ask-in').value;
+      document.querySelector('.ask-in').value = '설교 시작'; document.querySelector('.ask-in').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(1000);
+      const saved = (window.BC.state.settings.macros || []).map(m => m.name);
+      await window.BC.cmd('stageMessage', { text: '' }); await wait(200);
+      document.body.focus(); window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', code: 'Digit1', altKey: true, bubbles: true })); await wait(800);
+      const afterAlt = window.BC.state.stage.message;
+      await window.BC.cmd('stageMessage', { text: '' }); await wait(200);
+      const info = (await window.BC.cmd('triggerInfo', {})).result; await fetch('/api/trigger/macro?name=' + encodeURIComponent('설교 시작') + '&key=' + encodeURIComponent(info.key)); await wait(1000);
+      const afterTrig = window.BC.state.stage.message;
+      window.BCMacro.open(); await wait(300); const cards = $$('.mc-card').length; $('#modalClose').click();
+      for (const m of window.BC.state.settings.macros || []) await window.BC.cmd('deleteMacro', { id: m.id }); await window.BC.cmd('stageMessage', { text: '' });
+      return { askShown, def, saved, afterAlt, afterTrig, cards };`);
+    ok(mc.askShown && mc.def === '설교' && mc.saved.includes('설교 시작'), '글 묻기 창 (prompt 대신) · 매크로로 저장', mc);
+    ok(mc.afterAlt === '설교 시작' && mc.afterTrig === '설교 시작' && mc.cards === 1, '매크로 실행 (Alt+1 · 외부 단추 · 매크로 창)', mc);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

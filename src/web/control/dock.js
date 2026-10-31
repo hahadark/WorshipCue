@@ -159,7 +159,7 @@
   }
   /** 지금 배치를 새 작업공간으로 */
   async function saveAsWorkspace(name) {
-    name = (name ?? prompt('새 작업공간 이름 (예: 수요예배, 찬양팀, 노트북)', '')) || '';
+    name = (name ?? await app.ask('새 작업공간 이름 (예: 수요예배, 찬양팀, 노트북)', '')) || ''; // (Electron 은 prompt() 가 없다)
     if (!name.trim()) return;
     const id = 'w' + Date.now().toString(36);
     await storeWorkspaces([...userWorkspaces(), { id, name: name.trim(), layout: currentLayoutJson() }], id);

@@ -512,6 +512,7 @@
           배경 <select data-a="bg"><option value="">그대로</option><option value="hide" ${a.bg === 'hide' ? 'selected' : ''}>지우기</option><option value="show" ${a.bg === 'show' ? 'selected' : ''}>다시 보이기</option></select></div>
         <label>오버레이</label><div class="ce-row">켜기 ${ovSel('ovOn')} 끄기 ${ovSel('ovOff', `<option value="*" ${a.ovOff === '*' ? 'selected' : ''}>모두</option>`)}</div>
         <label>음악</label><div class="ce-row"><label class="tc-toggle"><input type="checkbox" data-a="stopMusic" ${a.stopMusic ? 'checked' : ''}> 재생 중인 음악 서서히 멈춤</label></div>
+        <label>매크로</label><div class="ce-row"><select data-a="macro"><option value="">없음</option>${(app.state.settings.macros || []).map(m => `<option value="${esc(m.id)}" ${a.macro === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select><button data-act="macrosave" class="ghost" title="지금 이 순서의 자동 동작 묶음에 이름을 붙여 단추 하나로 (도구 → 매크로 · Alt+1~9)">이 동작을 매크로로 저장…</button></div>
         <label>무대 화면</label><div class="ce-row"><select data-a="stagePin"><option value="">그대로</option><option value="live" ${a.stagePin === 'live' ? 'selected' : ''}>지금 화면 (고정 풀기)</option><option value="order" ${a.stagePin === 'order' ? 'selected' : ''}>순서표 고정</option>${(app.state.settings.stagePresets || []).map(p => `<option value="${esc(p.id)}" ${a.stagePin === p.id ? 'selected' : ''}>고정: ${esc(p.name)}</option>`).join('')}</select></div>
         ${obsActHtml(a)}
         <label>Companion</label><div class="ce-row"><input type="text" data-a="companion" value="${esc(a.companion || '')}" placeholder="단추 위치 (예: 1/0/2 · 여러 개는 쉼표)" style="width:220px" spellcheck="false"><button data-act="comptest" class="ghost" title="지금 눌러 보기">눌러 보기</button><span class="note">ATEM · PTZ · 조명 · 음향을 Companion 으로 (도구 → 스트림덱·외부 단추에서 주소)</span></div>
@@ -531,7 +532,7 @@
     return [a.timer && `⏱ 타이머 ${a.timer}분`, a.stageMsg && '💬 무대 메시지', a.clearStage && '메시지 지움', a.logo && `로고 ${a.logo === 'on' ? '켜기' : '끄기'}`, a.bg && `배경 ${a.bg === 'hide' ? '지우기' : '보이기'}`,
       a.ovOn && `오버레이 켜기: ${ovName(a.ovOn)}`, a.ovOff && `오버레이 끄기: ${ovName(a.ovOff)}`, a.stopMusic && '음악 멈춤',
       a.stagePin && (a.stagePin === 'live' ? '무대 고정 풀기' : a.stagePin === 'order' ? '무대: 순서표' : `무대 고정: ${((app.state.settings.stagePresets || []).find(p => p.id === a.stagePin) || {}).name || '?'}`),
-      a.companion && `Companion ${a.companion}`, window.BCDevices && window.BCDevices.summary(a),
+      a.macro && `매크로: ${((app.state.settings.macros || []).find(m => m.id === a.macro) || {}).name || '?'}`, a.companion && `Companion ${a.companion}`, window.BCDevices && window.BCDevices.summary(a),
       a.obsScene && `OBS 장면: ${a.obsScene}`, a.obsStream && `OBS 방송 ${a.obsStream === 'start' ? '시작' : '끝'}`, a.obsRecord && `OBS 녹화 ${a.obsRecord === 'start' ? '시작' : '끝'}`].filter(Boolean).join(' · ');
   }
   /** 새로 송출된 순서의 자동 동작 (한 번만 · 방금 송출한 것만) */
@@ -546,8 +547,9 @@
     const it = st.cue.items[L.passage.cueIndex];
     if (it) runActions(it);
   }
-  function runActions(it) {
+  function runActions(it, depth = 0) {
     const a = it.actions || {};
+    if (a.macro && window.BCMacro && depth < 2) window.BCMacro.run(a.macro, depth);
     if (it.music && window.BCLib) window.BCLib.audio.play({ url: it.music, title: `${it.title} · 배경 음악`, volume: it.musicVolume ?? 0.8, loop: true, fadeOnLeave: true });
     else if (a.stopMusic && window.BCLib) window.BCLib.audio.fadeOut(2500);
     if (a.timer) cmd('stageTimer', { action: 'start', minutes: a.timer });
@@ -823,6 +825,7 @@
       case 'obsopen': if (window.BCObs) window.BCObs.open(); break;
       case 'pptsplit': openSplit(i); break;
       case 'devopen': if (window.BCDevices) window.BCDevices.open(); break;
+      case 'macrosave': if (window.BCMacro) window.BCMacro.saveFrom(it); break;
       case 'comptest': { const v = ($('#cueEditor [data-a=companion]') || {}).value || ''; cmd('companionPress', { loc: v }).then(r => app.showMsg(r.ok ? `Companion 단추를 눌렀습니다 (${r.result.pressed}개).` : 'Companion: ' + r.error, r.ok ? 'ok' : 'error', 4000)); break; }
       case 'close': setEditor(false); app.showMsg('편집칸을 숨겼습니다. 다시 보려면 가운데 위 ✎ 편집칸 단추 · F2 · Ctrl+Shift+E', 'info', 3500); break;
       case 'up': if (i > 0) { moveItem(i, i - 1); st.sel = i - 1; renderEditor(true); } break;
@@ -982,9 +985,9 @@
       case 'bottom': if (i < st.cue.items.length - 1) { moveItem(i, st.cue.items.length - 1); render(); forceEditor(); } break;
       case 'dup': { const copy = { ...structuredClone(it), id: newId() }; st.cue.items.splice(i + 1, 0, copy); st.sel = i + 1; save(); render(); forceEditor(); break; }
       case 'del': removeItem(i); render(); break;
-      case 'note': { const v = prompt(`${i + 1}번 '${it.title}' 조작자 메모 (무대 화면에도 보임)`, it.note || ''); if (v !== null) { it.note = v.trim(); save(); render(); forceEditor(); } break; }
-      case 'duration': { const v = prompt(`${i + 1}번 '${it.title}' 예정 시간 (분)`, it.duration || ''); if (v !== null) { it.duration = Math.max(0, Math.min(600, parseInt(v, 10) || 0)); save(); render(); forceEditor(); } break; }
-      case 'rename': { const v = prompt('제목', it.title); if (v && v.trim()) { it.title = v.trim(); save(); render(); forceEditor(); } break; }
+      case 'note': { const v = await app.ask(`${i + 1}번 '${it.title}' 조작자 메모 (무대 화면에도 보임)`, it.note || ''); if (v !== null) { it.note = v.trim(); save(); render(); forceEditor(); } break; }
+      case 'duration': { const v = await app.ask(`${i + 1}번 '${it.title}' 예정 시간 (분)`, it.duration || ''); if (v !== null) { it.duration = Math.max(0, Math.min(600, parseInt(v, 10) || 0)); save(); render(); forceEditor(); } break; }
+      case 'rename': { const v = await app.ask('제목', it.title); if (v && v.trim()) { it.title = v.trim(); save(); render(); forceEditor(); } break; }
       case 'tolib': {
         const r = await cmd('saveSong', { song: { title: it.title, lyrics: it.lyrics || '', credit: it.credit || '' } });
         if (!r.ok) { app.showMsg(r.error, 'error'); break; }
@@ -1275,6 +1278,7 @@
     /** 열린 큐시트의 이름·예배 날짜·시작 시각 */
     meta: () => (st.cue ? { name: st.cue.name || '', serviceDate: st.cue.serviceDate || '', startTime: st.cue.startTime || '' } : null),
     addItem: (type, extra) => addItem(type, extra),
+    runActions: (it, depth) => runActions(it, depth), actSummary: it => actSummary(it),
     sendItem: i => { showSide('cue'); return sendItem(i); },
     addBethlehem: (h, o) => addBethlehem(h, o || {}),
     openCue: async id => { await refreshList(); showSide('cue'); return openCue(id); }, openHymnPicker: o => openHymnPicker(o || {}), pickImage: done => pickImage(done),

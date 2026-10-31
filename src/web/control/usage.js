@@ -65,7 +65,7 @@
       app.showMsg(`'${r.result.name}' 을(를) 저장했습니다.`, 'ok', 2500);
     };
     $('#ugClear').onclick = async () => {
-      const before = prompt('이 날짜 전의 기록을 지웁니다 (YYYY-MM-DD). 비우면 모두 지웁니다.', `${now.getFullYear() - 1}-01-01`);
+      const before = await app.ask('이 날짜 전의 기록을 지웁니다 (YYYY-MM-DD). 비우면 모두 지웁니다.', `${now.getFullYear() - 1}-01-01`);
       if (before === null) return;
       if (!confirm(before ? `${before} 전의 사용 기록을 지울까요?` : '사용 기록을 모두 지울까요?')) return;
       const r = await cmd('clearUsageLog', { before: before.trim() });

@@ -78,6 +78,7 @@ function defaults() {
     companion: { host: '127.0.0.1', port: 8000 },
     devices: [],         // 장비 직접 제어 [{ id, name, kind: 'x32'|'visca', host, port, proto }] // 순서 송출 때 누를 Companion 단추의 주소
     imeAuto: true,       // 가사·공지·즉석 자막 칸에 들어가면 한글 입력으로 (윈도우)
+    macros: [],          // 매크로 [{ id, name, color, actions, music?, startup? }]
     stagePresets: [],
     // 회중 메시지 틀 ({칸} 은 보일 때 채움)
     messageTemplates: [

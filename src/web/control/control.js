@@ -168,6 +168,7 @@
       if (d.what === 'templates' || d.what === 'settings') { rebuildPreview(); renderLive(); }
       if (d.what === 'overlays') { renderPreview(); renderLive(); if (window.BCLib) window.BCLib.onOverlays(); }
       if (window.BCLib) window.BCLib.onSettings(d.what);
+      if (window.BCMacro) window.BCMacro.refresh();
       syncControls();
       renderStudio();
       renderQuick(false);
@@ -183,6 +184,7 @@
       else if (u.state !== before && u.state === 'available') showMsg(`새 버전 ${u.version} 이 나왔습니다. 아래 상태줄의 '새 버전' 을 누르면 바뀐 점과 받는 곳이 보입니다.`, 'info', 6000);
       if (window.BCSettings && window.BCSettings.onUpdate) window.BCSettings.onUpdate();
     });
+    es.addEventListener('run-macro', e => { const m = JSON.parse(e.data); if (window.BCMacro) { window.BCMacro.run(m.id); app.showMsg(`매크로 '${m.name}'${m.by ? ' (' + m.by + ')' : ''}`, 'info', 2500); } });
     es.addEventListener('message', e => {
       if (app.state) app.state.message = JSON.parse(e.data);
       renderStatus();
@@ -243,6 +245,7 @@
     if (window.BCDraw) window.BCDraw.init();
     // 로딩 화면 닫기: 배치가 자리 잡은 뒤 (숨긴 창에서는 화면 그리기 신호가 없으므로 시간으로)
     setTimeout(() => cmd('uiReady'), 150);
+    setTimeout(() => { if (window.BCMacro) window.BCMacro.startup(); }, 2500); // 켤 때 매크로 (화면이 다 뜬 뒤)
     if (!app.state.versions.length) showWelcome();
     // 개역한글만 있으면(또는 아무것도 없으면) 베들레헴 설치 안내를 한 번 보여 준다
     else if (app.state.versions.length <= 1 && settings().uiLang !== 'en' && !(settings().guide && settings().guide.bethlehemDone)) showBethlehemGuide(); // 영어 화면에서는 안 보임 (한국어 성경 프로그램)
@@ -1547,6 +1550,7 @@
   window.addEventListener('keydown', e => {
     if (!app.state) return;
     if (window.BCCtx && window.BCCtx.isOpen()) return; // 오른쪽 클릭 메뉴가 키를 받는다 (Esc 로 보조 화면이 꺼지지 않게)
+    if (window.BCAsk && window.BCAsk.isOpen()) return; // 글 묻기 창이 Enter·Esc 를 받는다
     const combo = comboOf(e);
     if (!combo) return;
     if (app.capturing) { e.preventDefault(); e.stopPropagation(); app.capturing(combo); return; }
@@ -1571,6 +1575,8 @@
       return;
     }
     if (e.key === 'Escape' && !$('#modal').hidden) { closeModal(); e.preventDefault(); return; }
+    // Alt+1~9: 매크로 1~9번
+    if (/^Alt\+[1-9]$/.test(combo) && $('#modal').hidden && window.BCMacro && window.BCMacro.list()[+combo.slice(4) - 1]) { e.preventDefault(); const m = window.BCMacro.list()[+combo.slice(4) - 1]; window.BCMacro.run(m.id); showMsg(`매크로 '${m.name}'`, 'info', 1500); return; }
     if (!editing && jumpKey(e)) return;
     // ← → : 미리보기 슬라이드 이동 (글 쓰는 칸·슬라이드 격자·장 고르기처럼 방향키를 따로 쓰는 곳 밖에서)
     if (!editing && $('#modal').hidden && (combo === 'ArrowLeft' || combo === 'ArrowRight') && app.preview && app.preview.slides) {

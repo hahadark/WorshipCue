@@ -1493,3 +1493,20 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .msg-fields { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; }
 .msg-prev { padding: 10px 14px; background: rgba(12,14,20,.88); color: #fff; border-radius: 6px; font-weight: 600; min-height: 1.4em; }
 .msg-state { display: flex; align-items: center; gap: 8px; }
+/* ---- 매크로 (macropanel.js) ---- */
+.mc { display: flex; flex-direction: column; gap: 10px; min-width: min(720px, 86vw); }
+.mc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.mc-card { --mc: var(--accent); border: 1px solid var(--line); border-left: 4px solid var(--mc); border-radius: 8px; background: var(--panel2); display: flex; flex-direction: column; }
+.mc-run { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px; border: 0; background: transparent; text-align: left; min-height: 64px; }
+.mc-run b { font-size: 15px; }
+.mc-run span { font-size: 12px; color: var(--muted); white-space: normal; }
+.mc-run kbd { font-size: 11px; }
+.mc-tools { display: flex; gap: 4px; align-items: center; padding: 4px 6px; border-top: 1px solid var(--line-soft, var(--line)); }
+.mc-tools select { max-width: 90px; }
+/* ---- 글 한 줄 묻기 (ask.js — prompt() 대신) ---- */
+.ask-wrap { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.45); display: flex; align-items: flex-start; justify-content: center; padding-top: 18vh; }
+.ask-wrap[hidden] { display: none; }
+.ask-box { width: min(460px, 90vw); background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius, 10px); box-shadow: var(--shadow, 0 10px 30px rgba(0,0,0,.4)); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.ask-q { font-weight: 600; }
+.ask-in { width: 100%; box-sizing: border-box; font-size: 15px; }
+.ask-go { display: flex; justify-content: flex-end; gap: 8px; }
