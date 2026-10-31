@@ -67,3 +67,23 @@
 - 연결 계획(쇼츠편집기 채팅에서 받은 목록, 사용자가 1번부터 차례로 하라고 함): ① 설교 포인트 슬라이드(완료, 다음 판) ② 광고·주보 연동(완료, 다음 판: 홈페이지 /bulletin/feed.json → 큐시트·광고) ③ 예배 전 대기 화면(완료, 다음 판: 큐시트 → 순서 넣기 → 예배 전 화면 자동 만들기) ④ 실시간 자막 ⑤ 예배 녹음·자동 정리 ⑥ 실시간 통역(낮음).
 - 큐시트 패널의 "큐시트 · 성경 책" 독 탭 안에 다시 "큐시트(예배 순서) | 성경 책" 분절 탭이 있어 머리가 두 줄 — 하나로 합칠 여지.
 - 사용자가 1.11.0 을 써 보고 눈에 걸리는 곳을 말해 줄 예정 — 그 피드백을 먼저 반영.
+
+## 2026-10-31 더한 것 (큐워십 체험판의 기능 목록을 참고만 — 코드·문구·디자인은 가져오지 않음, 아직 릴리스 전)
+
+| 기능 | 코어 | 화면 | 설정 키 |
+|---|---|---|---|
+| 즉석 자막 (Ctrl+T) | — | `control/quicktext.js` | localStorage `wc-quick-texts` |
+| 교독문 역할 (인도자:·회중:·다같이:) | `cues.js` roleLabels | `shared/slides.js` roleText · textChunks({roles}) | — |
+| 글자 자동 숨김 · 처음/끝 한 번 더 숨김 | `core.js` scheduleHide · slideStep · edge | `cue.js` 편집칸 | item hideAfter · edgeHide, `cueEdgeHide` |
+| 연결 점검 · 로그 묶음 | `diagnose.js` · `logbundle.js` | `diag.js` · `logs.js` | — |
+| 새 버전 창 · 이번 버전 건너뛰기 | `main/updater.js` (notes · skip/unskip) | `updatepanel.js` | `skipVersion` |
+| OBS 원격 조작 (obs-websocket 5) | `obs.js` ObsLink (core.obs) | `obspanel.js` | `obs` {enabled,host,port,passwordEnc} |
+| 무대 화면 고정 (순서표·고정 글·프리셋) | `core.js` stage.pin · stagePinSet | `stagepanel.js` · `output/stage.js` | `stagePresets` |
+| 무대 화면 모니터 (전체 화면 두 번째 창) | `setStageWindow` | `stagepanel.js` | `stageOut` (main.js stageWin) |
+| PPT 여러 순서로 (슬라이드 범위) | `cues.js` hymn range | `cue.js` pptRange · openSplit | item range |
+| 한글 입력 자동 전환 (윈도우) | `imeKorean` | control.js focusin | `imeAuto` (main/ime.js PowerShell 도우미) |
+| Companion 단추 누르기 | `companion.js` | 외부 단추 창 · 순서 자동 동작 | `companion` {host,port} |
+| 장비 직접 (X32 OSC · PTZ VISCA) | `devices.js` | `devicepanel.js` | `devices` |
+
+순서마다 '⚡ 송출할 때 자동으로'(item.actions)에 obsScene/obsStream/obsRecord · stagePin · companion · dev[] 가 더해졌다 (실행은 `cue.js` runActions, 정리는 `cues.js`).
+실제 장비(OBS·Companion·X32·PTZ)로는 확인하지 못했다 — 가짜 서버/UDP 로 프로토콜 바이트만 단위 테스트. 테스트: 단위 61개 · e2e 40개.
