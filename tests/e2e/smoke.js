@@ -194,6 +194,15 @@ app.whenReady().then(async () => {
     ok(mc.askShown && mc.def === '설교' && mc.saved.includes('설교 시작'), '글 묻기 창 (prompt 대신) · 매크로로 저장', mc);
     ok(mc.afterAlt === '설교 시작' && mc.afterTrig === '설교 시작' && mc.cards === 1, '매크로 실행 (Alt+1 · 외부 단추 · 매크로 창)', mc);
 
+    // ---- 3-3. 예약 실행: 매크로 창에서 예약 더하기 → 요일 바꾸기 → 저장됨
+    const sc = await ev(`await window.BC.cmd('saveMacro', { macro: { name: '예배 전', actions: { logo: 'on' } } }); await wait(400);
+      window.BCMacro.open(); await wait(400); $('#scAdd').click(); await wait(800);
+      const row = $('.sc-row'); row.querySelector('[data-day="3"]').click(); await wait(800);
+      const s = window.BC.state.settings.schedule || []; $('#modalClose').click();
+      await window.BC.cmd('saveSchedule', { list: [] }); for (const m of window.BC.state.settings.macros || []) await window.BC.cmd('deleteMacro', { id: m.id });
+      return { n: s.length, days: s[0] && s[0].days, time: s[0] && s[0].time };`);
+    ok(sc.n === 1 && JSON.stringify(sc.days) === '[0,3]' && sc.time === '10:55', '예약 실행 (더하기 · 요일 · 저장)', sc);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

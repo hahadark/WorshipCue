@@ -1842,3 +1842,21 @@ test('매크로: 저장(동작 정리) · 켤 때 하나만 · 이름·id 로 �
   assert.equal(normalizeItem({ type: 'title', title: 'x', actions: { macro: b.result.id } }).actions.macro, b.result.id);
   core.store.close();
 });
+test('예약 실행: 요일·시각이 맞으면 매크로 한 번 · 꺼진 예약 · 다른 요일은 안 함', () => {
+  const core = newCore('schedule');
+  const m = core.command('saveMacro', { macro: { name: '예배 시작', actions: { logo: 'off' } } }).result;
+  const saved = core.command('saveSchedule', { list: [{ days: [0], time: '10:55', macroId: m.id }, { days: [0, 3], time: '19:30', macroId: m.id, enabled: false }, { days: [1], time: 'xx', macroId: m.id }] }).result;
+  assert.equal(saved.length, 2, '잘못된 시각은 버림');
+  const runs = [];
+  core.on('run-macro', r => runs.push(r));
+  const sun1055 = new Date(2026, 10, 1, 10, 55, 10); // 2026-11-01 (일)
+  assert.equal(sun1055.getDay(), 0);
+  assert.equal(core.checkSchedule(sun1055).length, 1);
+  assert.equal(runs[0].by, '예약 10:55');
+  assert.equal(core.checkSchedule(new Date(2026, 10, 1, 10, 55, 40)).length, 0, '같은 날 두 번 안 함');
+  assert.equal(core.checkSchedule(new Date(2026, 10, 1, 19, 30)).length, 0, '꺼진 예약');
+  assert.equal(core.checkSchedule(new Date(2026, 10, 2, 10, 55)).length, 0, '월요일');
+  assert.equal(core.checkSchedule(new Date(2026, 10, 8, 10, 55)).length, 1, '다음 주일');
+  clearInterval(core.scheduleTimer);
+  core.store.close();
+});

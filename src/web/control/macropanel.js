@@ -45,7 +45,12 @@
             <label class="tc-toggle" title="프로그램을 켜면 한 번 실행"><input type="radio" name="mcStart" data-start="${esc(m.id)}" ${m.startup ? 'checked' : ''}> 켤 때</label>
             <button class="icon-btn" data-ren="${esc(m.id)}" title="이름 바꾸기">${ic('pencil')}</button><button class="icon-btn" data-del="${esc(m.id)}" title="지우기">${ic('x')}</button></div></div>`).join('') || '<div class="muted">아직 매크로가 없습니다.</div>'}</div>
       ${ms.some(m => m.startup) ? `<div class="row-flex"><button id="mcNoStart" class="ghost">켤 때 실행 안 함</button></div>` : ''}
+      <h4>${ic('clock')}예약 실행</h4>
+      <div class="note">정한 요일·시각이 되면 매크로를 실행합니다 (프로그램이 켜져 있을 때). 예: 주일 10:55 '예배 전 화면' · 11:00 '방송 시작'.</div>
+      <div id="scList" class="sc-list"></div>
+      <div class="row-flex"><button id="scAdd" ${ms.length ? '' : 'disabled'}>${ic('plus')}예약 더하기</button>${ms.length ? '' : '<span class="muted">매크로를 먼저 만드세요</span>'}</div>
     </div>`;
+    drawSchedule();
     const save = (m, patch) => app.cmd('saveMacro', { macro: { ...m, ...patch } }).then(r => { if (!r.ok) app.showMsg(r.error, 'error'); setTimeout(draw, 250); });
     box.querySelectorAll('[data-run]').forEach(b => { b.onclick = () => { run(b.dataset.run); app.showMsg(`매크로 '${(list().find(x => x.id === b.dataset.run) || {}).name}' 실행`, 'info', 1500); }; });
     box.querySelectorAll('[data-color]').forEach(s => { s.onchange = () => save(list().find(x => x.id === s.dataset.color), { color: s.value }); });
@@ -53,9 +58,41 @@
     box.querySelectorAll('[data-ren]').forEach(b => { b.onclick = async () => { const m = list().find(x => x.id === b.dataset.ren); const n = await app.ask('새 이름', m.name); if (n) save(m, { name: n }); }; });
     box.querySelectorAll('[data-del]').forEach(b => { b.onclick = async () => { const m = list().find(x => x.id === b.dataset.del); if (!confirm(`매크로 '${m.name}' 을(를) 지울까요?`)) return; await app.cmd('deleteMacro', { id: m.id }); setTimeout(draw, 250); }; });
     if ($('#mcNoStart')) $('#mcNoStart').onclick = () => { const m = list().find(x => x.startup); if (m) save(m, { startup: false }); };
+    bindSchedule();
   }
 
-  function open() { app.openModal('매크로', '<div id="mcBox"></div>'); draw(); }
+  // ---- 예약 실행 ----
+  const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+  let sched = null; // 고치는 중인 목록 (저장 전)
+  function drawSchedule() {
+    const box = $('#scList'); if (!box) return;
+    sched = sched || JSON.parse(JSON.stringify((app.state.settings.schedule) || []));
+    box.innerHTML = sched.map((e, k) => `<div class="sc-row" data-k="${k}"><label class="tc-toggle"><input type="checkbox" data-f="enabled" ${e.enabled !== false ? 'checked' : ''}></label>
+      <span class="sc-days">${DAYS.map((d, i) => `<label class="${(e.days || []).includes(i) ? 'on' : ''}"><input type="checkbox" data-day="${i}" ${(e.days || []).includes(i) ? 'checked' : ''}>${d}</label>`).join('')}</span>
+      <input type="time" data-f="time" value="${esc(e.time || '')}">
+      <select data-f="macroId">${list().map(m => `<option value="${esc(m.id)}" ${e.macroId === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select>
+      <button class="icon-btn" data-scdel="${k}" title="지우기">${ic('x')}</button></div>`).join('') || '<div class="muted">예약이 없습니다.</div>';
+  }
+  async function saveSchedule() {
+    const r = await app.cmd('saveSchedule', { list: sched });
+    if (!r.ok) return app.showMsg(r.error, 'error');
+    sched = r.result; drawSchedule();
+  }
+  function bindSchedule() {
+    const box = $('#scList'); if (!box) return;
+    box.addEventListener('change', e => {
+      const row = e.target.closest('.sc-row'); if (!row) return;
+      const it = sched[+row.dataset.k];
+      if (e.target.dataset.day != null) { const d = +e.target.dataset.day; it.days = e.target.checked ? [...new Set([...(it.days || []), d])] : (it.days || []).filter(x => x !== d); }
+      else if (e.target.dataset.f === 'enabled') it.enabled = e.target.checked;
+      else it[e.target.dataset.f] = e.target.value;
+      saveSchedule();
+    });
+    box.addEventListener('click', e => { const b = e.target.closest('[data-scdel]'); if (b) { sched.splice(+b.dataset.scdel, 1); saveSchedule(); } });
+    $('#scAdd').onclick = () => { if (!list().length) return; sched.push({ days: [0], time: '10:55', macroId: list()[0].id, enabled: true }); saveSchedule(); };
+  }
+
+  function open() { sched = null; app.openModal('매크로', '<div id="mcBox"></div>'); draw(); }
   function refresh() { if ($('#mcBox')) draw(); }
 
   /** 켤 때 실행: 이 창(프로그램)이 처음 연결될 때 한 번 */

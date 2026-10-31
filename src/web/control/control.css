@@ -1510,3 +1510,10 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .ask-q { font-weight: 600; }
 .ask-in { width: 100%; box-sizing: border-box; font-size: 15px; }
 .ask-go { display: flex; justify-content: flex-end; gap: 8px; }
+/* ---- 예약 실행 (macropanel.js) ---- */
+.sc-list { display: flex; flex-direction: column; gap: 6px; }
+.sc-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 8px; border: 1px solid var(--line-soft, var(--line)); border-radius: 8px; background: var(--panel2); }
+.sc-days { display: inline-flex; gap: 2px; }
+.sc-days label { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; font-size: 13px; }
+.sc-days label.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sc-days input { display: none; }

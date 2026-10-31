@@ -108,6 +108,10 @@ class WorshipCueCore extends EventEmitter {
     });
     try { const n = this.store.purgeTrash(30); if (n) this.logger.info(`휴지통: 30일 지난 큐시트 ${n}개를 비웠습니다`); } catch { /* 무시 */ }
     this.logger.info('워십프리젠터 시작');
+    // 예약 실행: 요일·시각이 되면 매크로 (30초마다 확인, 같은 날 한 번)
+    this.scheduleDone = new Set();
+    this.scheduleTimer = setInterval(() => { try { this.checkSchedule(); } catch (e) { this.logger.warn('예약 실행: ' + e.message); } }, 30000);
+    if (this.scheduleTimer.unref) this.scheduleTimer.unref();
     // OBS 원격 조작: 켜 두었으면 연결 (desktop·암호 풀기가 붙은 뒤에)
     const { ObsLink } = require('./obs');
     this.obs = new ObsLink(this);
@@ -261,6 +265,22 @@ class WorshipCueCore extends EventEmitter {
       message: this.stage.message,
       pin: this.stagePin(live),
     };
+  }
+
+  /** 예약 실행 확인: now 의 요일·시:분 이 맞는 켜진 예약 → 매크로 (같은 날 같은 예약은 한 번) */
+  checkSchedule(now = new Date()) {
+    const pad = n => String(n).padStart(2, '0');
+    const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const day = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const ran = [];
+    for (const e of this.settings.get().schedule || []) {
+      if (!e.enabled || e.time !== hm || !(e.days || []).includes(now.getDay())) continue;
+      const key = `${day}|${e.id}`;
+      if (this.scheduleDone.has(key)) continue;
+      this.scheduleDone.add(key);
+      try { this.commands.runMacro.call(this, { id: e.macroId, by: '예약 ' + hm }); ran.push(e.id); } catch (err) { this.logger.warn(`예약 실행 실패 (${hm}): ${err.message}`); }
+    }
+    return ran;
   }
 
   /** 회중 메시지 (유아실 호출 · 차량 이동 등): 아래 띠 하나로, 정한 출력에만 */
@@ -1228,6 +1248,19 @@ WorshipCueCore.prototype.commands = {
     });
     this.settingsChanged('settings');
     return { id };
+  },
+  /** 예약 실행 목록 저장: [{ id, days: [0~6 (일~토)], time: 'HH:MM', macroId, enabled }] */
+  saveSchedule(a) {
+    const list = (Array.isArray(a.list) ? a.list : []).slice(0, 50).map(e => ({
+      id: /^[a-z0-9]{3,30}$/i.test(e.id || '') ? e.id : 'sc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      days: [...new Set((Array.isArray(e.days) ? e.days : []).map(Number).filter(d => d >= 0 && d <= 6))].sort(),
+      time: /^\d{2}:\d{2}$/.test(e.time || '') ? e.time : '',
+      macroId: String(e.macroId || ''),
+      enabled: e.enabled !== false,
+    })).filter(e => e.time && e.macroId);
+    this.settings.update(d => { d.schedule = list; });
+    this.settingsChanged('settings');
+    return list;
   },
   deleteMacro(a) { this.settings.update(d => { d.macros = (d.macros || []).filter(x => x.id !== a.id); }); this.settingsChanged('settings'); return {}; },
   /** 매크로 실행 요청 (외부 단추 · 예약): 조작 화면에 알린다 */
