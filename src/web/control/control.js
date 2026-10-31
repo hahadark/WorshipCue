@@ -183,6 +183,11 @@
       else if (u.state !== before && u.state === 'available') showMsg(`새 버전 ${u.version} 이 나왔습니다. 아래 상태줄의 '새 버전' 을 누르면 바뀐 점과 받는 곳이 보입니다.`, 'info', 6000);
       if (window.BCSettings && window.BCSettings.onUpdate) window.BCSettings.onUpdate();
     });
+    es.addEventListener('obs', e => {
+      if (app.state) app.state.obs = JSON.parse(e.data);
+      renderStatus();
+      if (window.BCObs) window.BCObs.draw();
+    });
     es.addEventListener('outputs', e => {
       if (!app.state) return;
       app.state.outputs = JSON.parse(e.data);
@@ -1418,10 +1423,12 @@
       const txt = u.state === 'ready' ? `⬆ 새 버전 ${esc(u.version)} — 끌 때 설치` : u.state === 'available' ? `⬆ 새 버전 ${esc(u.version)} — 받기` : `⬆ 새 버전 ${esc(u.version)} 받는 중${u.percent ? ' ' + u.percent + '%' : ''}`;
       parts.push(`<span class="st st-update" data-update="${u.state}" title="자동 업데이트 (설정 → 정보)"><span class="dot ok"></span>${txt}</span>`);
     }
+    if (window.BCObs) { const h = window.BCObs.statusHtml(); if (h) parts.push(h); }
     $('#status').innerHTML = parts.join('');
   }
   $('#status').addEventListener('click', e => {
     if (e.target.closest('[data-media-off]')) { cmd('setBackgroundMedia', { media: null }); return; }
+    if (e.target.closest('[data-obs]')) { if (window.BCObs) window.BCObs.open(); return; }
     const b = e.target.closest('[data-update]');
     if (!b) return;
     if (window.BCUpdate) window.BCUpdate.open(); // 바뀐 점 · 설치/받기 · 이번 버전 건너뛰기

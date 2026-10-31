@@ -72,6 +72,9 @@ function normalizeItem(x) {
     if (a.ovOff) act.ovOff = str(a.ovOff, 60);
     if (a.stopMusic) act.stopMusic = true;
     if (a.clearStage) act.clearStage = true;
+    if (a.obsScene) act.obsScene = str(a.obsScene, 120); // OBS 장면 바꾸기
+    if (['start', 'stop'].includes(a.obsStream)) act.obsStream = a.obsStream; // OBS 방송 시작·끝
+    if (['start', 'stop'].includes(a.obsRecord)) act.obsRecord = a.obsRecord; // OBS 녹화 시작·끝
     if (Object.keys(act).length) it.actions = act;
   }
   // 자동 넘김: N초마다 다음 슬라이드, 반복이면 끝에서 처음으로 (슬라이드쇼는 기본 8초·반복)

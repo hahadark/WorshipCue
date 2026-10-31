@@ -93,6 +93,18 @@ app.whenReady().then(async () => {
     ok(up.title === '새 버전 9.9.9' && up.items.length === 2 && up.bold && up.open && up.skip, '새 버전 창 (바뀐 점 · 받기 · 건너뛰기 단추)', up);
     ok(up.saved === '9.9.9' && up.closed, '이번 버전 건너뛰기 (저장)', up);
 
+    // ---- 2-6. OBS 원격 조작: 창 · 켜면 연결 시도(여기엔 OBS 가 없음 → 끊김 표시) · 순서의 자동 동작에 OBS 줄
+    const ob = await ev(`window.BCObs.open(); await wait(300);
+      const form = { host: !!$('#obsHost'), port: ($('#obsPort') || {}).value };
+      $('#obsHost').value = '127.0.0.1'; $('#obsPort').value = '4459'; $('#obsSave').click(); await wait(2500);
+      const st = window.BC.state.obs; const bar = ($('#status [data-obs]') || {}).textContent || '';
+      await window.BC.cmd('setObs', { enabled: false }); await wait(500);
+      $('#modalClose').click(); await wait(200);
+      const it = window.BCCue.selected(); $('#cueEditor [data-act=actmore]') && $('#cueEditor [data-act=actmore]').click(); await wait(300);
+      return { form, enabled: st && st.enabled, connected: st && st.connected, err: st && st.error, bar, row: !!$('#cueEditor [data-a=obsScene]'), after: ($('#status [data-obs]') || null) === null };`);
+    ok(ob.form.host && ob.form.port === '4455' && ob.enabled === true && ob.connected === false && /연결하지 못했습니다/.test(ob.err || '') && /OBS 원격 끊김/.test(ob.bar), 'OBS 원격 조작: 설정 · 연결 실패 안내 · 상태줄', ob);
+    ok(ob.row && ob.after, 'OBS 원격 조작: 순서 자동 동작 줄 · 끄면 상태줄에서 사라짐', ob);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

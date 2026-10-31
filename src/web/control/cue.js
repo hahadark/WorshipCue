@@ -446,13 +446,22 @@
           배경 <select data-a="bg"><option value="">그대로</option><option value="hide" ${a.bg === 'hide' ? 'selected' : ''}>지우기</option><option value="show" ${a.bg === 'show' ? 'selected' : ''}>다시 보이기</option></select></div>
         <label>오버레이</label><div class="ce-row">켜기 ${ovSel('ovOn')} 끄기 ${ovSel('ovOff', `<option value="*" ${a.ovOff === '*' ? 'selected' : ''}>모두</option>`)}</div>
         <label>음악</label><div class="ce-row"><label class="tc-toggle"><input type="checkbox" data-a="stopMusic" ${a.stopMusic ? 'checked' : ''}> 재생 중인 음악 서서히 멈춤</label></div>
+        ${obsActHtml(a)}
       </div>` : ''}</div>`;
+  }
+  /** OBS 장면 · 방송 · 녹화 (도구 → OBS 원격 조작이 연결돼 있으면 장면 목록에서 고른다) */
+  function obsActHtml(a) {
+    const os = (window.BCObs && window.BCObs.state()) || {};
+    const scenes = [...new Set([...(os.scenes || []), ...(a.obsScene ? [a.obsScene] : [])])];
+    const sel = (k, opts) => `<select data-a="${k}"><option value="">그대로</option>${opts.map(([v, t]) => `<option value="${esc(v)}" ${a[k] === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+    return `<label>OBS</label><div class="ce-row">장면 ${sel('obsScene', scenes.map(n => [n, n]))} 방송 ${sel('obsStream', [['start', '시작'], ['stop', '끝']])} 녹화 ${sel('obsRecord', [['start', '시작'], ['stop', '끝']])}${os.connected ? '' : `<button data-act="obsopen" class="ghost" title="도구 → OBS 원격 조작">${os.enabled ? 'OBS 연결 안 됨' : 'OBS 연결하기'}…</button>`}</div>`;
   }
   function actSummary(it) {
     const a = it.actions || {};
     const ovName = id => (id === '*' ? '모두' : ((app.state.settings.overlays || []).find(o => o.id === id) || {}).name || '?');
     return [a.timer && `⏱ 타이머 ${a.timer}분`, a.stageMsg && '💬 무대 메시지', a.clearStage && '메시지 지움', a.logo && `로고 ${a.logo === 'on' ? '켜기' : '끄기'}`, a.bg && `배경 ${a.bg === 'hide' ? '지우기' : '보이기'}`,
-      a.ovOn && `오버레이 켜기: ${ovName(a.ovOn)}`, a.ovOff && `오버레이 끄기: ${ovName(a.ovOff)}`, a.stopMusic && '음악 멈춤'].filter(Boolean).join(' · ');
+      a.ovOn && `오버레이 켜기: ${ovName(a.ovOn)}`, a.ovOff && `오버레이 끄기: ${ovName(a.ovOff)}`, a.stopMusic && '음악 멈춤',
+      a.obsScene && `OBS 장면: ${a.obsScene}`, a.obsStream && `OBS 방송 ${a.obsStream === 'start' ? '시작' : '끝'}`, a.obsRecord && `OBS 녹화 ${a.obsRecord === 'start' ? '시작' : '끝'}`].filter(Boolean).join(' · ');
   }
   /** 새로 송출된 순서의 자동 동작 (한 번만 · 방금 송출한 것만) */
   let lastEnter = '';
@@ -478,6 +487,11 @@
     if (a.ovOn) cmd('toggleOverlay', { id: a.ovOn, on: true });
     if (a.ovOff === '*') (app.state.settings.overlays || []).filter(o => o.on && o.id !== a.ovOn).forEach(o => cmd('toggleOverlay', { id: o.id, on: false }));
     else if (a.ovOff) cmd('toggleOverlay', { id: a.ovOff, on: false });
+    if (window.BCObs && (a.obsScene || a.obsStream || a.obsRecord)) {
+      if (a.obsScene) window.BCObs.act({ action: 'scene', scene: a.obsScene }, true);
+      if (a.obsStream) window.BCObs.act({ action: 'stream', on: a.obsStream === 'start' }, true);
+      if (a.obsRecord) window.BCObs.act({ action: 'record', on: a.obsRecord === 'start' }, true);
+    }
     const s = actSummary(it);
     if (s || it.music) app.showMsg(`⚡ ${it.title}: ${[it.music && '배경 음악', s].filter(Boolean).join(' · ')}`, 'info', 2500);
   }
@@ -714,6 +728,7 @@
     const i = st.sel;
     const it = st.cue.items[i];
     switch (b.dataset.act) {
+      case 'obsopen': if (window.BCObs) window.BCObs.open(); break;
       case 'close': setEditor(false); app.showMsg('편집칸을 숨겼습니다. 다시 보려면 가운데 위 ✎ 편집칸 단추 · F2 · Ctrl+Shift+E', 'info', 3500); break;
       case 'up': if (i > 0) { moveItem(i, i - 1); st.sel = i - 1; renderEditor(true); } break;
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;

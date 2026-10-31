@@ -1460,3 +1460,8 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .upd-notes p { margin: 4px 0; }
 .upd-go { gap: 8px; align-items: center; }
 .upd-go .grow { flex: 1; }
+/* ---- OBS 원격 조작 (obspanel.js) ---- */
+.obs-box { min-width: min(620px, 80vw); }
+.obs-box .st { display: inline-flex; align-items: center; gap: 6px; }
+.obs-scenes { display: flex; flex-wrap: wrap; gap: 6px; }
+.obs-scenes button.on { border-color: var(--live); color: var(--live); font-weight: 700; }

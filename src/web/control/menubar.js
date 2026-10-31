@@ -83,6 +83,7 @@
         '-',
         { ic: 'circle-x', label: '모두 지우기', run: click('#bAll') },
       ] },
+      { ic: 'radio', label: 'OBS (방송 · 녹화 · 장면)', sub: () => (window.BCObs ? window.BCObs.menu() : []) },
       { ic: 'camera', label: '송출 배경 (카메라·그림·영상)', sub: () => [
         { ic: 'camera', label: '카메라·미디어 고르기…', run: lib('cameras') },
         { label: app.state && app.state.layers && app.state.layers.media ? `■ 송출 배경 끄기 (${app.state.layers.media.label || '미디어'})` : '　송출 배경 끄기', run: () => window.BCLib && window.BCLib.liveMedia(null) },
@@ -123,6 +124,7 @@
       ] },
       { ic: 'video', label: '미디어 (영상·음악 바로 재생)', run: () => window.BCDock && window.BCDock.show('media') },
       { ic: 'timer', label: '무대·설교 타이머', run: () => window.BCDock && window.BCDock.show('stage') },
+      { ic: 'radio', label: 'OBS 원격 조작 (방송 · 녹화 · 장면)…', run: () => window.BCObs && window.BCObs.open() },
       '-',
       { ic: 'smartphone', label: '휴대폰 리모컨', sub: () => [
         { label: '열기 (QR · 주소 · PIN)…', run: () => window.BCRemote && window.BCRemote.open() },

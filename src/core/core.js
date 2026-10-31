@@ -106,6 +106,11 @@ class WorshipCueCore extends EventEmitter {
     });
     try { const n = this.store.purgeTrash(30); if (n) this.logger.info(`휴지통: 30일 지난 큐시트 ${n}개를 비웠습니다`); } catch { /* 무시 */ }
     this.logger.info('워십프리젠터 시작');
+    // OBS 원격 조작: 켜 두었으면 연결 (desktop·암호 풀기가 붙은 뒤에)
+    const { ObsLink } = require('./obs');
+    this.obs = new ObsLink(this);
+    const t = setTimeout(() => { try { this.obs.sync(); } catch (e) { this.logger.warn('OBS: ' + e.message); } }, 0);
+    if (t.unref) t.unref();
   }
 
   versionId(args) {
@@ -369,6 +374,7 @@ class WorshipCueCore extends EventEmitter {
       shortcutLabels: SHORTCUT_LABELS,
       defaultShortcuts: DEFAULT_SHORTCUTS,
       outputs: this.outputStatus(),
+      obs: this.obs ? this.obs.status() : null,
       port: this.activePort || s.port,
       portWarning: this.portWarning || '',
       dataDir: this.dataDir,
@@ -1041,6 +1047,26 @@ WorshipCueCore.prototype.commands = {
     return {};
   },
   // ---- 휴대폰 리모컨 ----
+  // ---- OBS 원격 조작 (obs-websocket 5) ----
+  obsStatus() { return this.obs.status(); },
+  setObs(a) {
+    this.settings.update(d => {
+      d.obs = { enabled: false, host: '127.0.0.1', port: 4455, password: '', passwordEnc: '', ...(d.obs || {}) };
+      if (typeof a.enabled === 'boolean') d.obs.enabled = a.enabled;
+      if (typeof a.host === 'string') d.obs.host = a.host.trim().slice(0, 200) || '127.0.0.1';
+      if (a.port !== undefined) d.obs.port = Math.max(1, Math.min(65535, Math.round(Number(a.port)) || 4455));
+      if (typeof a.password === 'string') {
+        const dk = this.desktop;
+        if (!a.password) { d.obs.password = ''; d.obs.passwordEnc = ''; }
+        else if (dk && dk.canEncrypt && dk.canEncrypt()) { d.obs.passwordEnc = dk.encrypt(a.password); d.obs.password = ''; }
+        else { d.obs.password = a.password; d.obs.passwordEnc = ''; }
+      }
+    });
+    this.obs.sync();
+    this.settingsChanged('settings');
+    return this.obs.status();
+  },
+  async obsAction(a) { return this.obs.action(a || {}); },
   /** 연결 점검 (도움말 → 연결 점검): 예배당 화면 · OBS · 내부망 · 리모컨 · 데이터 · 오늘 큐시트 · 동기화 · 저장 공간 */
   diagnose(a) { return require('./diagnose').diagnose(this, { cueId: a && a.cueId, port: a && a.port }); },
   /** 로그 묶음 (도움말 → 로그 묶음 저장): 버전 · 점검 결과 · 설정(비밀은 가림) · 최근 로그 → 글 파일 하나 */

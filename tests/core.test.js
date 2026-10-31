@@ -1597,3 +1597,71 @@ test('업데이트 동작: 결과로 지금 업데이트 상태를 돌려준다 
   assert.equal(core.settings.get().skipVersion, '9.9.9');
   core.store.close();
 });
+
+test('OBS 원격 조작: obs-websocket 5 인증 · 장면 목록 · 장면 바꾸기 · 방송/녹화 · 이벤트', async () => {
+  const { ObsLink, authString } = require('../src/core/obs');
+  const crypto = require('crypto');
+  const sha = s => crypto.createHash('sha256').update(s).digest('base64');
+  assert.equal(authString('pw', 'salt', 'ch'), sha(sha('pw' + 'salt') + 'ch'));
+  const sent = [];
+  const obsState = { scene: '예배', streaming: false, recording: false };
+  class FakeWS {
+    constructor(url) {
+      this.url = url; this.readyState = 1; FakeWS.last = this;
+      setTimeout(() => this.onmessage({ data: JSON.stringify({ op: 0, d: { obsWebSocketVersion: '5.5.0', rpcVersion: 1, authentication: { salt: 'S', challenge: 'C' } } }) }), 0);
+    }
+    send(raw) {
+      const m = JSON.parse(raw); sent.push(m);
+      const reply = (op, d) => setTimeout(() => this.onmessage({ data: JSON.stringify({ op, d }) }), 0);
+      if (m.op === 1) {
+        if (m.d.authentication !== authString('비밀', 'S', 'C')) return setTimeout(() => this.onclose({ code: 4009 }), 0);
+        return reply(2, { negotiatedRpcVersion: 1 });
+      }
+      if (m.op === 6) {
+        const { requestType: t, requestId, requestData: q = {} } = m.d;
+        const ok = data => reply(7, { requestType: t, requestId, requestStatus: { result: true, code: 100 }, responseData: data });
+        if (t === 'GetSceneList') return ok({ currentProgramSceneName: obsState.scene, scenes: [{ sceneName: '광고', sceneIndex: 0 }, { sceneName: '설교', sceneIndex: 1 }, { sceneName: '예배', sceneIndex: 2 }] });
+        if (t === 'GetStreamStatus') return ok({ outputActive: obsState.streaming, outputTimecode: '00:00:10.000' });
+        if (t === 'GetRecordStatus') return ok({ outputActive: obsState.recording });
+        if (t === 'SetCurrentProgramScene') { obsState.scene = q.sceneName; return ok({}); }
+        if (t === 'StartStream') { obsState.streaming = true; return ok({}); }
+        if (t === 'StopStream') { obsState.streaming = false; return ok({}); }
+        if (t === 'StartRecord') { obsState.recording = true; return ok({}); }
+        return reply(7, { requestType: t, requestId, requestStatus: { result: false, code: 204, comment: '없는 요청' } });
+      }
+    }
+    close() { this.readyState = 3; }
+  }
+  const events = [];
+  let conf = { enabled: true, host: '127.0.0.1', port: 4455, password: '비밀' };
+  const core = { settings: { get: () => ({ obs: conf }) }, logger: { info() {}, warn() {} }, emit: (n, s) => events.push(s), desktop: null };
+  const link = new ObsLink(core, { WebSocketImpl: FakeWS });
+  const until = async f => { for (let i = 0; i < 100 && !f(); i++) await new Promise(r => setTimeout(r, 10)); };
+  link.sync();
+  await until(() => link.st.connected && link.st.scenes.length);
+  assert.equal(FakeWS.last.url, 'ws://127.0.0.1:4455');
+  assert.equal(link.st.connected, true);
+  assert.deepEqual(link.st.scenes, ['예배', '설교', '광고'], 'OBS 화면과 같은 순서 (위에서 아래)');
+  assert.equal(link.st.scene, '예배');
+  await link.action({ action: 'scene', scene: '설교' });
+  assert.equal(obsState.scene, '설교');
+  await link.action({ action: 'stream', on: true });
+  assert.equal(obsState.streaming, true);
+  await link.action({ action: 'stream', on: true }); // 이미 방송 중이면 그대로
+  assert.equal(sent.filter(m => m.d && m.d.requestType === 'StartStream').length, 1);
+  await link.action({ action: 'record' }); // 바꾸기
+  assert.equal(obsState.recording, true);
+  await assert.rejects(link.request('Nope'), /없는 요청/);
+  // 이벤트: 다른 곳에서 장면을 바꾸면 따라간다
+  FakeWS.last.onmessage({ data: JSON.stringify({ op: 5, d: { eventType: 'CurrentProgramSceneChanged', eventData: { sceneName: '광고' } } }) });
+  assert.equal(link.st.scene, '광고');
+  assert.ok(events.length > 3, "상태가 바뀔 때마다 'obs' 이벤트");
+  // 비밀번호가 틀리면 다시 붙지 않고 알려 준다
+  link.close();
+  conf = { ...conf, password: '틀림' };
+  link.sync();
+  await until(() => /비밀번호/.test(link.st.error));
+  assert.match(link.st.error, /비밀번호가 맞지 않습니다/);
+  assert.equal(link.retry, null);
+  link.close();
+});

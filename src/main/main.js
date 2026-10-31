@@ -390,7 +390,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
-    if (core) { try { core.sync.stop(); } catch { /* 무시 */ } core.settings.saveNow(); core.logger.info('워십프리젠터 종료'); core.store.close(); }
+    if (core) { try { core.sync.stop(); } catch { /* 무시 */ } try { core.obs && core.obs.close(); } catch { /* 무시 */ } core.settings.saveNow(); core.logger.info('워십프리젠터 종료'); core.store.close(); }
   });
   process.on('uncaughtException', e => { try { core && core.logger.error('예외: ' + (e && e.stack || e)); } catch { /* 무시 */ } });
   app.on('window-all-closed', () => app.quit());

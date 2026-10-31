@@ -69,10 +69,18 @@ function diagnose(core, { cueId, port } = {}) {
   // 2. OBS 브라우저 소스
   const st = core.outputStatus();
   const obs = o => st.clients.filter(c => c.output === o && c.kind !== 'window').length;
-  port = Number(port) || 37528;
+  port = Number(port) || core.activePort || 37528;
   const nMain = obs('main'), nOv = obs('overlay');
   if (nMain || nOv) out.push(item('obs', 'OBS 브라우저 소스', 'ok', `연결됨 — 전체 ${nMain}개 · 하단 자막 ${nOv}개`));
   else out.push(item('obs', 'OBS 브라우저 소스', 'info', 'OBS 가 연결돼 있지 않습니다 (방송을 안 하면 괜찮습니다).', [`OBS → 소스 + → 브라우저 → 주소 http://127.0.0.1:${port}/outputs/main (전체) 또는 /outputs/overlay (하단 자막), 너비 1920 · 높이 1080.`, '이미 넣었다면 그 소스를 오른쪽 클릭 → 속성 → \'현재 페이지의 캐시를 새로 고침\'.', '자막 PC 와 송출 PC 가 따로면 아래 \'내부망 출력\' 을 켜세요.']));
+
+  // 2-1. OBS 원격 조작 (obs-websocket)
+  const oc = (s.obs || {});
+  if (oc.enabled && core.obs) {
+    const os_ = core.obs.status();
+    if (os_.connected) out.push(item('obsws', 'OBS 원격 조작', 'ok', `연결됨 — 장면 '${os_.scene}' · ${os_.streaming ? '방송 중' : '방송 안 함'} · ${os_.recording ? '녹화 중' : '녹화 안 함'}`));
+    else out.push(item('obsws', 'OBS 원격 조작', 'fail', os_.error || 'OBS 에 연결돼 있지 않습니다.', ['OBS 가 켜져 있는지 확인하세요 (OBS 28 이상).', 'OBS → 도구 → WebSocket 서버 설정 → \'WebSocket 서버 사용\' 을 켜고, 포트(기본 4455)와 비밀번호를 도구 → OBS 원격 조작에 똑같이 넣으세요.', 'OBS 가 다른 PC 에 있으면 주소에 그 PC 의 IP(192.168.x.x)를 넣고, 그 PC 방화벽에서 OBS 를 허용하세요.']));
+  }
 
   // 3. 내부망 출력 (다른 PC 의 OBS)
   const lan = s.lanOutput || {};
