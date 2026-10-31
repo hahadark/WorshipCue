@@ -105,7 +105,7 @@ class WorshipCueCore extends EventEmitter {
       }
     });
     try { const n = this.store.purgeTrash(30); if (n) this.logger.info(`휴지통: 30일 지난 큐시트 ${n}개를 비웠습니다`); } catch { /* 무시 */ }
-    this.logger.info('WorshipCue 시작');
+    this.logger.info('워십프리젠터 시작');
   }
 
   versionId(args) {
@@ -1330,7 +1330,7 @@ WorshipCueCore.prototype.commands = {
   importCues(a) {
     const d = a.data || {};
     const list = Array.isArray(d.cues) ? d.cues : Array.isArray(d.items) ? [d] : [];
-    if (!list.length) throw new Error('WorshipCue 큐시트 파일이 아닙니다.');
+    if (!list.length) throw new Error('워십프리젠터(WorshipCue) 큐시트 파일이 아닙니다.');
     const ids = [];
     for (const c of list.slice(0, 500)) {
       const cue = normalizeCue({ name: c.name || '가져온 큐시트', serviceDate: c.serviceDate || '', startTime: c.startTime || '', memo: c.memo || '', items: (c.items || []).map(x => ({ ...x, id: '' })) });

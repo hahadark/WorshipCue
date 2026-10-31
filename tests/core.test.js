@@ -737,7 +737,7 @@ test('슬라이드 편집: 정리·합치기·큐시트 저장·송출 슬라이
 test('채팅 AI (키 없이): 프롬프트·샘플, 붙여 넣은 답 → 큐시트', () => {
   const core = newCore('chatai');
   const p = core.command('chatAiPrompt', { extra: '오후 예배로' }).result;
-  assert.match(p.prompt, /WorshipCue-큐시트-샘플\.json/);
+  assert.match(p.prompt, /워십프리젠터-큐시트-샘플\.json/);
   assert.match(p.prompt, /규칙:/);
   assert.match(p.prompt, /추가 요청: 오후 예배로/);
   const sample = JSON.parse(p.sample);

@@ -2,7 +2,7 @@
 // Electron 데스크톱 셸: 조작 창 + 예배당 전체 화면 창(Output Manager) + 전역 단축키
 
 const path = require('path');
-// 창·작업 표시줄 아이콘 (소스에서 바로 실행할 때도 Electron 기본 아이콘 대신 WorshipCue 아이콘)
+// 창·작업 표시줄 아이콘 (소스에서 바로 실행할 때도 Electron 기본 아이콘 대신 워십프리젠터 아이콘)
 const APP_ICON = path.join(__dirname, 'icon.png');
 const { app, BrowserWindow, screen, globalShortcut, dialog, Menu, powerSaveBlocker, session, shell, safeStorage } = require('electron');
 const { WorshipCueCore } = require('../core/core');
@@ -23,6 +23,8 @@ const GLOBAL_ACTIONS = { prevSlide: 'previousSlide', nextSlide: 'nextSlide', sen
 {
   const di = process.argv.indexOf('--data');
   if (di > 0 && process.argv[di + 1]) app.setPath('userData', path.join(path.resolve(process.argv[di + 1]), 'electron'));
+  // 이름을 워십프리젠터로 바꿨지만(productName) 화면 배치·최근 글 같은 브라우저 저장소는 예전 폴더(%APPDATA%\WorshipCue)를 그대로 쓴다
+  else app.setPath('userData', path.join(app.getPath('appData'), 'WorshipCue'));
 }
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -83,7 +85,7 @@ if (!app.requestSingleInstanceLock()) {
       outputWin = new BrowserWindow({
         x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: d.bounds.height,
         frame: false, show: false, skipTaskbar: true, resizable: false, movable: false, minimizable: false,
-        fullscreenable: true, backgroundColor: '#000000', title: 'WorshipCue 출력', // 클릭하면 선택됨 (Esc 로 끄기). 켤 때는 showInactive 라 조작 화면 초점을 뺏지 않는다
+        fullscreenable: true, backgroundColor: '#000000', title: T('워십프리젠터 출력'), // 클릭하면 선택됨 (Esc 로 끄기). 켤 때는 showInactive 라 조작 화면 초점을 뺏지 않는다
         webPreferences: { backgroundThrottling: false, contextIsolation: true, sandbox: true },
       });
       outputWin.setMenu(null);
@@ -188,7 +190,7 @@ if (!app.requestSingleInstanceLock()) {
   function createSplash() {
     splash = new BrowserWindow({
       width: 560, height: 330, frame: false, transparent: true, resizable: false, movable: true, center: true,
-      skipTaskbar: false, alwaysOnTop: true, show: false, title: 'WorshipCue', backgroundColor: '#00000000', icon: APP_ICON,
+      skipTaskbar: false, alwaysOnTop: true, show: false, title: T('워십프리젠터'), backgroundColor: '#00000000', icon: APP_ICON,
       webPreferences: { contextIsolation: true, sandbox: true },
     });
     splash.loadFile(path.join(WEB_DIR, 'splash', 'index.html'));
@@ -252,7 +254,7 @@ if (!app.requestSingleInstanceLock()) {
       core.on('settings', () => { uiLang = core.settings.get().uiLang === 'en' ? 'en' : 'ko'; });
     } catch (e) {
       closeSplash();
-      dialog.showErrorBox('WorshipCue', T('데이터를 열 수 없습니다:') + ' ' + e.message);
+      dialog.showErrorBox(T('워십프리젠터'), T('데이터를 열 수 없습니다:') + ' ' + e.message);
       app.exit(1);
       return;
     }
@@ -269,7 +271,7 @@ if (!app.requestSingleInstanceLock()) {
     }
     if (!port) {
       closeSplash();
-      dialog.showErrorBox('WorshipCue', T(`로컬 서버를 시작할 수 없습니다 (포트 ${wanted}~${wanted + 9}).\n\n${lastErr && lastErr.message}`));
+      dialog.showErrorBox(T('워십프리젠터'), T(`로컬 서버를 시작할 수 없습니다 (포트 ${wanted}~${wanted + 9}).\n\n${lastErr && lastErr.message}`));
       app.exit(1);
       return;
     }
@@ -315,14 +317,14 @@ if (!app.requestSingleInstanceLock()) {
     core.on('settings', what => { if (what === 'shortcuts' || what === 'settings') applyGlobalShortcuts(); });
 
     // 글꼴 목록(Local Font Access) 권한 허용
-    // 카메라(배경용 '📷 카메라'): WorshipCue 자기 화면(127.0.0.1)에만, 소리 없이 영상만
+    // 카메라(배경용 '📷 카메라'): 워십프리젠터 자기 화면(127.0.0.1)에만, 소리 없이 영상만
     const localPage = u => /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//i.test(String(u || ''));
     session.defaultSession.setPermissionRequestHandler((wc, permission, cb, details) => cb(permission === 'local-fonts' || permission === 'clipboard-sanitized-write'
       || (permission === 'media' && localPage(details && details.requestingUrl) && !(details.mediaTypes || []).includes('audio'))));
     session.defaultSession.setPermissionCheckHandler((wc, permission, origin) => permission === 'local-fonts' || permission === 'clipboard-sanitized-write' || (permission === 'media' && localPage(origin + '/')));
 
     controlWin = new BrowserWindow({
-      width: 1500, height: 920, minWidth: 1100, minHeight: 700, backgroundColor: '#14171c', title: 'WorshipCue', icon: APP_ICON,
+      width: 1500, height: 920, minWidth: 1100, minHeight: 700, backgroundColor: '#14171c', title: T('워십프리젠터'), icon: APP_ICON,
       show: false,
       webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false, preload: path.join(__dirname, 'preload.js') },
     });
@@ -350,7 +352,7 @@ if (!app.requestSingleInstanceLock()) {
     // 외부 링크·새 창 차단
     controlWin.webContents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith(`http://127.0.0.1:${port}/outputs/stage`)) {
-        return { action: 'allow', overrideBrowserWindowOptions: { width: 1280, height: 720, title: T('WorshipCue 무대 화면'), backgroundColor: '#000000', icon: APP_ICON, autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } } };
+        return { action: 'allow', overrideBrowserWindowOptions: { width: 1280, height: 720, title: T('워십프리젠터 무대 화면'), backgroundColor: '#000000', icon: APP_ICON, autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } } };
       }
       return { action: 'deny' };
     });
@@ -359,7 +361,7 @@ if (!app.requestSingleInstanceLock()) {
     controlWin.on('close', e => {
       const live = core.presentation.getLiveState();
       if (live.hasLive && live.visible) {
-        const r = dialog.showMessageBoxSync(controlWin, { type: 'warning', buttons: [T('종료'), T('취소')], defaultId: 1, cancelId: 1, title: 'WorshipCue', message: T('본문을 송출 중입니다. 종료하면 예배당 화면과 OBS 출력이 사라집니다. 종료할까요?') });
+        const r = dialog.showMessageBoxSync(controlWin, { type: 'warning', buttons: [T('종료'), T('취소')], defaultId: 1, cancelId: 1, title: T('워십프리젠터'), message: T('본문을 송출 중입니다. 종료하면 예배당 화면과 OBS 출력이 사라집니다. 종료할까요?') });
         if (r !== 0) e.preventDefault();
       }
     });
@@ -388,7 +390,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
-    if (core) { try { core.sync.stop(); } catch { /* 무시 */ } core.settings.saveNow(); core.logger.info('WorshipCue 종료'); core.store.close(); }
+    if (core) { try { core.sync.stop(); } catch { /* 무시 */ } core.settings.saveNow(); core.logger.info('워십프리젠터 종료'); core.store.close(); }
   });
   process.on('uncaughtException', e => { try { core && core.logger.error('예외: ' + (e && e.stack || e)); } catch { /* 무시 */ } });
   app.on('window-all-closed', () => app.quit());

@@ -1,6 +1,6 @@
 {
   "appId": "org.worshipcue.app",
-  "productName": "WorshipCue",
+  "productName": "WorshipPresenter",
   "files": [
     "src/**/*",
     "package.json"
@@ -30,14 +30,14 @@
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
-    "shortcutName": "WorshipCue",
-    "artifactName": "WorshipCue-${version}-개인용-Setup.${ext}"
+    "shortcutName": "워십프리젠터",
+    "artifactName": "WorshipPresenter-${version}-개인용-Setup.${ext}"
   },
   "directories": {
     "output": "dist-personal"
   },
   "portable": {
-    "artifactName": "WorshipCue-${version}-개인용-Portable.${ext}"
+    "artifactName": "WorshipPresenter-${version}-개인용-Portable.${ext}"
   },
   "electronLanguages": [
     "ko",

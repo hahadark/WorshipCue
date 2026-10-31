@@ -141,7 +141,7 @@
         <label>전체 화면</label><div class="row-flex"><span class="url">http://127.0.0.1:${port}/outputs/main</span><button data-copy="http://127.0.0.1:${port}/outputs/main">복사</button></div>
         <label>투명 자막</label><div class="row-flex"><span class="url">http://127.0.0.1:${port}/outputs/overlay</span><button data-copy="http://127.0.0.1:${port}/outputs/overlay">복사</button></div>
         <label>OBS 도킹 (조작판)</label><div class="row-flex"><span class="url">http://127.0.0.1:${port}/dock</span><button data-copy="http://127.0.0.1:${port}/dock">복사</button></div>
-        <span></span><span class="note">OBS → 도킹 → 사용자 지정 브라우저 도킹 → 이름 WorshipCue, 주소 붙여넣기. OBS 화면 한쪽에서 지금·다음 슬라이드, 이전·다음·숨김, 큐시트 순서 송출, 무대 메시지를 쓸 수 있습니다.</span>
+        <span></span><span class="note">OBS → 도킹 → 사용자 지정 브라우저 도킹 → 이름 워십프리젠터, 주소 붙여넣기. OBS 화면 한쪽에서 지금·다음 슬라이드, 이전·다음·숨김, 큐시트 순서 송출, 무대 메시지를 쓸 수 있습니다.</span>
         <span></span><div class="note">OBS → 소스 추가 → 브라우저 → URL 입력, 너비/높이는 템플릿 해상도(기본 1920×1080). 본문이 바뀌면 자동으로 갱신되며 새로 고침이 필요 없습니다.</div>
         <h4>내부망 출력 (다른 PC 의 OBS)</h4>
         <span></span><label class="tc-toggle"><input type="checkbox" id="oLan" ${lan.enabled ? 'checked' : ''}> 같은 네트워크의 다른 PC(송출 PC)에서 출력 화면 열기</label>
@@ -507,7 +507,7 @@
         <span></span><div class="note">여기에 적은 키와 겹치면 경고를 표시합니다. 단독 글자키(A, 1 등)와 Enter는 검색창 입력과 겹치므로 등록할 수 없습니다.</div>
         <label>전역 단축키</label>
         <label><input type="checkbox" id="kGlobal" ${s.globalShortcuts ? 'checked' : ''} ${gStat.available ? '' : 'disabled'}> 다른 프로그램(OBS 등)에 초점이 있어도 송출 단축키(이전·다음·송출·숨김) 사용</label>
-        <span></span><div class="note">${gStat.available ? '기본값은 꺼짐입니다. 켜면 해당 키가 다른 모든 프로그램에서 WorshipCue 로 전달되므로, OBS 단축키와 겹치지 않는지 확인하세요.' : '데스크톱 프로그램에서만 사용할 수 있습니다.'}</div>
+        <span></span><div class="note">${gStat.available ? '기본값은 꺼짐입니다. 켜면 해당 키가 다른 모든 프로그램에서 워십프리젠터 로 전달되므로, OBS 단축키와 겹치지 않는지 확인하세요.' : '데스크톱 프로그램에서만 사용할 수 있습니다.'}</div>
       </div>`;
     const body = $('#setBody');
     body.querySelectorAll('.keycap').forEach(b => b.onclick = () => {
@@ -562,7 +562,7 @@
       <h4 style="color:var(--hl);margin-top:22px">여러 PC 동기화</h4>
       <div class="note">원드라이브·구글 드라이브처럼 PC 사이에 맞춰지는 폴더를 고르면 <b>찬양 라이브러리 · 큐시트 · 오버레이</b>를 그 폴더의 파일(WorshipCue-sync.json)로 주고받습니다.
         집에서 준비하고 교회 PC 에서 띄우는 용도. 같은 항목은 더 최근에 고친 쪽을 씁니다. 시작할 때 읽고, 바뀌면 1분 안에 씁니다.</div>
-      <div class="row-flex" style="margin:8px 0"><input type="text" id="syDir" placeholder="예: D:\\OneDrive\\WorshipCue" style="width:360px"><button id="syPick">📁 폴더 고르기…</button><button id="sySet" class="primary">저장</button><button id="syNow">지금 동기화</button><button id="syOff">끄기</button></div>
+      <div class="row-flex" style="margin:8px 0"><input type="text" id="syDir" placeholder="예: D:\\OneDrive\\워십프리젠터" style="width:360px"><button id="syPick">📁 폴더 고르기…</button><button id="sySet" class="primary">저장</button><button id="syNow">지금 동기화</button><button id="syOff">끄기</button></div>
       <div id="syInfo" class="note"></div>
       <h4 style="color:var(--hl);margin-top:22px">자동 백업</h4>
       <div class="note">하루 한 번 찬양·큐시트·기록이 든 DB 와 설정을 <b>데이터 폴더\\backups</b> 에 복사합니다 (10일치). 되돌리면 다음에 다시 시작할 때 적용되고, 지금 것은 bible.pre-restore.db 로 남습니다.</div>
@@ -748,7 +748,7 @@
   function drawAbout() {
     const vs = app.state.versions;
     $('#setBody').innerHTML = `
-      <h4 style="margin-top:0;color:var(--hl)">WorshipCue</h4>
+      <h4 style="margin-top:0;color:var(--hl)">워십프리젠터</h4>
       <div class="note">교회 예배 순서 통합 송출 프로그램<br>데이터 폴더: <span class="url">${esc(app.state.dataDir)}</span> (설정·성경 DB·로그)</div>
       <h4 style="color:var(--hl)">버전 · 업데이트</h4>
       <div id="updBox"></div>

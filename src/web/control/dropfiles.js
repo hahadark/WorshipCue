@@ -45,7 +45,7 @@
     const paths = pathOf ? files.map(f => pathOf(f)).filter(Boolean) : [];
     // AI 주보 창: 파일 자체를 넘긴다 (경로 필요 없음)
     if (!$('#modal').hidden && $('#modal .ai-form') && window.BCAI && window.BCAI.setFile) { window.BCAI.setFile(files[0]); return; }
-    if (!paths.length) return app.showMsg('끌어다 놓기는 WorshipCue 데스크톱 프로그램에서 됩니다.', 'info', 3000);
+    if (!paths.length) return app.showMsg('끌어다 놓기는 워십프리젠터 데스크톱 프로그램에서 됩니다.', 'info', 3000);
     const r = await app.cmd('addDroppedFiles', { paths });
     if (!r.ok) return app.showMsg(r.error, 'error');
     const list = r.result;

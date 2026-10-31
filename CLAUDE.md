@@ -1,4 +1,6 @@
-# WorshipCue — 이어서 작업하는 에이전트를 위한 핸드오프
+# 워십프리젠터 (WorshipPresenter, 옛 이름 WorshipCue) — 이어서 작업하는 에이전트를 위한 핸드오프
+
+> 2026-10-31 이름 변경: 화면·설치 파일·문서의 이름만 '워십프리젠터'(영어 Worship Presenter, 파일 WorshipPresenter-…)로 바꿨다. **바꾸지 않은 것**: 저장소 주소 hahadark/WorshipCue(자동 업데이트가 여기를 봄) · appId org.worshipcue.app · 데이터 폴더 %APPDATA%\WorshipCue (main.js 에서 userData 도 여기로 고정) · 문서\WorshipCue 찬양 PPT · 동기화 파일 WorshipCue-sync.json · X-WorshipCue 머리글 · 코드 이름(WorshipCueCore, wc- 저장소 키, 패키지 name worshipcue).
 
 교회 예배 순서(큐시트) 통합 송출 프로그램. Electron 44 + node:sqlite, 조작 화면은 바닐라 JS. 저장소 `hahadark/WorshipCue`.
 사용자(hahadark)는 한국어로 대화하고, 설명·커밋 메시지·주석도 한국어로 쓴다. 데모 데이터는 홍길동·○○교회처럼 가상으로.
@@ -9,8 +11,8 @@
   커밋 메시지 끝에 `Co-Authored-By: Claude <모델명> <noreply@anthropic.com>` 한 줄. PR 본문 끝에는 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 - **빌드·릴리스·푸시는 사용자가 시킬 때만.** 커밋은 작업 단위마다 해도 된다.
 - **GitHub 에 절대 올리지 않는 것**: `data-personal/`(저작권 있는 번역본·찬송가 `.hdb`/`.cmp`), 개인용 빌드, `telemetry/.stats-key`. 모두 `.gitignore` 에 있다. 새찬송가 악보(`.cmp`, 100MB 넘음)도 저작권 때문에 저장소·공개 릴리스에 넣지 않는다.
-- **개인용 빌드는 빌드할 때마다** `D:\OneDrive - The Salvation Army Korea Territory\첨부 파일\` 에 복사한다 (`WorshipCue-<버전>-개인용-Setup.exe` · `…-Portable.exe`). 옛 버전은 지우지 않는다. 이 폴더는 작업 폴더 밖이라 앱의 reveal_path 로 열리지 않는다.
-- 사용자가 띄워 둔 WorshipCue 를 죽이지 않는다 (점검은 다른 포트·임시 데이터 폴더로).
+- **개인용 빌드는 빌드할 때마다** `D:\OneDrive - The Salvation Army Korea Territory\첨부 파일\` 에 복사한다 (`WorshipPresenter-<버전>-개인용-Setup.exe` · `…-Portable.exe`). 옛 버전은 지우지 않는다. 이 폴더는 작업 폴더 밖이라 앱의 reveal_path 로 열리지 않는다.
+- 사용자가 띄워 둔 워십프리젠터(WorshipCue) 를 죽이지 않는다 (점검은 다른 포트·임시 데이터 폴더로).
 - 사용자에게 보내는 파일(SendUserFile)은 30MB 미만.
 - 줄 끝: 저장소 파일은 LF(일부 CRLF). 편집은 Edit 도구나 `\r\n` 을 보존하는 스크립트로. `sed` 로 `\n` 이스케이프가 든 JS 를 고치면 망가진다.
 

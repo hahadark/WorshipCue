@@ -1,4 +1,4 @@
-/* WorshipCue 공용 렌더러
+/* 워십프리젠터 공용 렌더러
  * 미리보기·Live 모니터·전체 화면 창·OBS 출력이 모두 같은 코드로 그린다.
  * 모든 크기는 템플릿 해상도(width×height) 기준이며, 화면에는 transform: scale 로 맞춘다.
  */

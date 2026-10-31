@@ -1,4 +1,4 @@
-/* WorshipCue 조작 화면
+/* 워십프리젠터 조작 화면
  * 원칙: 검색·미리보기는 Live 를 절대 바꾸지 않는다. Live 는 송출 명령으로만 바뀐다.
  */
 (function () {
@@ -288,7 +288,7 @@
           <div class="note">안내 페이지에서 윈도우용 베들레헴을 내려받아 압축을 풉니다.</div></li>
         <li><b>BethlehemWin 폴더 복사</b><br>
           <div class="note">압축을 풀면 나오는 <b>BethlehemWin</b> 폴더를 통째로 <span class="url">C:\\BethlehemWin</span> 처럼 드라이브 맨 위에 복사합니다. (Program Files 안은 피하세요)</div></li>
-        <li><b>WorshipCue 로 가져오기</b><br>
+        <li><b>워십프리젠터 로 가져오기</b><br>
           <button id="gFind" class="big send">베들레헴 자동으로 찾기</button>
           <div class="note">찾은 번역본을 체크하고 [선택한 번역본 가져오기]를 누르면 끝입니다. 나중에 설정 → 성경 데이터에서도 할 수 있습니다.</div></li>
       </ol>

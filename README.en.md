@@ -1,4 +1,6 @@
-# WorshipCue
+# Worship Presenter
+
+> Formerly WorshipCue. Your cue sheets, settings and data carry over.
 
 [한국어](README.md) | **English**
 
@@ -6,10 +8,10 @@ A **worship presentation program for churches** (Windows).
 
 Build your order of service ahead of time, and during the service you just press **F6**: Bible passages, song lyrics, hymn scores, announcements and videos go out in order to the sanctuary screen (second monitor) and to OBS for streaming.
 
-**⬇ Download**: [Latest release](https://github.com/hahadark/WorshipCue/releases/latest) — Windows `WorshipCue-…-English-Portable.exe` (no install) · Mac `WorshipCue-…-English-mac-arm64.dmg` (Apple Silicon) ([macOS notes](#macos)) — includes the **World English Bible (WEB, public domain)** and starts in English.
-The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Version. Both builds contain the same program; switch the language any time in `View → 🌐 Language`.
+**⬇ Download**: [Latest release](https://github.com/hahadark/WorshipCue/releases/latest) — Windows `WorshipPresenter-…-English-Portable.exe` (no install) · Mac `WorshipPresenter-…-English-mac-arm64.dmg` (Apple Silicon) ([macOS notes](#macos)) — includes the **World English Bible (WEB, public domain)** and starts in English.
+The Korean build (`WorshipPresenter-…-Portable.exe`) includes the Korean Revised Version. Both builds contain the same program; switch the language any time in `View → 🌐 Language`.
 
-![WorshipCue control screen](docs/images/main-en.png)
+![Worship Presenter control screen](docs/images/main-en.png)
 
 <sub>Left: cue sheet (order of service) · center: the selected item's editor and slides · right: Preview (green) and LIVE (red). All names and lyrics are examples.</sub>
 
@@ -28,7 +30,7 @@ The Korean build (`WorshipCue-…-Portable.exe`) includes the Korean Revised Ver
 
 ## Get started in 5 minutes
 
-1. **Download and run** `WorshipCue-…-English-Setup.exe` (installer — **notifies you of new versions**; download the new English-Setup from the release page) or `…-English-Portable.exe` (no install, USB — notifies you of new versions) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest). Updates keep your cue sheets, Bible data and settings; see `Settings → About`.
+1. **Download and run** `WorshipPresenter-…-English-Setup.exe` (installer — **notifies you of new versions**; download the new English-Setup from the release page) or `…-English-Portable.exe` (no install, USB — notifies you of new versions) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest). Updates keep your cue sheets, Bible data and settings; see `Settings → About`.
    - 📊 **Anonymous usage count**: once a day the app sends only a **random install ID, version, UI language and OS** so we can count how many installs are in use (no names, church, Bible or cue sheet content). Turn it off in `Settings → About → Send anonymous usage statistics`. If Windows SmartScreen warns you, click "More info → Run anyway".
 2. **Sanctuary screen**: connect a second monitor and click `Second screen` at the bottom (Ctrl+Shift+F). Choose the monitor in `File → ⚙ Settings → Output`.
 3. **OBS** (when streaming): add a Browser source with `http://127.0.0.1:37528/outputs/main` (full screen) or `/outputs/overlay` (transparent lower third), 1920×1080.
@@ -96,17 +98,17 @@ Open it with `✎ Slide editor` in the item editor, the ✎ on a thumbnail, or *
 ## OBS dock (control panel inside OBS)
 
 1. Copy the **OBS dock** URL `http://127.0.0.1:37528/dock` from `Settings → Output`.
-2. In OBS: `Docks → Custom Browser Docks` → name `WorshipCue`, paste the URL → Apply.
+2. In OBS: `Docks → Custom Browser Docks` → name `Worship Presenter`, paste the URL → Apply.
 3. You get the current/next slide, ◀ Prev · Next ▶ · hide text, verse/chorus jumps, the cue sheet (tap to go live) and stage messages right inside OBS.
 
 It only works on this PC, so no PIN is needed. Turning off the second screen also hides the slide in OBS browser sources (can be turned off in `Settings → Output`).
 
 ## macOS
 
-- Download `WorshipCue-…-English-mac-arm64.dmg` (Apple Silicon M1/M2/M3… only — Intel Macs are not supported) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest), open it and drag WorshipCue to `Applications`.
-- **First launch**: the app isn't signed with an Apple Developer certificate, so macOS warns about an unidentified developer. Right-click (Control-click) WorshipCue in `Applications` → **Open** → **Open**. (macOS 15+: try opening once, then `System Settings → Privacy & Security` → **Open Anyway**.) If it says the app "is damaged", run `xattr -cr /Applications/WorshipCue.app` once in Terminal.
+- Download `WorshipPresenter-…-English-mac-arm64.dmg` (Apple Silicon M1/M2/M3… only — Intel Macs are not supported) from [Releases](https://github.com/hahadark/WorshipCue/releases/latest), open it and drag Worship Presenter to `Applications`.
+- **First launch**: the app isn't signed with an Apple Developer certificate, so macOS warns about an unidentified developer. Right-click (Control-click) Worship Presenter in `Applications` → **Open** → **Open**. (macOS 15+: try opening once, then `System Settings → Privacy & Security` → **Open Anyway**.) If it says the app "is damaged", run `xattr -cr /Applications/WorshipPresenter.app` once in Terminal.
 - **Shortcuts**: Ctrl on Windows is **⌘ (Command)** on Mac (⌘K search · ⌘E slide editor · ⌘B bold · ⌘⇧F second screen), and the app shows ⌘. On MacBooks press **fn** with F5/F6/F9/F10, or turn on "Use F1, F2, etc. keys as standard function keys" in `System Settings → Keyboard → Keyboard Shortcuts → Function Keys`. All shortcuts can be changed in `Settings → Shortcuts`.
-- **Camera**: macOS asks for camera permission the first time. If you denied it, enable WorshipCue in `System Settings → Privacy & Security → Camera`.
+- **Camera**: macOS asks for camera permission the first time. If you denied it, enable Worship Presenter in `System Settings → Privacy & Security → Camera`.
 - Not available on Mac: reading hymn PPTs "as shown" (needs PowerPoint on Windows; Mac uses the Auto mode).
 
 ## Keyboard shortcuts

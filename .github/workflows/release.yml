@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           tag="${{ inputs.tag }}"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --draft --target "$(git rev-parse HEAD)" --title "WorshipCue ${tag#v}" --notes "WorshipCue ${tag#v}"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --draft --target "$(git rev-parse HEAD)" --title "워십프리젠터 ${tag#v}" --notes "워십프리젠터 (WorshipPresenter) ${tag#v}"
           # 자동 업데이트는 한국어판 설치판 기준 (latest.yml · blockmap)
           gh release upload "$tag" dist/*-Setup.exe dist/*-Setup.exe.blockmap dist/*-Portable.exe dist/latest.yml dist-en/*-Setup.exe dist-en/*-Portable.exe --clobber
         env:

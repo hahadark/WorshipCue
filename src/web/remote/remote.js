@@ -19,7 +19,7 @@
 
   async function poll() {
     let r;
-    try { r = await fetch('/r/state?pin=' + encodeURIComponent(pin)).then(x => x.json()); } catch { $('title').textContent = DOCK ? '연결 끊김 — WorshipCue 가 켜져 있는지 확인하세요' : '연결 끊김 — 같은 Wi-Fi 인지 확인하세요'; return; }
+    try { r = await fetch('/r/state?pin=' + encodeURIComponent(pin)).then(x => x.json()); } catch { $('title').textContent = DOCK ? '연결 끊김 — 워십프리젠터 가 켜져 있는지 확인하세요' : '연결 끊김 — 같은 Wi-Fi 인지 확인하세요'; return; }
     if (!r.ok) { try { sessionStorage.removeItem('wc-pin'); } catch { /* 무시 */ } return showLogin(r.error); }
     $('login').hidden = true; $('main').hidden = false; $('bar').hidden = false;
     const L = r.live;

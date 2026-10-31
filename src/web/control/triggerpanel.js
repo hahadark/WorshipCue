@@ -19,7 +19,7 @@
   }
   function draw(info) {
     app.openModal('🎛 스트림덱 · 외부 단추 연결', `<div class="trg">
-      <div class="note">Stream Deck · Companion · 매크로 프로그램의 단추에 아래 주소를 넣으면, 누를 때 WorshipCue 가 그 동작을 합니다 (HTTP GET).<br>
+      <div class="note">Stream Deck · Companion · 매크로 프로그램의 단추에 아래 주소를 넣으면, 누를 때 워십프리젠터 가 그 동작을 합니다 (HTTP GET).<br>
       이 PC 안에서만 열립니다 (Stream Deck 이 이 PC 에 꽂혀 있을 때). 주소의 열쇠를 바꾸면 예전 주소는 더 이상 동작하지 않습니다.</div>
       <div class="trg-list">${info.actions.map(a => `<div class="trg-row"><b>${esc(a.name)}</b><code>${esc(url(info.key, a.id))}</code><button data-copy="${esc(url(info.key, a.id))}">복사</button><button data-test="${esc(a.id)}" title="지금 한 번 눌러 보기">▶</button></div>`).join('')}</div>
       <h4>설정하는 법</h4>

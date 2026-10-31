@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#111418">
-<title>WorshipCue 리모컨</title>
+<title>워십프리젠터 리모컨</title>
 <style>
   :root { --bg: #111418; --panel: #1a1f27; --line: #2c3340; --text: #e8ebf0; --muted: #8a93a6; --live: #e04b4b; --pv: #2e9e57; --accent: #3d7bff; }
   * { box-sizing: border-box; }
@@ -58,14 +58,14 @@
 </head>
 <body>
 <div id="login" class="login" hidden>
-  <h1>WorshipCue 리모컨</h1>
+  <h1>워십프리젠터 리모컨</h1>
   <div class="muted">조작 PC 의 '무대·타이머' 패널에 보이는 PIN 6자리를 입력하세요</div>
   <input id="pin" inputmode="numeric" maxlength="6" autocomplete="off">
   <button id="go">연결</button>
   <div class="err" id="loginErr"></div>
 </div>
 <div id="main" hidden>
-  <div class="card warn" id="noctl" hidden>조작 화면(WorshipCue)이 꺼져 있습니다. 다음·이전은 되지만 큐시트 순서 송출은 안 됩니다.</div>
+  <div class="card warn" id="noctl" hidden>조작 화면(워십프리젠터)이 꺼져 있습니다. 다음·이전은 되지만 큐시트 순서 송출은 안 됩니다.</div>
   <div class="card live">
     <span class="badge" id="badge">LIVE</span> <span class="muted" id="count"></span>
     <div class="t" id="title">송출 중인 화면 없음</div>

@@ -1,6 +1,6 @@
 {
   "appId": "org.worshipcue.app",
-  "productName": "WorshipCue",
+  "productName": "WorshipPresenter",
   "files": [
     "src/**/*",
     "package.json"
@@ -22,14 +22,14 @@
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
-    "shortcutName": "WorshipCue",
-    "artifactName": "WorshipCue-${version}-English-Setup.${ext}"
+    "shortcutName": "Worship Presenter",
+    "artifactName": "WorshipPresenter-${version}-English-Setup.${ext}"
   },
   "directories": {
     "output": "dist-en"
   },
   "portable": {
-    "artifactName": "WorshipCue-${version}-English-Portable.${ext}"
+    "artifactName": "WorshipPresenter-${version}-English-Portable.${ext}"
   },
   "electronLanguages": [
     "ko",
@@ -59,7 +59,7 @@
     "icon": "build/icon.png"
   },
   "dmg": {
-    "artifactName": "WorshipCue-${version}-English-mac-${arch}.${ext}"
+    "artifactName": "WorshipPresenter-${version}-English-mac-${arch}.${ext}"
   },
   "afterPack": "build/adhoc-sign.js",
   "publish": [

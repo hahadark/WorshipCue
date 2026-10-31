@@ -37,7 +37,7 @@
         <div class="rm-step">② PIN 을 입력하세요</div>
         <div class="rm-pin">${esc(s.pin)}</div>
         <div class="row-flex"><button id="rmNewPin" title="새 PIN 으로 바꾸면 연결된 휴대폰은 다시 입력해야 합니다">PIN 바꾸기</button><button id="rmCopy">주소 복사</button><button id="rmOffBtn" class="danger">리모컨 끄기</button></div>
-        <div class="note">휴대폰이 <b>같은 Wi-Fi</b> 에 있어야 합니다. 안 열리면 Windows 방화벽에서 WorshipCue 의 '개인 네트워크' 허용을 확인하세요. PIN 을 5번 틀리면 30초 잠깁니다.</div>
+        <div class="note">휴대폰이 <b>같은 Wi-Fi</b> 에 있어야 합니다. 안 열리면 Windows 방화벽에서 워십프리젠터 의 '개인 네트워크' 허용을 확인하세요. PIN 을 5번 틀리면 30초 잠깁니다.</div>
       </div></div>`;
   }
 

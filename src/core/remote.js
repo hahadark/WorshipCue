@@ -155,7 +155,7 @@ class RemoteServer {
   /** 리모컨에서 할 수 있는 일만 */
   act(a) {
     const core = this.core;
-    const control = () => { if (![...core.outputClients.values()].some(c => c.client === 'control')) throw new Error('조작 화면(WorshipCue)이 열려 있어야 합니다.'); };
+    const control = () => { if (![...core.outputClients.values()].some(c => c.client === 'control')) throw new Error('조작 화면(워십프리젠터)이 열려 있어야 합니다.'); };
     switch (a.action) {
       case 'next': return core.command('nextSlide');
       case 'prev': return core.command('previousSlide');

@@ -208,7 +208,7 @@ async function askPoints({ apiKey, model, text, meta = {}, extra = '', fetchImpl
   const user = `${metaLines(meta) ? metaLines(meta) + '\n\n' : ''}[설교 원고]\n${t.slice(0, 60000)}${extra ? `\n\n추가 요청: ${extra}` : ''}`;
   const r = await fetchImpl(endpoint || DEFAULT_ENDPOINT, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://github.com/hahadark/WorshipCue', 'X-Title': 'WorshipCue' },
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://github.com/hahadark/WorshipCue', 'X-Title': 'Worship Presenter' },
     body: JSON.stringify({ model: model || DEFAULT_MODEL, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }], temperature: 0.2, response_format: { type: 'json_object' } }),
   });
   const body = await r.json().catch(() => ({}));

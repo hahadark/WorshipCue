@@ -12,6 +12,6 @@ const dataDir = arg('--data') || path.join(process.env.APPDATA || os.homedir(), 
 const core = new WorshipCueCore({ dataDir, logEcho: true, seedDb: path.join(__dirname, '..', 'data', 'bible.db') });
 const port = Number(arg('--port')) || core.settings.get().port;
 startServer(core, { webDir: path.join(__dirname, 'web'), port }).then(({ port }) => {
-  console.log(`WorshipCue 실행 중: http://127.0.0.1:${port}/control/`);
+  console.log(`워십프리젠터 실행 중: http://127.0.0.1:${port}/control/`);
 }).catch(e => { console.error('서버 시작 실패:', e.message); process.exit(1); });
 process.on('SIGINT', () => { core.settings.saveNow(); core.store.close(); process.exit(0); });

@@ -2,7 +2,7 @@
 // 찬양 가져오기: 다른 프로그램의 찬양 파일 → 찬양 라이브러리 형식 { title, lyrics, credit, arrangement }
 //   OpenLyrics XML (OpenLP 내보내기 .xml) · ChordPro (.cho .chordpro .chopro .crd) · ProPresenter 6 (.pro6)
 //   PowerPoint (.pptx · .ppt · .pps · .ppsx 의 글자) · 글 (.txt)
-// 가사 형식: 빈 줄 = 슬라이드, [1절] [후렴] 이름표 줄, 코드는 [G] 처럼 (WorshipCue 와 같음)
+// 가사 형식: 빈 줄 = 슬라이드, [1절] [후렴] 이름표 줄, 코드는 [G] 처럼 (워십프리젠터 와 같음)
 
 const fs = require('fs');
 const path = require('path');

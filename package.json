@@ -1,10 +1,10 @@
 {
   "name": "worshipcue",
-  "productName": "WorshipCue",
+  "productName": "WorshipPresenter",
   "version": "1.11.0",
-  "description": "교회 예배 순서(큐시트) 통합 송출 프로그램 — 성경·찬양 가사·공지·제목·이미지",
+  "description": "워십프리젠터 — 교회 예배 순서(큐시트) 통합 송출 프로그램 · 성경·찬양 가사·공지·제목·이미지",
   "main": "src/main/main.js",
-  "author": "WorshipCue",
+  "author": "WorshipPresenter",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
@@ -31,7 +31,7 @@
   },
   "build": {
     "appId": "org.worshipcue.app",
-    "productName": "WorshipCue",
+    "productName": "WorshipPresenter",
     "files": [
       "src/**/*",
       "package.json"
@@ -53,15 +53,15 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "WorshipCue",
-      "artifactName": "WorshipCue-${version}-Setup.${ext}",
+      "shortcutName": "워십프리젠터",
+      "artifactName": "WorshipPresenter-${version}-Setup.${ext}",
       "include": "build/installer.nsh"
     },
     "directories": {
       "output": "dist"
     },
     "portable": {
-      "artifactName": "WorshipCue-${version}-Portable.${ext}"
+      "artifactName": "WorshipPresenter-${version}-Portable.${ext}"
     },
     "electronLanguages": [
       "ko",
@@ -88,7 +88,7 @@
       "icon": "build/icon.png"
     },
     "dmg": {
-      "artifactName": "WorshipCue-${version}-mac-${arch}.${ext}"
+      "artifactName": "WorshipPresenter-${version}-mac-${arch}.${ext}"
     },
     "afterPack": "build/adhoc-sign.js",
     "publish": [

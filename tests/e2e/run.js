@@ -1,6 +1,6 @@
 'use strict';
 // 실제 프로그램을 띄워서 화면까지 점검 (npm run test:e2e)
-//   1) 임시 데이터 폴더(공개 성경 DB 만)에 WorshipCue 를 띄운다
+//   1) 임시 데이터 폴더(공개 성경 DB 만)에 워십프리젠터 를 띄운다
 //   2) 또 하나의 Electron 으로 smoke.js 를 돌려 조작 화면을 숨은 창에 띄우고 점검한다
 //   3) 결과 JSON (tests/e2e/out/smoke.json) · 실패가 있으면 종료 코드 1
 const { spawn } = require('child_process');
@@ -37,8 +37,8 @@ async function main() {
     }
     if (app.exitCode !== null) break;
   }
-  if (!port) { app.kill(); throw new Error('WorshipCue 가 뜨지 않았습니다.'); }
-  console.log(`WorshipCue: 127.0.0.1:${port} (데이터 ${dir})`);
+  if (!port) { app.kill(); throw new Error('워십프리젠터 가 뜨지 않았습니다.'); }
+  console.log(`워십프리젠터: 127.0.0.1:${port} (데이터 ${dir})`);
 
   const t = spawn(electron, [path.join(__dirname, 'smoke.js'), String(port), OUT], { cwd: ROOT, env, stdio: ['ignore', 'inherit', 'inherit'] });
   const code = await new Promise(r => { const k = setTimeout(() => { t.kill(); r(-1); }, 180000); t.on('exit', c => { clearTimeout(k); r(c); }); });

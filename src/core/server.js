@@ -149,7 +149,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
     const p = decodeURIComponent(url.pathname);
     if (lan) {
-      if (!lanGate(req, res, url, p)) { res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('WorshipCue: key required (설정 → 출력 → 내부망 출력의 주소를 그대로 쓰세요)'); }
+      if (!lanGate(req, res, url, p)) { res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Worship Presenter: key required (설정 → 출력 → 내부망 출력의 주소를 그대로 쓰세요)'); }
     } else if (!okHost(req)) { res.writeHead(421); return res.end('Misdirected'); }
     req.lan = lan;
 
@@ -186,7 +186,7 @@ function startServer(core, { webDir, port, host = '127.0.0.1' }) {
         const want = core.settings.get().triggerKey || '';
         const got = String(url.searchParams.get('key') || '');
         const crypto = require('crypto');
-        if (!want || got.length !== want.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want))) return json(res, 403, { ok: false, error: '열쇠(key)가 맞지 않습니다. WorshipCue → 도구 → 스트림덱·외부 단추에서 주소를 다시 복사하세요.' });
+        if (!want || got.length !== want.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want))) return json(res, 403, { ok: false, error: '열쇠(key)가 맞지 않습니다. 워십프리젠터 → 도구 → 스트림덱·외부 단추에서 주소를 다시 복사하세요.' });
         try {
           const result = core.trigger(p.slice('/api/trigger/'.length), Object.fromEntries(url.searchParams));
           return json(res, 200, { ok: true, result: result && result.ok === false ? result : true });

@@ -121,10 +121,10 @@ ${FORMAT}
 ${RULES}`;
 
 // ---------------- 채팅 AI (키 없이): 프롬프트 · 샘플 파일 ----------------
-const SAMPLE_NAME = 'WorshipCue-큐시트-샘플.json';
+const SAMPLE_NAME = '워십프리젠터-큐시트-샘플.json';
 /** 샘플 큐시트 (가상 이름·예시) — 채팅 AI 에 형식을 보여 주는 용도 */
 const SAMPLE = {
-  _안내: 'WorshipCue 큐시트 형식 예시입니다. 주보의 예배 순서로 이 형식 그대로 새로 만들어 주세요. (이 파일의 내용은 예시일 뿐입니다)',
+  _안내: '워십프리젠터 큐시트 형식 예시입니다. 주보의 예배 순서로 이 형식 그대로 새로 만들어 주세요. (이 파일의 내용은 예시일 뿐입니다)',
   name: '2026-10-18 주일 예배',
   serviceDate: '2026-10-18',
   startTime: '11:00',
@@ -145,8 +145,8 @@ const SAMPLE = {
 
 /** 채팅 AI(ChatGPT·Claude·Gemini 등) 에 붙여 넣을 프롬프트 */
 function chatPrompt(extra = '') {
-  return `[WorshipCue 큐시트 만들기]
-너는 한국 교회 예배 방송실을 돕는 도우미다. 첨부한 주보에서 '예배 순서'(주일 낮/오전 예배를 우선)를 찾아, 송출 프로그램 WorshipCue 가 불러올 큐시트 JSON 을 만들어 줘.
+  return `[워십프리젠터 큐시트 만들기]
+너는 한국 교회 예배 방송실을 돕는 도우미다. 첨부한 주보에서 '예배 순서'(주일 낮/오전 예배를 우선)를 찾아, 송출 프로그램 워십프리젠터 가 불러올 큐시트 JSON 을 만들어 줘.
 첨부한 샘플 파일(${SAMPLE_NAME})과 똑같은 형식으로 만든다. 샘플의 내용(이름·장절·찬송 번호)은 예시일 뿐이니 쓰지 말고, 주보 내용으로만 채운다.
 
 형식:
@@ -156,7 +156,7 @@ ${RULES}
 
 답하는 법:
 - JSON 하나만 \`\`\`json 코드 블록으로 답한다. 앞뒤 설명은 짧게.
-- 파일을 만들 수 있으면 'WorshipCue-큐시트.json' 파일로 줘도 된다.
+- 파일을 만들 수 있으면 '워십프리젠터-큐시트.json' 파일로 줘도 된다.
 - 주보에서 읽기 어려운 부분은 지어내지 말고 note 에 "확인 필요" 라고 적는다.${extra ? `\n\n추가 요청: ${extra}` : ''}`;
 }
 
@@ -274,7 +274,7 @@ async function askAI({ apiKey, model, input, fetchImpl = fetch, extra = '', endp
   if (extra) content.push({ type: 'text', text: '추가 요청: ' + extra });
   const r = await fetchImpl(endpoint || DEFAULT_ENDPOINT, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://github.com/hahadark/WorshipCue', 'X-Title': 'WorshipCue' },
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://github.com/hahadark/WorshipCue', 'X-Title': 'Worship Presenter' },
     body: JSON.stringify({ model: model || DEFAULT_MODEL, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content }], temperature: 0.1, response_format: { type: 'json_object' } }),
   });
   const body = await r.json().catch(() => ({}));

@@ -41,13 +41,13 @@ function parseJson(text, report) {
     out.verses.push({ bookRaw: bookVal, bookIndex: idx, chapter: ch, verse: v, text: t });
   };
 
-  // 1) WorshipCue 기본 형식: { version: {...}, verses: [{book, chapter, verse, text}], headings?: [...] }
+  // 1) 워십프리젠터(WorshipCue) 기본 형식: { version: {...}, verses: [{book, chapter, verse, text}], headings?: [...] }
   if (data && !Array.isArray(data) && Array.isArray(data.verses)) {
     out.meta = data.version || data.meta || {};
     for (const r of data.verses) push(r.book ?? r.book_id ?? r.b, r.chapter ?? r.c, r.verse ?? r.v, r.text ?? r.t);
     for (const h of data.headings || []) out.headings.push({ bookRaw: h.book, chapter: h.chapter, verse: h.verse ?? 1, text: h.text });
     for (const n of data.notes || []) out.notes.push({ bookRaw: n.book, chapter: n.chapter, verse: n.verse, text: n.text });
-    report.format = 'JSON (WorshipCue)';
+    report.format = 'JSON (워십프리젠터)';
     return out;
   }
   // 2) 평면 배열: [{book, chapter, verse, text}]

@@ -17,7 +17,7 @@ function newer(a, b) { // a > b ?
 
 function latestRelease() {
   return new Promise((resolve, reject) => {
-    const req = https.get(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'WorshipCue', Accept: 'application/vnd.github+json' }, timeout: 15000 }, res => {
+    const req = https.get(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'WorshipPresenter', Accept: 'application/vnd.github+json' }, timeout: 15000 }, res => {
       let body = '';
       res.on('data', c => { body += c; });
       res.on('end', () => { try { const j = JSON.parse(body); if (!j.tag_name) throw new Error('no tag'); resolve(j); } catch (e) { reject(e); } });

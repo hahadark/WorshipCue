@@ -123,7 +123,7 @@
     inp.onchange = () => {
       const pathOf = window.wcDesktop && window.wcDesktop.pathOf;
       const paths = pathOf ? [...inp.files].map(f => pathOf(f)).filter(Boolean) : [];
-      if (!paths.length) return app.showMsg('가져오기는 WorshipCue 데스크톱 프로그램에서 됩니다.', 'info');
+      if (!paths.length) return app.showMsg('가져오기는 워십프리젠터 데스크톱 프로그램에서 됩니다.', 'info');
       importSongs(paths);
     };
     inp.click();
