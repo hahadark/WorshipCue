@@ -742,6 +742,17 @@ WorshipCueCore.prototype.commands = {
     this.emit('outputs');
     return r;
   },
+  /** Companion 단추 누르기 (loc: '1/0/2, 2/1/0') · 설정 (주소·포트) */
+  async companionPress(a) { return require('./companion').press(this, a && a.loc); },
+  setCompanion(a) {
+    this.settings.update(d => {
+      d.companion = { host: '127.0.0.1', port: 8000, ...(d.companion || {}) };
+      if (typeof a.host === 'string') d.companion.host = a.host.trim().slice(0, 200) || '127.0.0.1';
+      if (a.port !== undefined) d.companion.port = Math.max(1, Math.min(65535, Math.round(Number(a.port)) || 8000));
+    });
+    this.settingsChanged('settings');
+    return this.settings.get().companion;
+  },
   /** 한글 입력 자동 전환: 가사·공지 칸에 들어가면 (설정 imeAuto, 윈도우 데스크톱만) */
   async imeKorean() {
     if (this.settings.get().imeAuto === false || !this.desktop || !this.desktop.setImeKorean) return { skipped: true };

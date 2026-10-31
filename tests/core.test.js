@@ -1733,3 +1733,26 @@ test('한글 입력 자동 전환: 데스크톱의 도우미를 부르고, 설�
   core.desktop = null;
   core.store.close();
 });
+test('Companion 단추: 위치 읽기 · POST /api/location/페이지/줄/칸/press · 실패 이유 · 순서 자동 동작 정리', async () => {
+  const { parseLocations } = require('../src/core/companion');
+  assert.deepEqual(parseLocations('1/0/2, 2/1/0 x 9'), [{ page: 1, row: 0, col: 2 }, { page: 2, row: 1, col: 0 }]);
+  const hits = [];
+  const srv = http.createServer((req, res) => { hits.push(req.method + ' ' + req.url); res.statusCode = /\/9\/9\/9\//.test(req.url) ? 404 : 200; res.end('ok'); });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const core = newCore('companion');
+  core.command('setCompanion', { host: '127.0.0.1', port: srv.address().port });
+  const r = await core.command('companionPress', { loc: '1/0/2, 2/1/0' });
+  assert.equal(r.ok, true, r.error);
+  assert.deepEqual(hits, ['POST /api/location/1/0/2/press', 'POST /api/location/2/1/0/press']);
+  const bad = await core.command('companionPress', { loc: '9/9/9' });
+  assert.equal(bad.ok, false);
+  assert.match(bad.error, /단추가 없거나/);
+  assert.match((await core.command('companionPress', { loc: '' })).error, /페이지\/줄\/칸/);
+  srv.close();
+  core.command('setCompanion', { port: 1 });
+  assert.match((await core.command('companionPress', { loc: '1/0/0' })).error, /연결하지 못했습니다/);
+  const { normalizeItem } = require('../src/core/cues');
+  assert.equal(normalizeItem({ type: 'title', title: 'x', actions: { companion: '1/0/2 , 이상한값, 3/2/1' } }).actions.companion, '1/0/2, 3/2/1');
+  assert.equal(normalizeItem({ type: 'title', title: 'x', actions: { companion: '없음' } }).actions, undefined);
+  core.store.close();
+});

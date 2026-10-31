@@ -73,6 +73,7 @@ function normalizeItem(x) {
     if (a.ovOff) act.ovOff = str(a.ovOff, 60);
     if (a.stopMusic) act.stopMusic = true;
     if (a.clearStage) act.clearStage = true;
+    if (a.companion) { const loc = require('./companion').parseLocations(a.companion).map(l => `${l.page}/${l.row}/${l.col}`).join(', '); if (loc) act.companion = loc; } // Companion 단추 (페이지/줄/칸)
     if (a.stagePin) act.stagePin = str(a.stagePin, 40); // 무대 화면 고정: live(풀기) · order(순서표) · 프리셋 id
     if (a.obsScene) act.obsScene = str(a.obsScene, 120); // OBS 장면 바꾸기
     if (['start', 'stop'].includes(a.obsStream)) act.obsStream = a.obsStream; // OBS 방송 시작·끝

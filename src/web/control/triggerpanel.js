@@ -28,6 +28,10 @@
         <li><b>Bitfocus Companion</b>: 'Generic HTTP Requests' 연결 → 단추 동작 'GET' 에 주소. (Companion 이 같은 PC 에서 돌 때)</li>
         <li><b>그 밖</b>: 주소를 여는 것만으로 됩니다 (예: AutoHotkey, 매크로 키보드, 바로 가기).</li>
       </ul>
+      <h4>반대로: 순서를 송출할 때 Companion 단추 누르기</h4>
+      <div class="note">순서 편집칸의 '⚡ 송출할 때 자동으로 → Companion' 에 단추 위치(페이지/줄/칸, 예: 1/0/2)를 쓰면 그 순서를 송출할 때 Companion 단추를 누릅니다. ATEM 스위처 · PTZ 카메라 프리셋 · X32 음향 · 조명처럼 Companion 이 아는 장비가 같이 움직입니다 (Companion 3 이상).</div>
+      <div class="row-flex"><span>Companion 주소</span><input type="text" id="cpHost" value="${esc((app.state.settings.companion || {}).host || '127.0.0.1')}" style="width:160px" spellcheck="false"> : <input type="number" id="cpPort" value="${esc((app.state.settings.companion || {}).port || 8000)}" style="width:80px"><button id="cpSave">저장</button></div>
+      <div class="row-flex"><span>시험</span><input type="text" id="cpLoc" placeholder="1/0/2" style="width:120px" spellcheck="false"><button id="cpTest">눌러 보기</button><span class="muted" id="cpMsg"></span></div>
       <div class="row-flex"><button id="trgNew" class="danger">🔑 열쇠 바꾸기</button><span class="muted">주소가 밖으로 새어 나갔을 때</span></div>
     </div>`);
     document.querySelectorAll('.trg [data-copy]').forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => app.showMsg('주소를 복사했습니다.', 'ok', 1200)));
@@ -35,6 +39,8 @@
       const j = await fetch(url(info.key, b.dataset.test)).then(x => x.json()).catch(e => ({ ok: false, error: e.message }));
       app.showMsg(j.ok ? '동작했습니다.' : j.error, j.ok ? 'ok' : 'error', 1800);
     });
+    $('#cpSave').onclick = async () => { const r = await app.cmd('setCompanion', { host: $('#cpHost').value, port: Number($('#cpPort').value) }); app.showMsg(r.ok ? 'Companion 주소를 저장했습니다.' : r.error, r.ok ? 'ok' : 'error', 2000); };
+    $('#cpTest').onclick = async () => { $('#cpMsg').textContent = '누르는 중…'; const r = await app.cmd('companionPress', { loc: $('#cpLoc').value }); $('#cpMsg').textContent = r.ok ? '눌렀습니다.' : r.error; };
     $('#trgNew').onclick = async () => {
       if (!confirm('열쇠를 바꾸면 Stream Deck 등에 넣은 주소를 모두 다시 넣어야 합니다. 바꿀까요?')) return;
       const r = await app.cmd('newTriggerKey');
