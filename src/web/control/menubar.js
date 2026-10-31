@@ -75,6 +75,7 @@
       { ic: 'skip-forward', label: '다음 슬라이드', key: 'F6', run: act('nextSlide') }, { ic: 'skip-back', label: '이전 슬라이드', key: 'F5', run: act('prevSlide') },
       { ic: 'chevrons-down', label: '다음 순서 미리보기', key: 'Ctrl+↓', run: act('cueNext') }, { ic: 'chevrons-up', label: '이전 순서 미리보기', key: 'Ctrl+↑', run: act('cuePrev') },
       { ic: 'text', label: '즉석 자막 (글을 써서 바로 송출)…', key: 'Ctrl+T', run: act('quickText') },
+      { ic: 'megaphone', label: '회중 메시지 (유아실 호출 · 차량 이동)…', key: 'Ctrl+M', run: act('messages') },
       '-',
       { ic: 'eraser', label: '화면 지우기', sub: () => [
         { ic: 'eye-off', label: '글자 숨김·복원', key: 'F10', run: act('toggleClear') },

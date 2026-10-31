@@ -67,6 +67,7 @@ class WorshipCueCore extends EventEmitter {
     this.library = new Library(this);
     this.usage = new UsageLog(this); // 사용 기록 (저작권 보고)
     this.sync = new Sync(this); // 여러 PC 동기화 · 자동 백업
+    this.message = null; // 회중 메시지 (아래 띠)
     this.stage = { timer: { running: false, endAt: 0, remaining: 0, duration: 0 }, message: '', pin: null }; // pin: 무대 화면 고정 { mode: 'order' | 'text', text, name }
     // 화면 지우기 층: 배경 숨김 · 로고 화면 · 오버레이 끄기 전 켜져 있던 것
     this.layers = { hideBg: false, logo: false, savedOverlays: [], media: null }; // media = 배경 미디어 (카메라·그림·영상, 슬라이드와 따로)
@@ -260,6 +261,14 @@ class WorshipCueCore extends EventEmitter {
     };
   }
 
+  /** 회중 메시지 (유아실 호출 · 차량 이동 등): 아래 띠 하나로, 정한 출력에만 */
+  messageOverlay(output) {
+    const m = this.message;
+    if (!m || !m.outputs.includes(output)) return [];
+    const { normalizeOverlay } = require('./library');
+    return [normalizeOverlay({ id: 'wpmessage', type: 'banner', on: true, name: '회중 메시지', text: m.text, outputs: m.outputs, position: 'bottom-center', full: true, size: m.size || 52, color: '#ffffff', bg: 'rgba(12,14,20,0.88)', margin: 0 })];
+  }
+
   /** 무대 화면 고정: 지금 슬라이드와 상관없이 계속 보이는 것 (순서표 · 고정 글). 지금 화면은 아래 작은 칸에 */
   stagePin(live) {
     const p = this.stage.pin;
@@ -351,7 +360,7 @@ class WorshipCueCore extends EventEmitter {
       obsFull: output === 'overlay' && this.obsFull,
       // OBS 자막: 글 없는 그림·악보 슬라이드를 우상단에 작게 (예배당 화면 모양으로)
       pip: output === 'overlay' && !this.obsFull && this.settings.get().output.obsPip ? { template: this.templateFor('main') } : null,
-      overlays: this.library.activeFor(output),
+      overlays: [...this.library.activeFor(output), ...this.messageOverlay(output)],
       layers: this.layersPayload(output),
       video: this.videoPayload(),
       cursorHidden: this.settings.get().output.cursorHidden,
@@ -388,6 +397,7 @@ class WorshipCueCore extends EventEmitter {
       defaultShortcuts: DEFAULT_SHORTCUTS,
       outputs: this.outputStatus(),
       obs: this.obs ? this.obs.status() : null,
+      message: this.message || null,
       port: this.activePort || s.port,
       portWarning: this.portWarning || '',
       dataDir: this.dataDir,
@@ -1197,6 +1207,33 @@ WorshipCueCore.prototype.commands = {
     this.emit('live');
     return this.stagePayload().timer;
   },
+  /** 회중 메시지 보이기: text(칸을 채운 글) · seconds(0 = 숨길 때까지) · outputs(main · overlay) */
+  showMessage(a) {
+    const text = String(a.text || '').trim().slice(0, 300);
+    if (!text) throw new Error('보일 메시지를 쓰세요.');
+    if (/\{[^}]+\}/.test(text)) throw new Error('채우지 않은 칸이 있습니다: ' + text.match(/\{[^}]+\}/g).join(' '));
+    const outputs = (Array.isArray(a.outputs) ? a.outputs : ['main', 'overlay']).filter(x => x === 'main' || x === 'overlay');
+    if (!outputs.length) throw new Error('보일 화면(예배당 · OBS)을 고르세요.');
+    const sec = Math.max(0, Math.min(3600, Math.round(Number(a.seconds) || 0)));
+    clearTimeout(this.messageTimer);
+    this.message = { text, outputs, size: Number(a.size) || 0, until: sec ? Date.now() + sec * 1000 : 0, at: Date.now() };
+    if (sec) { this.messageTimer = setTimeout(() => { this.message = null; this.emit('live'); this.emit('message', null); }, sec * 1000); if (this.messageTimer.unref) this.messageTimer.unref(); }
+    this.logger.info('회중 메시지: ' + text);
+    this.emit('live'); this.emit('message', this.message);
+    return this.message;
+  },
+  clearMessage() { clearTimeout(this.messageTimer); this.message = null; this.emit('live'); this.emit('message', null); return {}; },
+  /** 메시지 틀 저장 (같은 id 면 고침) · 지우기 */
+  saveMessageTemplate(a) {
+    const t = a.template || {};
+    const name = String(t.name || '').trim().slice(0, 40), text = String(t.text || '').trim().slice(0, 300);
+    if (!name || !text) throw new Error('틀 이름과 글을 쓰세요.');
+    const id = /^[a-z0-9]{3,30}$/i.test(t.id || '') ? t.id : 'mt' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    this.settings.update(d => { const l = (d.messageTemplates || []).filter(x => x.id !== id); l.push({ id, name, text, seconds: Math.max(0, Math.min(3600, Math.round(Number(t.seconds) || 0))) }); d.messageTemplates = l.slice(-40); });
+    this.settingsChanged('settings');
+    return { id };
+  },
+  deleteMessageTemplate(a) { this.settings.update(d => { d.messageTemplates = (d.messageTemplates || []).filter(x => x.id !== a.id); }); this.settingsChanged('settings'); return {}; },
   /** 무대 화면 고정: { mode: 'order' | 'text', text, name } · { preset: id } · null(지금 화면으로) */
   stagePinSet(a) {
     let p = a && a.preset ? (this.settings.get().stagePresets || []).find(x => x.id === a.preset) : a;

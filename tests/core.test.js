@@ -1797,3 +1797,25 @@ test('장비 직접 제어: X32 OSC (채널·페이더·메인·씬) · PTZ VISC
   x32.close(); cam.close(); raw.close();
   core.store.close();
 });
+test('회중 메시지: 칸 채우기 확인 · 출력별 아래 띠 · N초 뒤 숨김 · 틀 저장', async () => {
+  const core = newCore('message');
+  assert.equal(core.command('showMessage', { text: '{이름} 어린이 부모님' }).ok, false, '채우지 않은 칸');
+  assert.equal(core.command('showMessage', { text: '가', outputs: [] }).ok, false, '출력 없음');
+  const r = core.command('showMessage', { text: '홍길동 어린이 부모님, 유아실로 와 주세요', seconds: 1, outputs: ['main'] });
+  assert.equal(r.ok, true, r.error);
+  const ov = core.outputPayload('main').overlays.find(o => o.id === 'wpmessage');
+  assert.ok(ov && ov.type === 'banner' && ov.full && /홍길동/.test(ov.text));
+  assert.ok(!core.outputPayload('overlay').overlays.some(o => o.id === 'wpmessage'), 'OBS 는 고르지 않음');
+  assert.equal(core.getState().message.text, '홍길동 어린이 부모님, 유아실로 와 주세요');
+  await new Promise(res => setTimeout(res, 1200));
+  assert.equal(core.message, null, '1초 뒤 숨김');
+  core.command('showMessage', { text: '차량 이동', seconds: 0 });
+  core.command('clearMessage');
+  assert.equal(core.outputPayload('main').overlays.some(o => o.id === 'wpmessage'), false);
+  assert.ok(core.settings.get().messageTemplates.some(t => t.id === 'mtnursery'), '기본 틀');
+  const s = core.command('saveMessageTemplate', { template: { name: '주차', text: '{차번호} 차량', seconds: 20 } });
+  assert.equal(s.ok, true);
+  core.command('deleteMessageTemplate', { id: s.result.id });
+  assert.ok(!core.settings.get().messageTemplates.some(t => t.id === s.result.id));
+  core.store.close();
+});

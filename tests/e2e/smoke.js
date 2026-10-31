@@ -163,6 +163,17 @@ app.whenReady().then(async () => {
       return { rows, row, n: ds.length };`);
     ok(dv.rows === 1 && dv.n === 1 && dv.row, '장비 (X32 등록 · 순서 자동 동작 줄)', dv);
 
+    // ---- 3-1. 회중 메시지: Ctrl+M → 유아실 호출 틀 → 칸 채우고 Enter → 예배당 미리보기에 띠 · 상태줄 '메시지 ✕' → 숨기기
+    const mg = await ev(`document.body.focus(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', code: 'KeyM', ctrlKey: true, bubbles: true })); await wait(500);
+      const f = $('#msgFields [data-f]'); const field = f && f.dataset.f; f.value = '홍길동'; f.dispatchEvent(new Event('input', { bubbles: true }));
+      const prev = $('#msgPrev').textContent; f.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(1200);
+      const st = window.BC.state.message; const bar = ($('#status [data-msgoff]') || {}).textContent || '';
+      const live = $('#lvScreen').innerText;
+      $('#msgHide').click(); await wait(800);
+      const after = window.BC.state.message; $('#modalClose').click(); await wait(200);
+      return { field, prev, text: st && st.text, bar, live: /홍길동/.test(live), after };`);
+    ok(mg.field === '이름' && /^홍길동 어린이 부모님/.test(mg.prev) && /홍길동/.test(mg.text || '') && /메시지/.test(mg.bar) && mg.after === null, '회중 메시지 (틀 칸 채우기 · 보이기 · 상태줄 · 숨기기)', mg);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

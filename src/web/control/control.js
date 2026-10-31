@@ -183,6 +183,11 @@
       else if (u.state !== before && u.state === 'available') showMsg(`새 버전 ${u.version} 이 나왔습니다. 아래 상태줄의 '새 버전' 을 누르면 바뀐 점과 받는 곳이 보입니다.`, 'info', 6000);
       if (window.BCSettings && window.BCSettings.onUpdate) window.BCSettings.onUpdate();
     });
+    es.addEventListener('message', e => {
+      if (app.state) app.state.message = JSON.parse(e.data);
+      renderStatus();
+      if (window.BCMessage) window.BCMessage.refresh();
+    });
     es.addEventListener('obs', e => {
       if (app.state) app.state.obs = JSON.parse(e.data);
       renderStatus();
@@ -1434,11 +1439,13 @@
       parts.push(`<span class="st st-update" data-update="${u.state}" title="자동 업데이트 (설정 → 정보)"><span class="dot ok"></span>${txt}</span>`);
     }
     if (window.BCObs) { const h = window.BCObs.statusHtml(); if (h) parts.push(h); }
+    if (window.BCMessage) { const h = window.BCMessage.statusHtml(); if (h) parts.unshift(h); }
     $('#status').innerHTML = parts.join('');
   }
   $('#status').addEventListener('click', e => {
     if (e.target.closest('[data-media-off]')) { cmd('setBackgroundMedia', { media: null }); return; }
     if (e.target.closest('[data-obs]')) { if (window.BCObs) window.BCObs.open(); return; }
+    if (e.target.closest('[data-msgoff]')) { cmd('clearMessage'); return; }
     const b = e.target.closest('[data-update]');
     if (!b) return;
     if (window.BCUpdate) window.BCUpdate.open(); // 바뀐 점 · 설치/받기 · 이번 버전 건너뛰기
@@ -1478,6 +1485,7 @@
     openHistory: () => openHistory(),
     webLyrics: () => window.BCCue && window.BCCue.webLyrics(),
     quickText: () => window.BCQuick && window.BCQuick.toggle(),
+    messages: () => window.BCMessage && window.BCMessage.open(),
     previewPrevSlide: () => stepPreview(-1),
     previewNextSlide: () => stepPreview(1),
     previewPrevVerse: () => previewAdjacentVerse(-1),

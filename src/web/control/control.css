@@ -1486,3 +1486,10 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 .dv-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line-soft, var(--line)); border-radius: 8px; background: var(--panel2); }
 .dv-row .muted { font-size: 12px; white-space: nowrap; }
 .dv-name { min-width: 90px; font-weight: 600; }
+/* ---- 회중 메시지 (messagepanel.js) ---- */
+.msgp { display: flex; flex-direction: column; gap: 10px; min-width: min(620px, 82vw); }
+.msg-tpls { display: flex; flex-wrap: wrap; gap: 6px; }
+.msg-tpls button.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.msg-fields { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; }
+.msg-prev { padding: 10px 14px; background: rgba(12,14,20,.88); color: #fff; border-radius: 6px; font-weight: 600; min-height: 1.4em; }
+.msg-state { display: flex; align-items: center; gap: 8px; }
