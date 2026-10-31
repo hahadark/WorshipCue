@@ -44,6 +44,7 @@ function normalizeItem(x) {
       it.file = str(x.file, 1000); it.number = Number.isFinite(+x.number) ? +x.number : null;
       it.background = str(x.background, 300) || 'default'; // default(설정 기본값) | original | template | 이미지 주소
       it.obsLyrics = str(x.obsLyrics); // OBS 자막(가사만) 직접 입력: 슬라이드마다 빈 줄로 구분. 비우면 자동
+      { const m = /^\s*(\d{1,3})\s*(?:[-~]\s*(\d{1,3}))?\s*$/.exec(String(x.range || '')); if (m) { const a = +m[1], b = +(m[2] || m[1]); if (a >= 1) it.range = `${Math.min(a, b)}-${Math.max(a, b)}`; } } // 슬라이드 범위 (한 PPT 를 여러 순서로)
       break;
   }
   // 순서별 배경 이미지·템플릿 (글자 순서)

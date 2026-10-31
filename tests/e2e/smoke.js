@@ -118,6 +118,26 @@ app.whenReady().then(async () => {
     await ev(`await window.BC.cmd('stagePinSet', {}); await window.BC.cmd('clearAll', {}); return 1;`);
     ok(sp.items.length === 3 && /^now:광고/.test(sp.items[1]) && /^nx:설교/.test(sp.items[2]) && /고정/.test(sp.badge) && /식사/.test(sp.now), '무대 화면 고정 (순서표 · 지금 순서 · 아래 칸에 지금 화면)', sp);
 
+    // ---- 2-8. PPT 여러 순서로 나누기 (PowerPoint 없이: loadHymn 응답을 가짜 슬라이드 6장으로)
+    const ps = await ev(`const realFetch = window.fetch;
+      const svg = n => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"><rect width="160" height="90" fill="#335"/><text x="70" y="55" fill="#fff" font-size="30">' + n + '</text></svg>');
+      window.fetch = async (u, o) => { if (String(u).includes('/api/command') && o && /"cmd":"loadHymn"/.test(o.body)) return new Response(JSON.stringify({ ok: true, result: { mode: 'slides', slides: [1, 2, 3, 4, 5, 6].map(svg), scores: [], texts: [] } })); return realFetch(u, o); };
+      const c = (await window.BC.cmd('saveCue', { cue: { name: 'PPT 점검', items: [{ type: 'hymn', title: '주보 PPT', file: 'C:\\\\가짜\\\\주보.pptx' }] } })).result;
+      window.BCCue.openCue(c.id); await wait(800); $$('#cueList .cue-item')[0].click(); await wait(1000);
+      const row = !!$('#cueEditor [data-k=range]');
+      $('#cueEditor [data-act=pptsplit]').click(); await wait(800);
+      const th = $$('.sp-th'); th[0].click(); th[3].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+      const r1 = $('#spRange').value; $('#spName').value = '광고'; $('#spAdd').click();
+      const r2 = $('#spRange').value; $('#spRange').value = '5-6'; $('#spName').value = '설교'; $('#spAdd').click(); await wait(200);
+      $('#spGo').click(); await wait(1500);
+      const items = [0, 1, 2].map(k => window.BCCue.item(k)).filter(Boolean).map(x => x.title + ':' + (x.range || ''));
+      $$('#cueList .cue-item')[1].click(); await wait(1200);
+      const pv = window.BC.preview ? window.BC.preview.slides.length : -1;
+      window.fetch = realFetch; return { row, thumbs: th.length, r1, r2, items, pv };`);
+    await shot('ppt-split');
+    ok(ps.row && ps.thumbs === 6 && ps.r1 === '1-4' && ps.r2 === '5', 'PPT 나누기 창 (슬라이드 · Shift 범위 · 다음 시작 번호)', ps);
+    ok(ps.items && ps.items.join('|') === '광고:1-4|설교:5-6' && ps.pv === 2, 'PPT 나누기 → 순서 2개 · 범위만 송출', ps);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

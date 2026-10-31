@@ -1695,3 +1695,15 @@ test('무대 화면 고정: 순서표(지금 순서 표시) · 고정 글 · 프
   assert.equal(normalizeItem({ type: 'title', title: 'x', actions: { stagePin: 'order' } }).actions.stagePin, 'order');
   core.store.close();
 });
+
+test('PPT 슬라이드 범위: 한 PPT 를 여러 순서로 (범위 정리 · 잘못된 값은 버림)', () => {
+  const { normalizeItem } = require('../src/core/cues');
+  const h = r => normalizeItem({ type: 'hymn', title: '광고', file: 'C:\\주보\\광고.pptx', range: r }).range;
+  assert.equal(h('5-9'), '5-9');
+  assert.equal(h(' 9 ~ 5 '), '5-9', '거꾸로 써도 정리');
+  assert.equal(h('3'), '3-3', '한 장');
+  assert.equal(h(''), undefined, '비우면 전체');
+  assert.equal(h('가-나'), undefined);
+  assert.equal(h('0'), undefined);
+  assert.equal(normalizeItem({ type: 'song', title: 'x', lyrics: '가', range: '1-2' }).range, undefined, 'PPT 순서에만');
+});

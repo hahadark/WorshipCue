@@ -308,6 +308,7 @@
         slides = SL.buildText({ title: it.title, showTitle: false, chunks: meta.texts.map((t, k) => ({ label: String(k + 1), text: t.join('\n') })) }, opts);
         slides.forEach(s => { s.bg = bg; });
       }
+      slides = pptRange(it, slides);
     }
     else if (it.type === 'song') slides = SL.buildText({ title: it.title, showTitle: it.showTitle, chunks: SL.arrange(SL.lyricsChunks(it.lyrics), songOrder(it)).chunks }, opts);
     else if (it.type === 'text') slides = SL.buildText({ title: it.title, showTitle: true, chunks: SL.textChunks(it.body, { roles: it.roleLabels ? 'labels' : true }) }, opts);
@@ -344,6 +345,71 @@
    * 찬양·공지·제목: 슬라이드 키 = 가사·글 덩어리 번호(src)
    * 그 밖(성경·찬송가·그림·영상·슬라이드쇼·카메라·빈 화면): 키 = 슬라이드 번호, 덧붙인 제목 카드 = 'x'+id, 건너뛰기(skip)
    */
+  /** 슬라이드 범위 (한 PPT 를 여러 순서로 나눠 쓸 때 '5-9'): 이름표는 원래 번호 그대로 */
+  function rangeOf(r) { const m = /^\s*(\d+)\s*(?:[-~]\s*(\d+))?\s*$/.exec(r || ''); if (!m) return null; const a = +m[1], b = +(m[2] || m[1]); return a >= 1 ? [Math.min(a, b), Math.max(a, b)] : null; }
+  /** 한 PPT 를 여러 순서로 나누기: 슬라이드를 보며 범위·이름을 정하면 그 순서 자리에 순서 여러 개로 */
+  async function openSplit(i) {
+    const it = st.cue.items[i];
+    let meta;
+    try { meta = await hymnMeta(it); } catch (e) { return app.showMsg(e.message, 'error'); }
+    const all = buildSlides({ ...it, range: '' }, meta, { raw: true });
+    if (all.length < 2) return app.showMsg('슬라이드가 하나뿐이라 나눌 수 없습니다.', 'warn', 2500);
+    const parts = [];
+    let from = 0;
+    const thumb = (s, k) => `<button class="sp-th" data-k="${k}" title="${k + 1}번 슬라이드 — 누르면 시작, Shift+누르면 끝">${s.image ? `<img src="${esc(s.image)}" alt="">` : `<span class="sp-tx">${esc(window.BCGroup.stripFmt((s.parts && s.parts[0] && s.parts[0].text) || s.ref || '').slice(0, 40))}</span>`}<b>${k + 1}</b></button>`;
+    app.openModal(`'${it.title}' 여러 순서로 나누기`, `<div class="sp">
+      <div class="note">슬라이드를 누르면 시작, <b>Shift</b> 를 누른 채 누르면 끝으로 고릅니다. 이름을 쓰고 '범위 더하기' — 다 더했으면 '나누기'. 이 순서 자리에 순서 여러 개가 생기고, 각 순서는 그 범위의 슬라이드만 송출합니다.</div>
+      <div class="sp-grid">${all.map(thumb).join('')}</div>
+      <div class="row-flex"><span>범위</span><input type="text" id="spRange" style="width:90px" placeholder="1-4"><span>이름</span><input type="text" id="spName" style="flex:1" placeholder="예: 광고 · 설교 · 축도"><button id="spAdd">범위 더하기</button></div>
+      <ol id="spList" class="sp-list"></ol>
+      <div class="row-flex"><button id="spGo" class="primary" disabled>나누기</button><span class="muted" id="spMsg"></span></div>
+    </div>`);
+    const mark = () => {
+      const r = rangeOf($('#spRange').value);
+      const used = new Set(parts.flatMap(p => Array.from({ length: p.b - p.a + 1 }, (_, n) => p.a + n)));
+      document.querySelectorAll('.sp-th').forEach(b => { const n = +b.dataset.k + 1; b.classList.toggle('sel', !!r && n >= r[0] && n <= r[1]); b.classList.toggle('used', used.has(n)); });
+      $('#spList').innerHTML = parts.map((p, k) => `<li>${p.a === p.b ? p.a : `${p.a}-${p.b}`} · <b>${esc(p.name)}</b> <button class="icon-btn" data-rm="${k}" title="빼기">✕</button></li>`).join('');
+      $('#spGo').disabled = !parts.length;
+      const left = all.length - used.size;
+      $('#spMsg').textContent = parts.length ? `순서 ${parts.length}개${left ? ` · 아직 안 넣은 슬라이드 ${left}장` : ''}` : '';
+    };
+    document.querySelector('.sp-grid').addEventListener('click', e => {
+      const b = e.target.closest('.sp-th'); if (!b) return;
+      const k = +b.dataset.k;
+      if (e.shiftKey) $('#spRange').value = `${Math.min(from, k) + 1}-${Math.max(from, k) + 1}`;
+      else { from = k; $('#spRange').value = String(k + 1); }
+      mark();
+    });
+    $('#spRange').oninput = mark;
+    const add = () => {
+      const r = rangeOf($('#spRange').value);
+      if (!r || r[1] > all.length) return app.showMsg(`범위를 1-${all.length} 안에서 쓰세요.`, 'warn', 2500);
+      const name = $('#spName').value.trim() || `${it.title} ${r[0] === r[1] ? r[0] : `${r[0]}-${r[1]}`}`;
+      parts.push({ a: r[0], b: r[1], name });
+      parts.sort((x, y) => x.a - y.a);
+      const next = r[1] < all.length ? r[1] + 1 : 0;
+      $('#spRange').value = next ? String(next) : ''; from = next ? next - 1 : 0; $('#spName').value = '';
+      $('#spName').focus();
+      mark();
+    };
+    $('#spAdd').onclick = add;
+    $('#spName').onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); add(); } };
+    $('#spList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { parts.splice(+b.dataset.rm, 1); mark(); } });
+    $('#spGo').onclick = () => {
+      const { id, skip, edits, extra, ...base } = it; // 슬라이드 번호에 묶인 편집·건너뛰기는 새 순서에 옮기지 않는다
+      const made = parts.map(p => ({ ...base, id: newId(), title: p.name, range: `${p.a}-${p.b}` }));
+      st.cue.items.splice(i, 1, ...made);
+      st.sel = i;
+      save(); render(); renderEditor(true); previewItem(i);
+      app.closeModal();
+      app.showMsg(`'${it.title}' 을(를) 순서 ${made.length}개로 나눴습니다.`, 'ok', 3000);
+    };
+    mark();
+  }
+  function pptRange(it, slides) {
+    const r = rangeOf(it.range);
+    return r ? slides.slice(r[0] - 1, r[1]) : slides;
+  }
   function decorate(it, slides, { withSkipped = false, noEdits = false } = {}) {
     const chunk = ['song', 'text', 'title'].includes(it.type);
     let out = slides;
@@ -594,6 +660,7 @@
     };
     const fields = {
       hymn: `<label>파일</label><div class="ce-row"><span class="muted ce-file">${esc((it.file || '').split(/[\\/]/).pop())}</span><button data-act="rehymn">다른 찬송가로 바꾸기</button></div>
+        <label>슬라이드 범위</label><div class="ce-row"><input type="text" data-k="range" value="${esc(it.range || '')}" placeholder="전체 (예: 5-9)" style="width:110px" spellcheck="false"><button data-act="pptsplit" title="광고·설교처럼 한 PPT 안의 여러 부분을 순서마다 나눠 씁니다">여러 순서로 나누기…</button><span class="note">비우면 전체 · 한 PPT 를 순서마다 나눠 쓸 때</span></div>
         <label>OBS 가사</label><div class="ce-col"><textarea data-k="obsLyrics" rows="3" placeholder="${esc(obsHint(it))}">${esc(it.obsLyrics || '')}</textarea>
           <div class="ce-row note">OBS 자막처럼 'PPT 슬라이드: 가사만'인 출력에 나옵니다. 슬라이드마다 빈 줄로 구분 · 비우면 자동 <button data-act="obsfill" title="자동 가사를 칸에 넣어 직접 고칠 수 있게">자동 가사 넣어 고치기</button></div></div>
         <label>배경</label><div class="ce-row">${(st.hymnMeta.get(it.file) || {}).mode === 'slides' ? '<span class="muted">PPT 화면 그대로 송출합니다 (배경 바꾸기 없음). 폴더 읽는 방식을 \'자동\'으로 바꾸면 악보·배경을 나눠 꺼낼 수 있습니다.</span>' : hymnBgSel()}</div>`,
@@ -732,6 +799,7 @@
     const it = st.cue.items[i];
     switch (b.dataset.act) {
       case 'obsopen': if (window.BCObs) window.BCObs.open(); break;
+      case 'pptsplit': openSplit(i); break;
       case 'close': setEditor(false); app.showMsg('편집칸을 숨겼습니다. 다시 보려면 가운데 위 ✎ 편집칸 단추 · F2 · Ctrl+Shift+E', 'info', 3500); break;
       case 'up': if (i > 0) { moveItem(i, i - 1); st.sel = i - 1; renderEditor(true); } break;
       case 'down': if (i < st.cue.items.length - 1) { moveItem(i, i + 1); st.sel = i + 1; renderEditor(true); } break;

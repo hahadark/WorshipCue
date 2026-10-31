@@ -1469,3 +1469,14 @@ footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent);
 #stPins { flex-wrap: wrap; gap: 6px; }
 #stPins button.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
 .stg-preset { display: inline-flex; gap: 2px; }
+/* ---- PPT 여러 순서로 나누기 (cue.js openSplit) ---- */
+.sp { display: flex; flex-direction: column; gap: 10px; min-width: min(760px, 86vw); }
+.sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; max-height: 46vh; overflow-y: auto; padding: 2px; }
+.sp-th { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; padding: 0; overflow: hidden; background: #000; border: 2px solid var(--line); border-radius: 6px; }
+.sp-th img { width: 100%; height: 100%; object-fit: contain; }
+.sp-th .sp-tx { font-size: 11px; color: #ddd; padding: 4px; text-align: center; }
+.sp-th b { position: absolute; left: 4px; top: 2px; font-size: 12px; background: rgba(0,0,0,.65); color: #fff; padding: 0 5px; border-radius: 4px; }
+.sp-th.used { opacity: .45; }
+.sp-th.sel { border-color: var(--accent); opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+.sp-list { margin: 0 0 0 18px; padding: 0; }
+.sp-list li { margin: 2px 0; }
