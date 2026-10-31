@@ -1469,3 +1469,11 @@ test('예배 전 화면 자동 만들기: 최근 카드 묶음 · 홈페이지 �
   assert.equal(core.command('preServiceInfo').result.autoSec, 6);
   core.store.close();
 });
+
+test('단축키 기본값: 즉석 자막(Ctrl+T) 포함 · 서로 겹치지 않음 · 이름표가 모두 있음', () => {
+  const { DEFAULT_SHORTCUTS, SHORTCUT_LABELS } = require('../src/core/settings');
+  assert.equal(DEFAULT_SHORTCUTS.quickText, 'Ctrl+T');
+  const combos = Object.values(DEFAULT_SHORTCUTS);
+  assert.equal(new Set(combos).size, combos.length, '같은 키가 두 동작에 묶이면 안 된다');
+  for (const k of Object.keys(DEFAULT_SHORTCUTS)) assert.ok(SHORTCUT_LABELS[k], `${k} 이름표`);
+});

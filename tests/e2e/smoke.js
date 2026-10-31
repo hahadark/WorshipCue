@@ -37,6 +37,24 @@ app.whenReady().then(async () => {
     ok(/하나님이 세상을/.test(bible.lv || ''), '송출 (F9)', bible);
     ok(bible.after === false, '모두 지우기', bible);
 
+    // ---- 2-1. 즉석 자막: Ctrl+T → 글 쓰고 Enter → 바로 송출 → 최근 목록 → Esc 로 닫기 (보조 화면은 그대로)
+    const qt = await ev(`document.body.focus(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 't', code: 'KeyT', ctrlKey: true, bubbles: true })); await wait(300);
+      const opened = window.BCQuick.isOpen() && document.activeElement === $('#qtInput');
+      $('#qtInput').value = '예배 후 전 교인 식사가 있습니다';
+      $('#qtInput').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true })); await wait(900);
+      const lv = $('#lvScreen').innerText.replace(/\\s+/g, ' ');
+      const title = window.BC.state.live && window.BC.state.live.passage && window.BC.state.live.passage.title;
+      const list = $$('#qtList .qt-send').map(b => b.textContent);
+      return { opened, lv, title, list };`);
+    await shot('quicktext');
+    Object.assign(qt, await ev(`$('#qtInput').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })); await wait(200);
+      const closed = !window.BCQuick.isOpen();
+      await window.BC.cmd('clearAll', {}); await wait(300);
+      return { closed, input: $('#qtInput').value };`));
+    ok(qt.opened && qt.closed, '즉석 자막: Ctrl+T 로 열고 Esc 로 닫기', qt);
+    ok(/전 교인 식사/.test(qt.lv || '') && qt.title === '즉석 자막' && qt.input === '', '즉석 자막: Enter 로 바로 송출', qt);
+    ok(qt.list && qt.list[0] === '예배 후 전 교인 식사가 있습니다', '즉석 자막: 최근 목록에 남음', qt);
+
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);
     const quick = await ev(`window.BCAI.open('quick'); await wait(600); $('#qkText').value = '묵도 / 찬양 은혜 아니면 / 성경봉독 요 3:16 / 설교 “선한 목자” 홍길동 목사 / 축도'; $('#qkName').value = '점검 예배'; $('#qkGo').click(); await wait(2500);

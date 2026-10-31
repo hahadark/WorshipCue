@@ -1411,3 +1411,19 @@ html[data-theme="light"], html[data-theme="manna"] { --tc-p: 100%; }
 .ps-qt:empty { display: none; }
 .ps-verses { margin-top: 4px; font-size: 13px; line-height: 1.7; color: var(--text2); max-height: 140px; overflow: auto; }
 .ps-verses sup { color: var(--hl); margin-right: 2px; }
+
+
+/* ---- 즉석 자막 (quicktext.js): 송출 줄 위에 뜨는 작은 입력칸 — 모달이 아니라 송출 키는 그대로 ---- */
+.quick-text { position: fixed; z-index: 60; width: min(440px, calc(100vw - 16px)); background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius, 10px); box-shadow: var(--shadow, 0 8px 28px rgba(0,0,0,.35)); padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.quick-text[hidden] { display: none; }
+.quick-text .qt-head { display: flex; align-items: center; gap: 8px; }
+.quick-text .qt-head b { display: inline-flex; align-items: center; gap: 6px; }
+.quick-text .qt-head .muted { flex: 1; font-size: 12px; }
+.quick-text textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 64px; font-size: 15px; }
+.quick-text .qt-actions { display: flex; gap: 8px; }
+.quick-text .qt-sub { font-size: 12px; }
+.quick-text .qt-list { display: flex; flex-direction: column; gap: 4px; max-height: 210px; overflow-y: auto; }
+.quick-text .qt-item { display: flex; gap: 4px; align-items: stretch; }
+.quick-text .qt-send { flex: 1; min-width: 0; text-align: left; justify-content: flex-start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quick-text .qt-empty { font-size: 12px; padding: 4px 2px; }
+footer.bottom .quick-btn.on { border-color: var(--accent); color: var(--accent); }

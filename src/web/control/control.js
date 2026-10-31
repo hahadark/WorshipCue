@@ -1459,6 +1459,7 @@
     toggleEditor: () => window.BCCue && window.BCCue.toggleEditor(),
     openHistory: () => openHistory(),
     webLyrics: () => window.BCCue && window.BCCue.webLyrics(),
+    quickText: () => window.BCQuick && window.BCQuick.toggle(),
     previewPrevSlide: () => stepPreview(-1),
     previewNextSlide: () => stepPreview(1),
     previewPrevVerse: () => previewAdjacentVerse(-1),
@@ -1530,6 +1531,7 @@
       if (editing) return; // 편집기가 닫음
       if (window.BCDraw && window.BCDraw.isOn()) { window.BCDraw.off(); e.preventDefault(); return; } // 그리기 끝 (보조 화면은 그대로)
       if (!$('#suggest').hidden) return; // 검색창 처리기가 후보 목록을 닫음
+      if (window.BCQuick && window.BCQuick.isOpen()) { window.BCQuick.close(); e.preventDefault(); return; } // 즉석 자막 칸 닫기 (보조 화면은 그대로)
     }
     const sc = settings().shortcuts;
     const action = Object.keys(sc).find(a => sc[a] === combo);
