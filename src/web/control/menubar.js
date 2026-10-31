@@ -139,6 +139,7 @@
       { ic: 'list-checks', label: '연결 점검 (예배 전에 한 번)…', run: () => window.BCDiag && window.BCDiag.open() },
       { ic: 'keyboard', label: '단축키 보기', run: settings('shortcuts') },
       { ic: 'sparkles', label: '새 소식 (버전별 바뀐 점)', run: link('https://github.com/hahadark/WorshipCue/releases') },
+      { ic: 'download', label: '로그 묶음 저장 (문제 알릴 때 첨부)…', run: () => window.BCLogs && window.BCLogs.save() },
       { ic: 'bug', label: '문제 알리기 · 건의', run: link('https://github.com/hahadark/WorshipCue/issues') },
       '-',
       { ic: 'info', label: '정보 · 라이선스', run: settings('about') },

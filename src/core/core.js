@@ -1043,6 +1043,8 @@ WorshipCueCore.prototype.commands = {
   // ---- 휴대폰 리모컨 ----
   /** 연결 점검 (도움말 → 연결 점검): 예배당 화면 · OBS · 내부망 · 리모컨 · 데이터 · 오늘 큐시트 · 동기화 · 저장 공간 */
   diagnose(a) { return require('./diagnose').diagnose(this, { cueId: a && a.cueId, port: a && a.port }); },
+  /** 로그 묶음 (도움말 → 로그 묶음 저장): 버전 · 점검 결과 · 설정(비밀은 가림) · 최근 로그 → 글 파일 하나 */
+  logBundle(a) { return require('./logbundle').logBundle(this, { days: Math.max(1, Math.min(30, Number(a && a.days) || 7)), port: a && a.port, cueId: a && a.cueId }); },
   remoteStatus() { return this.remote ? this.remote.status() : { enabled: false, running: false, urls: [], error: '리모컨을 쓸 수 없습니다.' }; },
   async setRemote(a) {
     const { newPin } = require('./remote');

@@ -77,10 +77,11 @@ app.whenReady().then(async () => {
 
     // ---- 2-4. 연결 점검: 도움말 → 연결 점검 → 항목들 · 오늘 큐시트 · 결과 글
     const dg = await ev(`window.BCDiag.open(); await wait(2000);
-      return { rows: $$('#dgList .dg-row').length, titles: $$('#dgList .dg-title b').map(b => b.textContent), sum: ($('#dgSum') || {}).textContent, text: window.BCDiag.asText().split('\\n')[0] };`);
+      return { rows: $$('#dgList .dg-row').length, titles: $$('#dgList .dg-title b').map(b => b.textContent), sum: ($('#dgSum') || {}).textContent, text: window.BCDiag.asText().split('\\n')[0], logsBtn: !!$('#dgLogs'), bundle: await window.BC.cmd('logBundle', {}).then(r => r.ok && /## 최근 7일 로그/.test(r.result.text)) };`);
     await shot('diag');
     await ev(`$('#modalClose').click(); await wait(300); return 1;`);
     ok(dg.rows >= 7 && dg.titles.some(t => /오늘 큐시트/.test(t)) && dg.titles.includes('카메라') && /^워십프리젠터 연결 점검/.test(dg.text || ''), '연결 점검 (항목 · 오늘 큐시트 · 카메라 · 결과 글)', dg);
+    ok(dg.logsBtn && dg.bundle, '로그 묶음 (연결 점검 창 단추 · 내용)', dg);
 
     // ---- 3. 주보 순서 붙여 넣기 → 큐시트 (AI 없이)
     await ev(`await window.BC.cmd('saveSong', { song: { title: '은혜 아니면', lyrics: '은혜 아니면 나 서지 못하네' } }); return 1;`);

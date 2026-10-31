@@ -1569,3 +1569,19 @@ test('연결 점검: 항목마다 상태·해결 순서, 오늘 큐시트의 없
   assert.ok(r.result.summary.warn >= 2);
   core.store.close();
 });
+
+test('로그 묶음: 버전 · 점검 · 설정(열쇠·PIN·AI 키 가림) · 최근 로그를 글 하나로', () => {
+  const core = newCore('logbundle');
+  core.settings.update(d => { d.ai = { ...(d.ai || {}), key: 'sk-or-비밀키1234567890' }; d.triggerKey = 'trig-비밀'; d.remote = { enabled: false, pin: '482913', port: 37540 }; });
+  core.logger.info('점검용 로그 한 줄');
+  const r = core.command('logBundle', { days: 3 });
+  assert.equal(r.ok, true, r.error);
+  const { name, text } = r.result;
+  assert.match(name, /^워십프리젠터-로그-\d{8}-\d{4}\.txt$/);
+  assert.match(text, /## 연결 점검/);
+  assert.match(text, /## 최근 3일 로그/);
+  assert.match(text, /점검용 로그 한 줄/);
+  for (const secret of ['sk-or-비밀키1234567890', 'trig-비밀', '482913']) assert.ok(!text.includes(secret), '비밀이 새면 안 됨: ' + secret);
+  assert.match(text, /\(숨김\)/);
+  core.store.close();
+});
